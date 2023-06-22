@@ -1,0 +1,6 @@
+framework module Pods_FullyNoded {
+  umbrella header "Pods-FullyNoded-umbrella.h"
+
+  export *
+  module * { export * }
+}
