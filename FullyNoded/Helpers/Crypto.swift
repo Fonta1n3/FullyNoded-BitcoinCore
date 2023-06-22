@@ -7,7 +7,6 @@
 //
 
 import CryptoKit
-import RNCryptor
 
 enum Crypto {
     
@@ -26,18 +25,6 @@ enum Crypto {
     static func privateKey() -> Data {
         return P256.Signing.PrivateKey().rawRepresentation
     }
-    
-//    static func encryptForBackup(_ key: Data, _ data: Data) -> Data? {
-//        return try? ChaChaPoly.seal(data, using: SymmetricKey(data: key)).combined
-//    }
-//
-//    static func decryptForBackup(_ key: Data, _ data: Data) -> Data? {
-//        guard let box = try? ChaChaPoly.SealedBox.init(combined: data) else {
-//                return nil
-//        }
-//
-//        return try? ChaChaPoly.open(box, using: SymmetricKey(data: key))
-//    }
     
     static func encrypt(_ data: Data) -> Data? {
         guard let key = KeyChain.getData("privateKey") else { return nil }
@@ -76,14 +63,6 @@ enum Crypto {
         }
         
         return try? ChaChaPoly.open(box, using: SymmetricKey(data: key))
-    }
-    
-    static func encryptNostr(_ content: Data, _ password: String) -> Data? {
-        return RNCryptor.encrypt(data: content, withPassword: password.replacingOccurrences(of: " ", with: ""))
-    }
-    
-    static func decryptNostr(_ content: Data, _ password: String) -> Data? {
-        return try? RNCryptor.decrypt(data: content, withPassword: password.replacingOccurrences(of: " ", with: ""))
     }
     
     static func decrypt(_ data: Data) -> Data? {
@@ -129,76 +108,6 @@ enum Crypto {
 
         return Crypto.sha256hash(Crypto.sha256hash(Crypto.sha256hash(Data(bytes))))
     }
-    
-    static func secretNick() -> Data? {
-        var bytes = [UInt8](repeating: 0, count: 16)
-        let result = SecRandomCopyBytes(kSecRandomDefault, bytes.count, &bytes)
-
-        guard result == errSecSuccess else {
-            print("Problem generating random bytes")
-            return nil
-        }
-
-        return Crypto.sha256hash(Crypto.sha256hash(Crypto.sha256hash(Data(bytes))))
-    }
-    
-    // MARK: JoinMarket JWT token creation
-    struct Header: Encodable {
-        let alg = "HS256"
-        let typ = "JWT"
-    }
-
-    struct Payload: Encodable {
-        let sub = "1234567890"
-        let name = "Satoshi"
-        let iat = 1516239022
-    }
-    
-    static func jwtToken() -> String? {
-        guard let secret = Crypto.secret() else { return nil }
-        
-        let privateKey = SymmetricKey(data: secret)
-
-        let headerJSONData = try! JSONEncoder().encode(Header())
-        let headerBase64String = headerJSONData.urlSafeB64String
-
-        let payloadJSONData = try! JSONEncoder().encode(Payload())
-        let payloadBase64String = payloadJSONData.urlSafeB64String
-
-        let toSign = (headerBase64String + "." + payloadBase64String).data(using: .utf8)!
-
-        let signature = HMAC<SHA256>.authenticationCode(for: toSign, using: privateKey)
-        let signatureBase64String = Data(signature).urlSafeB64String
-
-        return [headerBase64String, payloadBase64String, signatureBase64String].joined(separator: ".")
-    }
-
-    static func decode(jwtToken jwt: String) throws -> [String: Any] {
-        enum DecodeErrors: Error {
-            case badToken
-            case other
-        }
-
-        func base64Decode(_ base64: String) throws -> Data {
-            let padded = base64.padding(toLength: ((base64.count + 3) / 4) * 4, withPad: "=", startingAt: 0)
-            guard let decoded = Data(base64Encoded: padded) else {
-                throw DecodeErrors.badToken
-            }
-            return decoded
-        }
-
-        func decodeJWTPart(_ value: String) throws -> [String: Any] {
-            let bodyData = try base64Decode(value)
-            let json = try JSONSerialization.jsonObject(with: bodyData, options: [])
-            guard let payload = json as? [String: Any] else {
-                throw DecodeErrors.other
-            }
-            return payload
-        }
-
-        let segments = jwt.components(separatedBy: ".")
-        return try decodeJWTPart(segments[1])
-      }
     
     
 }

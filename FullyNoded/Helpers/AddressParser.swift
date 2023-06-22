@@ -85,8 +85,6 @@ class AddressParser {
     
     private class func processedAddress(_ processed: String) -> String? {
         var address = processed.replacingOccurrences(of: "bitcoin:", with: "")
-        address = address.replacingOccurrences(of: "lightning:", with: "")
-        address = address.replacingOccurrences(of: "LIGHTNING:", with: "")
         address = address.replacingOccurrences(of: "BITCOIN:", with: "")
         switch address {
         case _ where address.hasPrefix("1"),
@@ -96,12 +94,7 @@ class AddressParser {
             _ where address.hasPrefix("2"),
             _ where address.lowercased().hasPrefix("bcrt"),
             _ where address.hasPrefix("m"),
-            _ where address.hasPrefix("n"),
-            _ where address.lowercased().hasPrefix("lntb"),
-            _ where address.lowercased().hasPrefix("lno"),
-            _ where address.lowercased().hasPrefix("lightning:"),
-            _ where address.lowercased().hasPrefix("lnbc"),
-            _ where address.lowercased().hasPrefix("lnbcrt"):
+            _ where address.hasPrefix("n"):
             if address.hasPrefix("BC1") || address.hasPrefix("TB1") {
                 return address.lowercased()
             } else {

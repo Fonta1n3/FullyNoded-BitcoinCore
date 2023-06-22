@@ -11,11 +11,9 @@ import Foundation
 public struct Balances: CustomStringConvertible {
     
     let onchainBalance:String
-    let offchainBalance:String
     
     init(dictionary: [String: Any]) {
         onchainBalance = dictionary["onchainBalance"] as? String ?? "0.00000000"
-        offchainBalance = dictionary["offchainBalance"] as? String ?? "0.00000000"
     }
     
     public var description: String {

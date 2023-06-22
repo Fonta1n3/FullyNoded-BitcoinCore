@@ -307,7 +307,6 @@ enum Keys {
                     let legacy = childKey.address(type: .payToPubKeyHash).description
                     
                     if address == segwit || address == wrappedSegwit || address == legacy {
-                        print("signerStruct.label: \(signerStruct.label)")
                         completion((true, signerStruct.label))
                         break
                     } else {

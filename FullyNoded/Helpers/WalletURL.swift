@@ -12,7 +12,7 @@ import UIKit
 class WalletURL {
     
     class func url(wallet: Wallet, completion: @escaping ((String?)) -> Void) {
-        CoreDataService.retrieveEntity(entityName: .newNodes) { nodes in
+        CoreDataService.retrieveEntity(entityName: .nodes) { nodes in
             guard let nodes = nodes, nodes.count > 0 else { completion(nil); return }
             
             var activeNode: [String:Any]?

@@ -109,8 +109,8 @@ class UTXOCell: UITableViewCell {
             isChangeBackground.backgroundColor = .clear
         }
         
-        if let path = utxo.path, let mixdepth = utxo.mixdepth {
-            derivationLabel.text = path + " mixdepth: \(mixdepth)"
+        if let path = utxo.path {
+            derivationLabel.text = path
         }
         
         if let address = utxo.address {

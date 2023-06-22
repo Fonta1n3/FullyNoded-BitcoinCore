@@ -172,8 +172,7 @@ class LogInViewController: UIViewController, UITextFieldDelegate {
     private func destroy(completion: @escaping ((Bool)) -> Void) {
         
         let entities:[ENTITY] = [.authKeys,
-                                 .newNodes,
-                                 .peers,
+                                 .nodes,
                                  .signers,
                                  .transactions,
                                  .utxos,

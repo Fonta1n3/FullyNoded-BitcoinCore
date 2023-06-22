@@ -76,11 +76,7 @@ class InvoiceViewController: UIViewController, UITextFieldDelegate {
             self.isFiat = false
         }
         
-        if self.invoiceText.text.hasPrefix("l")  {
-            createLightningInvoice()
-        } else {
-           updateQRImage()
-        }
+        updateQRImage()
     }
     
     
@@ -124,13 +120,9 @@ class InvoiceViewController: UIViewController, UITextFieldDelegate {
         }
         
         activeWallet { w in
-            guard let w = w else { getFromRpc(); return }
+            guard let w = w else { return }
             
-            if w.isJm {
-                showAlert(vc: self, title: "", message: "Address fetched from joinmarket.")
-            } else {
-                getFromRpc()
-            }
+            getFromRpc()
         }
     }
     
@@ -170,120 +162,7 @@ class InvoiceViewController: UIViewController, UITextFieldDelegate {
         UIPasteboard.general.string = invoiceText.text
         displayAlert(viewController: self, isError: false, message: "invoice text copied ✓")
     }
-    
-    @IBAction func generateLightningAction(_ sender: Any) {
-        createLightningInvoice()
-    }
-    
-    private func createLightningInvoice() {
-        spinner.addConnectingView(vc: self, description: "creating lightning invoice...")
-        
-        isLndNode { [weak self] isLnd in
-            guard let self = self else { return }
             
-            guard isLnd else {
-                self.createCLInvoice()
-                return
-            }
-            self.createLNDInvoice()
-        }
-    }
-    
-    private func createLNDInvoice() {
-        var amount = ""
-        var param:[String:Any] = [:]
-
-        if amountField.text != "" {
-            if isBtc {
-                if let dbl = Double(amountField.text!) {
-                    let int = Int(dbl * 100000000.0)
-                    amount = "\(int)"
-                }
-            } else if isSats {
-                if let int = Double(amountField.text!) {
-                    amount = "\(Int(int))"
-                }
-            }
-            param["value"] = amount
-        }
-        
-        var memoValue = labelField.text ?? "Fully Noded LND Invoice ⚡️"
-        
-        if memoValue == "" {
-            memoValue = "Fully Noded LND Invoice ⚡️"
-        }
-        
-        if messageField.text != "" {
-            memoValue += "- \(messageField.text!)"
-        }
-        
-        param["memo"] = "\(memoValue)"
-        param["private"] = true
-        
-        LndRpc.sharedInstance.command(.addinvoice, param, nil, nil) { (response, error) in
-            guard let dict = response, let bolt11 = dict["payment_request"] as? String else {
-                self.spinner.removeConnectingView()
-                showAlert(vc: self, title: "Error", message: error ?? "we had an issue getting your lightning invoice")
-                return
-            }
-            
-            DispatchQueue.main.async { [weak self] in
-                guard let self = self else { return }
-                
-                self.showLightningInvoice(bolt11)
-            }
-        }
-    }
-    
-    private func createCLInvoice() {
-        let commandId = UUID()
-        spinner.addConnectingView(vc: self, description: "fetching cln config...")
-        LightningRPC.sharedInstance.command(id: commandId, method: .listconfigs, param: nil) { (id, response, errorDesc) in
-            guard id == commandId else { return }
-                    
-            guard let response = response as? [String:Any] else {
-                self.spinner.removeConnectingView()
-                showAlert(vc: self, title: "Error fetching config.", message: errorDesc ?? "unknown")
-                return
-            }
-            
-            guard let experimentalOffers = response["experimental-offers"] as? Bool, experimentalOffers else {
-                self.createBolt11Invoice()
-                return
-            }
-            
-            self.promptForBolt12Or11()
-        }
-    }
-    
-    private func promptForBolt12Or11() {
-        DispatchQueue.main.async { [weak self] in
-            guard let self = self else { return }
-
-            let alert = UIAlertController(title: "Select invoice type.", message: "", preferredStyle: .alert)
-
-            alert.addAction(UIAlertAction(title: "Bolt 11", style: .default, handler: { action in
-                DispatchQueue.main.async { [weak self] in
-                    guard let self = self else { return }
-
-                    self.createBolt11Invoice()
-                }
-            }))
-
-            alert.addAction(UIAlertAction(title: "Bolt 12", style: .default, handler: { action in
-                DispatchQueue.main.async { [weak self] in
-                    guard let self = self else { return }
-
-                    self.createBolt12Invoice()
-                }
-            }))
-
-            alert.addAction(UIAlertAction(title: "Cancel", style: .cancel, handler: { action in }))
-            alert.popoverPresentationController?.sourceView = self.view
-            self.present(alert, animated: true, completion: nil)
-        }
-    }
-    
     @IBAction func generateOnchainAction(_ sender: Any) {
         generateOnchainInvoice()
     }
@@ -300,227 +179,14 @@ class InvoiceViewController: UIViewController, UITextFieldDelegate {
                 self.fetchAddress()
                 return
             }
-            if wallet.isJm {
-                self.getReceiveAddressJm(wallet: wallet)
-            } else if wallet.type == WalletType.descriptor.stringValue {
+            if wallet.type == WalletType.descriptor.stringValue {
                 self.getReceieveAddressForFullyNodedWallet(wallet)
             } else {
                 self.fetchAddress()
             }
         }
     }
-    
-    private func createBolt11Invoice() {
-        var param:[String:Any] = ["expiry": 86400]
-        var description = labelField.text ?? "Fully Noded CLN invoice"
-        
-        if description == "" {
-            description = "Fully Noded CLN bolt11 invoice"
-        }
-        
-        let label = "Fully Noded CLN invoice \(randomString(length: 10))"
-        param["label"] = label
-        
-        if amountField.text != "" {
-            if isBtc {
-                if let dbl = Double(amountField.text!) {
-                    param["amount_msat"] = Int(dbl * 100000000000.0)
-                }
-            } else if isSats {
-                if let int = Double(amountField.text!) {
-                    param["amount_msat"] = Int(int * 1000)
-                }
-            }
-        } else {
-            param["amount_msat"] = "any"
-        }
-        
-        if messageField.text != "" {
-            description += "\n\n" + messageField.text!
-        }
-        param["description"] = description
-        let commandId = UUID()
-        
-        LightningRPC.sharedInstance.command(id: commandId, method: .invoice, param: param) { [weak self] (uuid, response, errorDesc) in
-            guard let self = self else { return }
             
-            guard let dict = response as? [String:Any] else {
-                self.spinner.removeConnectingView()
-                showAlert(vc: self, title: "Error", message: errorDesc ?? "we had an issue getting your lightning invoice")
-                return
-            }
-            
-            var inv = "no invoice received..."
-            
-            if let bolt11 = dict["bolt11"] as? String {
-                inv = bolt11
-            } else if let bolt12 = dict["bolt12"] as? String {
-                inv = bolt12
-            }
-            
-            DispatchQueue.main.async { [weak self] in
-                guard let self = self else { return }
-                
-                self.showLightningInvoice(inv)
-            }
-            
-            if let warning = dict["warning_capacity"] as? String {
-                if warning != "" {
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
-                        showAlert(vc: self, title: "Warning", message: warning)
-                    }
-                }
-            }
-        }
-    }
-    
-    private func createBolt12Invoice() {
-        // amount description [issuer] [label] [quantity_max] [absolute_expiry] [recurrence] [recurrence_base] [recurrence_paywindow] [recurrence_limit] [single_use]
-        var param:[String:Any] = [:]
-        let defDesc = "Fully Noded CLN bolt12 offer"
-        var description = labelField.text ?? defDesc
-
-        if amountField.text != "" {
-            if isBtc {
-                if let dbl = Double(amountField.text!) {
-                    param["amount"] = Int(dbl * 100000000000.0)
-                }
-            } else if isSats {
-                if let int = Double(amountField.text!) {
-                    param["amount"] = Int(int * 1000)
-                }
-            }
-        } else {
-            param["amount"] = "any"
-        }
-
-        if messageField.text != "" {
-            description += "\n\n" + messageField.text!
-        }
-        param["description"] = description
-        let commandId = UUID()
-
-        LightningRPC.sharedInstance.command(id: commandId, method: .offer, param: param) { [weak self] (uuid, response, errorDesc) in
-            guard let self = self else { return }
-
-            guard let dict = response as? [String:Any], let offer = dict["bolt12"] as? String else {
-                self.spinner.removeConnectingView()
-                showAlert(vc: self, title: "Error", message: errorDesc ?? "we had an issue getting your lightning offer")
-                return
-            }
-
-            DispatchQueue.main.async { [weak self] in
-                guard let self = self else { return }
-
-                self.showLightningInvoice(offer)
-            }
-
-            if let warning = dict["warning_capacity"] as? String {
-                if warning != "" {
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
-                        showAlert(vc: self, title: "Warning", message: warning)
-                    }
-                }
-            }
-        }
-    }
-    
-    
-    private func getReceiveAddressJm(wallet: Wallet) {
-        DispatchQueue.main.async { [weak self] in
-            guard let self = self else { return }
-            
-            self.spinner.removeConnectingView()
-            
-            let title = "Select a mixdepth to deposit to."
-            
-            let alert = UIAlertController(title: title, message: "", preferredStyle: .alert)
-            
-            alert.addAction(UIAlertAction(title: "Mixdepth 0", style: .default, handler: { [weak self] action in
-                guard let self = self else { return }
-                                                
-                self.getJmAddressFromMixDepth(mixDepth: 0, wallet: wallet)
-            }))
-            
-            alert.addAction(UIAlertAction(title: "Mixdepth 1", style: .default, handler: { [weak self] action in
-                guard let self = self else { return }
-                                                
-                self.getJmAddressFromMixDepth(mixDepth: 1, wallet: wallet)
-            }))
-            
-            alert.addAction(UIAlertAction(title: "Mixdepth 2", style: .default, handler: { [weak self] action in
-                guard let self = self else { return }
-                                                
-                self.getJmAddressFromMixDepth(mixDepth: 2, wallet: wallet)
-            }))
-            
-            alert.addAction(UIAlertAction(title: "Mixdepth 3", style: .default, handler: { [weak self] action in
-                guard let self = self else { return }
-                                                
-                self.getJmAddressFromMixDepth(mixDepth: 3, wallet: wallet)
-            }))
-            
-            alert.addAction(UIAlertAction(title: "Mixdepth 4", style: .default, handler: { [weak self] action in
-                guard let self = self else { return }
-                
-                self.getJmAddressFromMixDepth(mixDepth: 4, wallet: wallet)
-            }))
-            
-            alert.addAction(UIAlertAction(title: "Cancel", style: .cancel, handler: { action in }))
-            alert.popoverPresentationController?.sourceView = self.view
-            self.present(alert, animated: true, completion: nil)
-        }
-    }
-    
-    private func getJmAddressFromMixDepth(mixDepth: Int, wallet: Wallet) {
-        spinner.addConnectingView(vc: self, description: "getting address from jm...")
-        var w = wallet
-        if w.token != nil {
-            JMRPC.sharedInstance.command(method: .getaddress(jmWallet: w, mixdepth: mixDepth), param: nil) { [weak self] (response, errorDesc) in
-                guard let self = self else { return }
-                
-                if errorDesc == "Invalid credentials." {
-                    JMUtils.unlockWallet(wallet: w) { [weak self] (unlockedWallet, message) in
-                        guard let self = self else { return }
-                        guard let unlockedWallet = unlockedWallet else { return }
-                        
-                        guard let encryptedToken = Crypto.encrypt(unlockedWallet.token.utf8) else {
-                            self.spinner.removeConnectingView()
-                            showAlert(vc: self, title: "", message: "Unable to decrypt your jm auth token.")
-                            return
-                        }
-                        
-                        w.token = encryptedToken
-                        self.getJmAddressFromMixDepth(mixDepth: mixDepth, wallet: w)
-                    }
-                    
-                } else {
-                    guard let response = response as? [String:Any],
-                    let address = response["address"] as? String else {
-                        showAlert(vc: self, title: "", message: errorDesc ?? "unknown error getting jm address.")
-                        return
-                    }
-                    self.spinner.removeConnectingView()
-                    self.showAddress(address: address)
-                }
-            }
-        } else {
-            JMUtils.unlockWallet(wallet: w) { [weak self] (unlockedWallet, message) in
-                guard let self = self else { return }
-                guard let unlockedWallet = unlockedWallet else { return }
-                
-                guard let encryptedToken = Crypto.encrypt(unlockedWallet.token.utf8) else {
-                    self.spinner.removeConnectingView()
-                    showAlert(vc: self, title: "", message: "Unable to decrypt your jm auth token.")
-                    return
-                }
-                
-                w.token = encryptedToken
-                self.getJmAddressFromMixDepth(mixDepth: mixDepth, wallet: w)
-            }
-        }
-    }
-    
     private func getReceieveAddressForFullyNodedWallet(_ wallet: Wallet) {
         let index = Int(wallet.index) + 1
         
@@ -577,24 +243,7 @@ class InvoiceViewController: UIViewController, UITextFieldDelegate {
             self.spinner.removeConnectingView()
         }
     }
-    
-    private func showLightningInvoice(_ invoice: String) {
-        DispatchQueue.main.async { [weak self] in
-            guard let self = self else { return }
-            if invoice.hasPrefix("lno") {
-                self.addressOutlet.text = "see bolt12 lightning offer below"
-                self.invoiceHeader.text = "Bolt12 Offer"
-            } else {
-                self.addressOutlet.text = "see bolt11 lightning invoice below"
-            }
-            
-            self.addressString = invoice
-            self.qrView.image = self.generateQrCode(key: invoice)
-            self.invoiceText.text = invoice
-            self.spinner.removeConnectingView()
-        }
-    }
-    
+        
     private func shareText(_ text: String) {
         DispatchQueue.main.async { [weak self] in
             guard let self = self else { return }
@@ -644,41 +293,39 @@ class InvoiceViewController: UIViewController, UITextFieldDelegate {
             }
         }
         
-        if !addressString.hasPrefix("lntb") && !addressString.hasPrefix("lightning:") && !addressString.hasPrefix("lnbc") && !addressString.hasPrefix("lnbcrt") {
-            let label = self.labelField.text?.replacingOccurrences(of: " ", with: "%20") ?? ""
-            let message = self.messageField.text?.replacingOccurrences(of: " ", with: "%20") ?? ""
-            textToShareViaQRCode = "bitcoin:\(self.addressString)"
-            let dict = ["amount": amount, "label": label, "message": message]
-            
-            if amount != "" || label != "" || message != "" {
-                textToShareViaQRCode += "?"
-            }
-            
-            for (key, value) in dict {
-                if textToShareViaQRCode.contains("amount=") || textToShareViaQRCode.contains("label=") || textToShareViaQRCode.contains("message=") {
-                    if value != "" {
-                        textToShareViaQRCode += "&\(key)=\(value)"
-                    }
-                } else {
-                    if value != "" {
-                        textToShareViaQRCode += "\(key)=\(value)"
-                    }
+        let label = self.labelField.text?.replacingOccurrences(of: " ", with: "%20") ?? ""
+        let message = self.messageField.text?.replacingOccurrences(of: " ", with: "%20") ?? ""
+        textToShareViaQRCode = "bitcoin:\(self.addressString)"
+        let dict = ["amount": amount, "label": label, "message": message]
+        
+        if amount != "" || label != "" || message != "" {
+            textToShareViaQRCode += "?"
+        }
+        
+        for (key, value) in dict {
+            if textToShareViaQRCode.contains("amount=") || textToShareViaQRCode.contains("label=") || textToShareViaQRCode.contains("message=") {
+                if value != "" {
+                    textToShareViaQRCode += "&\(key)=\(value)"
+                }
+            } else {
+                if value != "" {
+                    textToShareViaQRCode += "\(key)=\(value)"
                 }
             }
+        }
+        
+        newImage = self.generateQrCode(key:textToShareViaQRCode)
+        
+        DispatchQueue.main.async { [weak self] in
+            guard let self = self else { return }
             
-            newImage = self.generateQrCode(key:textToShareViaQRCode)
+            UIView.transition(with: self.qrView,
+                              duration: 0.75,
+                              options: .transitionCrossDissolve,
+                              animations: { self.qrView.image = newImage },
+                              completion: nil)
             
-            DispatchQueue.main.async { [weak self] in
-                guard let self = self else { return }
-                
-                UIView.transition(with: self.qrView,
-                                  duration: 0.75,
-                                  options: .transitionCrossDissolve,
-                                  animations: { self.qrView.image = newImage },
-                                  completion: nil)
-                
-                self.invoiceText.text = self.textToShareViaQRCode
-            }
+            self.invoiceText.text = self.textToShareViaQRCode
         }
     }
     

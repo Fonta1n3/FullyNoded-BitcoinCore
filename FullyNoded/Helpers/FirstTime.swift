@@ -10,7 +10,6 @@ enum FirstTime {
     
     static func firstTimeHere() -> Bool {
         if KeyChain.getData("privateKey") == nil {
-            /// Sets a new encryption key.
             return KeyChain.set(Crypto.privateKey(), forKey: "privateKey")
         } else {
             return true

@@ -23,7 +23,6 @@ class SeedDisplayerViewController: UIViewController, UINavigationControllerDeleg
     var blockheight:Int64!
     var version:Int = 0
     var dict = [String:Any]()
-    var jmMessage = ""
     
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -81,17 +80,7 @@ class SeedDisplayerViewController: UIViewController, UINavigationControllerDeleg
         }
         
         self.version = version
-        if jmMessage != "" {
-            DispatchQueue.main.async { [weak self] in
-                guard let self = self else { return }
-                
-                self.textView.text = self.jmMessage
-                showAlert(vc: self, title: "", message: "Join Market Wallet created ✓")
-                NotificationCenter.default.post(name: .refreshWallet, object: nil)
-            }
-        } else {
-            getWords()
-        }
+        getWords()
         
     }
     
@@ -185,7 +174,7 @@ class SeedDisplayerViewController: UIViewController, UINavigationControllerDeleg
                     "blockheight": Int(self.blockheight),
                     "label": "Taproot Single Sig",
                     "password": password1,
-                    "watching":[]
+                    "watching":[] as [String]
                 ]
                 
                 self.importAccountMap(accountMap)
@@ -334,7 +323,7 @@ class SeedDisplayerViewController: UIViewController, UINavigationControllerDeleg
                             "next_index": 0,
                             "timestamp": "now",
                             "internal": false
-                        ],
+                        ] as [String:Any],
                         [
                             "desc": self.changeDesc,
                             "active": true,
@@ -342,7 +331,7 @@ class SeedDisplayerViewController: UIViewController, UINavigationControllerDeleg
                             "next_index": 0,
                             "timestamp": "now",
                             "internal": true
-                        ]
+                        ] as [String:Any]
                     ]
                 ] as [String:Any])
                 

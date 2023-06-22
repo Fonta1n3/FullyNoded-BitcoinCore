@@ -15,13 +15,6 @@ class NodesViewController: UIViewController, UITableViewDelegate, UITableViewDat
     let ud = UserDefaults.standard
     var addButton = UIBarButtonItem()
     var editButton = UIBarButtonItem()
-    var isNostr = false
-    var isLightning = false
-    var isJoinMarket = false
-    var isBitcoinCore = false
-    var isLND = false
-    var isCLN = false
-    private var authenticated = false
     @IBOutlet var nodeTable: UITableView!
     
     override func viewDidLoad() {
@@ -37,16 +30,12 @@ class NodesViewController: UIViewController, UITableViewDelegate, UITableViewDat
     }
     
     override func viewDidAppear(_ animated: Bool) {
-        isNostr = false
-        isLightning = false
-        isJoinMarket = false
-        isBitcoinCore = false
         getNodes()
     }
     
     func getNodes() {
         nodeArray.removeAll()
-        CoreDataService.retrieveEntity(entityName: .newNodes) { [weak self] nodes in
+        CoreDataService.retrieveEntity(entityName: .nodes) { [weak self] nodes in
             guard let self = self else { return }
             
             guard let nodes = nodes else {
@@ -116,12 +105,7 @@ class NodesViewController: UIViewController, UITableViewDelegate, UITableViewDat
         
         let nodeStruct = NodeStruct(dictionary: nodeArray[indexPath.section])
         
-        if !nodeStruct.uncleJim {
-            label.text = nodeStruct.label
-        } else {
-            label.text = "***shared node***"
-        }
-        
+        label.text = nodeStruct.label
         isActive.isOn = nodeArray[indexPath.section]["isActive"] as? Bool ?? false
         isActive.restorationIdentifier = "\(indexPath.section)"
         isActive.addTarget(self, action: #selector(setActiveNow(_:)), for: .touchUpInside)
@@ -134,16 +118,8 @@ class NodesViewController: UIViewController, UITableViewDelegate, UITableViewDat
         
         icon.tintColor = .white
         
-        if nodeStruct.isJoinMarket {
-            icon.image = UIImage(systemName: "arrow.triangle.2.circlepath")
-            background.backgroundColor = .black
-        } else if nodeStruct.isLightning {
-            icon.image = UIImage(systemName: "bolt")
-            background.backgroundColor = .systemOrange
-        } else {
-            icon.image = UIImage(systemName: "link")
-            background.backgroundColor = .systemBlue
-        }
+        icon.image = UIImage(systemName: "link")
+        background.backgroundColor = .systemBlue
         
         return cell
     }
@@ -177,7 +153,7 @@ class NodesViewController: UIViewController, UITableViewDelegate, UITableViewDat
     }
     
     private func deleteNode(nodeId: UUID, indexPath: IndexPath) {
-        CoreDataService.deleteEntity(id: nodeId, entityName: .newNodes) { [unowned vc = self] success in
+        CoreDataService.deleteEntity(id: nodeId, entityName: .nodes) { [unowned vc = self] success in
             if success {
                 DispatchQueue.main.async { [unowned vc = self] in
                     vc.nodeArray.remove(at: indexPath.section)
@@ -215,56 +191,32 @@ class NodesViewController: UIViewController, UITableViewDelegate, UITableViewDat
         
         if index < nodeArray.count {
             
-            CoreDataService.update(id: nodeStr.id!, keyToUpdate: "isActive", newValue: selectedSwitch.isOn, entity: .newNodes) { [unowned vc = self] success in
+            CoreDataService.update(id: nodeStr.id!, keyToUpdate: "isActive", newValue: selectedSwitch.isOn, entity: .nodes) { [unowned vc = self] success in
                 if success {
-                    if !nodeStr.isLightning && !nodeStr.isJoinMarket {
-                        vc.ud.removeObject(forKey: "walletName")
-                    }
+                    vc.ud.removeObject(forKey: "walletName")
                     
                     if vc.nodeArray.count == 1 {
-                        if nodeStr.isNostr {
-                            if !selectedSwitch.isOn {
-                                //MakeRPCCall.sharedInstance.disconnect()
-                            } else {
-                                MakeRPCCall.sharedInstance.connectToRelay(node: nodeStr)
-                            }
-                        }
                         vc.reloadTable()
                     }
-                                        
                 } else {
                     displayAlert(viewController: vc, isError: true, message: "error updating node")
                 }
             }
             
             if nodeArray.count > 1 {
-                
-                if nodeStr.isNostr {
-                    if !selectedSwitch.isOn {
-                        //MakeRPCCall.sharedInstance.disconnect()
-                    } else {
-                        MakeRPCCall.sharedInstance.connectToRelay(node: nodeStr)
-                    }
-                }
-                
+                                
                 for (i, node) in nodeArray.enumerated() {
                     
                     if i != index {
                         let str = NodeStruct(dictionary: node)
                         
                         if str.id != nodeStr.id {
-                            if !nodeStr.isLightning && !str.isLightning && !nodeStr.isJoinMarket && !str.isJoinMarket {
-                                CoreDataService.update(id: str.id!, keyToUpdate: "isActive", newValue: false, entity: .newNodes) { _ in }
-                            }
-                            
-                            if nodeStr.isLightning && str.isLightning || nodeStr.isJoinMarket && str.isJoinMarket {
-                                CoreDataService.update(id: str.id!, keyToUpdate: "isActive", newValue: false, entity: .newNodes) { _ in }
-                            }
+                            CoreDataService.update(id: str.id!, keyToUpdate: "isActive", newValue: false, entity: .nodes) { _ in }
                         }
                     }
                     
                     if i + 1 == nodeArray.count {
-                        CoreDataService.retrieveEntity(entityName: .newNodes) { nodes in
+                        CoreDataService.retrieveEntity(entityName: .nodes) { nodes in
                             if nodes != nil {
                                 DispatchQueue.main.async { [unowned vc = self] in
                                     vc.nodeArray.removeAll()
@@ -276,10 +228,8 @@ class NodesViewController: UIViewController, UITableViewDelegate, UITableViewDat
                                     }
                                     vc.nodeTable.reloadData()
                                     
-                                    if !nodeStr.isLightning && !nodeStr.isJoinMarket {
-                                        if selectedSwitch.isOn {
-                                            NotificationCenter.default.post(name: .refreshNode, object: nil, userInfo: nil)
-                                        }
+                                    if selectedSwitch.isOn {
+                                        NotificationCenter.default.post(name: .refreshNode, object: nil, userInfo: nil)
                                     }
                                     
 //                                    if !nodeStr.isJoinMarket {
@@ -297,7 +247,7 @@ class NodesViewController: UIViewController, UITableViewDelegate, UITableViewDat
     }
     
     func reloadTable() {
-        CoreDataService.retrieveEntity(entityName: .newNodes) { nodes in
+        CoreDataService.retrieveEntity(entityName: .nodes) { nodes in
             if nodes != nil {
                 DispatchQueue.main.async { [unowned vc = self] in
                     vc.nodeArray.removeAll()
@@ -338,52 +288,9 @@ class NodesViewController: UIViewController, UITableViewDelegate, UITableViewDat
             
             let alert = UIAlertController(title: "Scan QR or add manually?", message: "You can add the node credentials manually or scan a QR code.", preferredStyle: alertStyle)
             
-            alert.addAction(UIAlertAction(title: "Nostrnode", style: .default, handler: { [weak self] action in
-                guard let self = self else { return }
-                self.isNostr = true
-                self.isLightning = false
-                self.isJoinMarket = false
-                self.isBitcoinCore = false
-                self.segueToAddNodeManually()
-            }))
-            
-            alert.addAction(UIAlertAction(title: "Bitcoin Core", style: .default, handler: { [weak self] action in
+            alert.addAction(UIAlertAction(title: "Manually", style: .default, handler: { [weak self] action in
                 guard let self = self else { return }
                 
-                self.isLightning = false
-                self.isJoinMarket = false
-                self.isBitcoinCore = true
-                self.segueToAddNodeManually()
-            }))
-            
-            alert.addAction(UIAlertAction(title: "Join Market", style: .default, handler: { [weak self] action in
-                guard let self = self else { return }
-                
-                self.isLightning = false
-                self.isJoinMarket = true
-                self.isBitcoinCore = false
-                self.segueToAddNodeManually()
-            }))
-            
-            alert.addAction(UIAlertAction(title: "Core Lightning", style: .default, handler: { [weak self] action in
-                guard let self = self else { return }
-                
-                self.isCLN = true
-                self.isLND = false
-                self.isLightning = true
-                self.isJoinMarket = false
-                self.isBitcoinCore = false
-                self.segueToAddNodeManually()
-            }))
-            
-            alert.addAction(UIAlertAction(title: "LND", style: .default, handler: { [weak self] action in
-                guard let self = self else { return }
-                
-                self.isLND = true
-                self.isCLN = false
-                self.isLightning = true
-                self.isJoinMarket = false
-                self.isBitcoinCore = false
                 self.segueToAddNodeManually()
             }))
             
@@ -417,17 +324,13 @@ class NodesViewController: UIViewController, UITableViewDelegate, UITableViewDat
     }
     
     private func addBtcRpcQr(url: String) {
-        QuickConnect.addNode(uncleJim: false, url: url) { [weak self] (success, errorMessage) in
+        QuickConnect.addNode(url: url) { [weak self] (success, errorMessage) in
             if success {
-                if !url.hasPrefix("clightning-rpc") && !url.hasPrefix("lndconnect:") && !url.hasPrefix("http") {
-                    DispatchQueue.main.async { [weak self] in
-                        guard let self = self else { return }
-                        
-                        NotificationCenter.default.post(name: .refreshNode, object: nil, userInfo: nil)
-                        self.tabBarController?.selectedIndex = 0
-                    }
-                } else {
-                    self?.reloadTable()
+                DispatchQueue.main.async { [weak self] in
+                    guard let self = self else { return }
+                    
+                    NotificationCenter.default.post(name: .refreshNode, object: nil, userInfo: nil)
+                    self.tabBarController?.selectedIndex = 0
                 }
             } else {
                 displayAlert(viewController: self, isError: true, message: "Error adding that node: \(errorMessage ?? "unknown")")
@@ -440,11 +343,6 @@ class NodesViewController: UIViewController, UITableViewDelegate, UITableViewDat
         if segue.identifier == "updateNode" {
             if let vc = segue.destination as? NodeDetailViewController {
                 vc.selectedNode = self.nodeArray[selectedIndex]
-                if self.nodeArray[selectedIndex]["rpcpassword"] != nil {
-                    vc.isCLN = true
-                } else {
-                    vc.isLND = true
-                }
                 vc.createNew = false
             }
         }
@@ -452,12 +350,6 @@ class NodesViewController: UIViewController, UITableViewDelegate, UITableViewDat
         if segue.identifier == "segueToAddBitcoinCoreNode" {
             if let vc = segue.destination as? NodeDetailViewController {
                 vc.createNew = true
-                vc.isLightning = self.isLightning
-                vc.isJoinMarket = self.isJoinMarket
-                vc.isNostr = self.isNostr
-                vc.isBitcoinCore = self.isBitcoinCore
-                vc.isLND = self.isLND
-                vc.isCLN = self.isCLN
             }
         }
         

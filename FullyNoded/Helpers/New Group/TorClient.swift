@@ -284,7 +284,7 @@ class TorClient: NSObject, URLSessionDelegate {
             let authKeysStr = AuthKeysStruct.init(dictionary: authKeys[0])
             let authorizedKey = decryptedValue(authKeysStr.privateKey)
             
-            CoreDataService.retrieveEntity(entityName: .newNodes) { [weak self] nodes in
+            CoreDataService.retrieveEntity(entityName: .nodes) { [weak self] nodes in
                 guard let self = self, let nodes = nodes, nodes.count > 0 else { completion(); return }
                 
                 for (i, nodeDict) in nodes.enumerated() {
