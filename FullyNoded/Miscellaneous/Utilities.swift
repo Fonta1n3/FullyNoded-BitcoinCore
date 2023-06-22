@@ -128,12 +128,6 @@ public func rounded(number: Double) -> Double {
     
 }
 
-public func displayAlert(viewController: UIViewController?, isError: Bool, message: String) {
-    if viewController != nil {
-        showAlert(vc: viewController, title: "Error", message: message)
-    }
-}
-
 public func hexStringToUIColor(hex:String) -> UIColor {
     var cString:String = hex.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
 

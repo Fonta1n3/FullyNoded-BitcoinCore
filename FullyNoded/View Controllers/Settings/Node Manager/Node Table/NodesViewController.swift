@@ -39,9 +39,7 @@ class NodesViewController: UIViewController, UITableViewDelegate, UITableViewDat
             guard let self = self else { return }
             
             guard let nodes = nodes else {
-                displayAlert(viewController: self,
-                             isError: true,
-                             message: "error getting nodes from core data")
+                showAlert(vc: self, title: "", message: "Error getting nodes from core data.")
                 return
             }
             
@@ -160,9 +158,7 @@ class NodesViewController: UIViewController, UITableViewDelegate, UITableViewDat
                     vc.nodeTable.deleteSections(IndexSet.init(arrayLiteral: indexPath.section), with: .fade)
                 }
             } else {
-                displayAlert(viewController: vc,
-                             isError: true,
-                             message: "We had an error trying to delete that node")
+                showAlert(vc: vc, title: "", message: "Error deleting that node.")
             }
         }
     }
@@ -199,7 +195,7 @@ class NodesViewController: UIViewController, UITableViewDelegate, UITableViewDat
                         vc.reloadTable()
                     }
                 } else {
-                    displayAlert(viewController: vc, isError: true, message: "error updating node")
+                    showAlert(vc: vc, title: "", message: "Error updating node.")
                 }
             }
             
@@ -261,15 +257,9 @@ class NodesViewController: UIViewController, UITableViewDelegate, UITableViewDat
                 }
                 
             } else {
-                
-                displayAlert(viewController: self,
-                             isError: true,
-                             message: "error getting nodes from core data")
-                
+                showAlert(vc: self, title: "", message: "Error getting nodes from core data.")
             }
-            
         }
-        
     }
     
     private func reduced(label: String) -> String {
@@ -333,7 +323,7 @@ class NodesViewController: UIViewController, UITableViewDelegate, UITableViewDat
                     self.tabBarController?.selectedIndex = 0
                 }
             } else {
-                displayAlert(viewController: self, isError: true, message: "Error adding that node: \(errorMessage ?? "unknown")")
+                showAlert(vc: self, title: "", message: "Error adding that node: \(errorMessage ?? "unknown")")
             }
         }
     }

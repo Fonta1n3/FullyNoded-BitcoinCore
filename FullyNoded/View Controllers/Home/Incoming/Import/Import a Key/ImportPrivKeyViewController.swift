@@ -68,12 +68,7 @@ class ImportPrivKeyViewController: UIViewController, UITextFieldDelegate {
         importedKey = key
         
         func showError() {
-            DispatchQueue.main.async {
-                self.connectingView.removeConnectingView()
-                displayAlert(viewController: self,
-                             isError: true,
-                             message: "Invalid key.")
-            }
+            showAlert(vc: self, title: "", message: "Invalid key.")
         }
         
         if key != "" {

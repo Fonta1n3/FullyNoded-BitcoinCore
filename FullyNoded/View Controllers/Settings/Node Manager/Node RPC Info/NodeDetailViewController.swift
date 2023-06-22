@@ -177,16 +177,14 @@ class NodeDetailViewController: UIViewController, UITextFieldDelegate, UINavigat
                             if success {
                                 vc.nodeAddedSuccess()
                             } else {
-                                displayAlert(viewController: vc, isError: true, message: "Error saving tor node")
+                                showAlert(vc: self, title: "", message: "Error saving tor node")
                             }
                         }
                     }
                 }
             }
             guard nodeLabel.text != "" else {
-                displayAlert(viewController: self,
-                             isError: true,
-                             message: "Fill out all fields first")
+                showAlert(vc: self, title: "", message: "Fill out all fields first")
                 return
             }
             save()
@@ -197,7 +195,7 @@ class NodeDetailViewController: UIViewController, UITextFieldDelegate, UINavigat
             if nodeLabel.text != "" {
                 CoreDataService.update(id: id, keyToUpdate: "label", newValue: nodeLabel.text!, entity: .nodes) { success in
                     if !success {
-                        displayAlert(viewController: self, isError: true, message: "error updating label")
+                        showAlert(vc: self, title: "", message: "Error updating label.")
                     }
                 }
             }
@@ -206,7 +204,7 @@ class NodeDetailViewController: UIViewController, UITextFieldDelegate, UINavigat
                 guard let enc = encryptedValue((rpcUserField.text)!.dataUsingUTF8StringEncoding) else { return }
                 CoreDataService.update(id: id, keyToUpdate: "rpcuser", newValue: enc, entity: .nodes) { success in
                     if !success {
-                        displayAlert(viewController: self, isError: true, message: "error updating rpc username")
+                        showAlert(vc: self, title: "", message: "Error updating rpc username.")
                     }
                 }
             }
@@ -215,7 +213,7 @@ class NodeDetailViewController: UIViewController, UITextFieldDelegate, UINavigat
                 guard let enc = encryptedValue((rpcPassword.text)!.dataUsingUTF8StringEncoding) else { return }
                 CoreDataService.update(id: id, keyToUpdate: "rpcpassword", newValue: enc, entity: .nodes) { success in
                     if !success {
-                        displayAlert(viewController: self, isError: true, message: "error updating rpc password")
+                        showAlert(vc: self, title: "", message: "Error updating rpc password.")
                     }
                 }
             }
@@ -231,7 +229,7 @@ class NodeDetailViewController: UIViewController, UITextFieldDelegate, UINavigat
                     if success {
                         vc.nodeAddedSuccess()
                     } else {
-                        displayAlert(viewController: vc, isError: true, message: "Error updating node!")
+                        showAlert(vc: self, title: "", message: "Error updating the node.")
                     }
                 }
             }
@@ -323,7 +321,7 @@ class NodeDetailViewController: UIViewController, UITextFieldDelegate, UINavigat
                     NotificationCenter.default.post(name: .refreshNode, object: nil, userInfo: nil)
                 }
             } else {
-                displayAlert(viewController: self, isError: true, message: "Error adding that node: \(errorMessage ?? "unknown")")
+                showAlert(vc: self, title: "Error adding node.", message: "\(errorMessage ?? "unknown")")
             }
         }
     }

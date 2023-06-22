@@ -111,7 +111,7 @@ class UTXOViewController: UIViewController, UITextFieldDelegate, UINavigationCon
                     guard let self = self else { return }
                     
                     self.loadUnlockedUtxos()
-                    displayAlert(viewController: self, isError: true, message: errorMessage ?? "unknown error")
+                    showAlert(vc: self, title: "", message: errorMessage ?? "unknown error")
                 }
                 
                 return
@@ -131,7 +131,7 @@ class UTXOViewController: UIViewController, UITextFieldDelegate, UINavigationCon
                     guard let self = self else { return }
                     
                     self.loadUnlockedUtxos()
-                    displayAlert(viewController: self, isError: true, message: "utxo was not locked")
+                    showAlert(vc: self, title: "", message: "Utxo was not locked.")
                 }
             }
         }

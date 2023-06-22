@@ -745,7 +745,7 @@ class VerifyTransactionViewController: UIViewController, UINavigationControllerD
                     self.spinner.removeConnectingView()
                     if let txid = result["txid"] as? String {
                         self.saveNewTx(txid)
-                        displayAlert(viewController: self, isError: false, message: "fee bumped from \(originalFee.avoidNotation) to \(newFee.avoidNotation)")
+                        showAlert(vc: self, title: "", message: "fee bumped from \(originalFee.avoidNotation) to \(newFee.avoidNotation)")
                     } else if let errors = result["errors"] as? NSArray {
                         showAlert(vc: self, title: "There was an error increasing the fee.", message: "\(errors)")
                     }
@@ -831,7 +831,7 @@ class VerifyTransactionViewController: UIViewController, UINavigationControllerD
                 
                 guard let _ = response as? String else {
                     self.spinner.removeConnectingView()
-                    displayAlert(viewController: self, isError: true, message: errorMessage ?? "")
+                    showAlert(vc: self, title: "", message: errorMessage ?? "")
                     return
                 }
                 
@@ -841,7 +841,7 @@ class VerifyTransactionViewController: UIViewController, UINavigationControllerD
                     self.disableSendButton()
                     self.spinner.removeConnectingView()
                     self.navigationItem.title = "Sent ✓"
-                    displayAlert(viewController: self, isError: false, message: "Transaction sent ✓")
+                    showAlert(vc: self, title: "", message: "Transaction sent ✓")
                 }
             }
         }
@@ -852,7 +852,7 @@ class VerifyTransactionViewController: UIViewController, UINavigationControllerD
                 
                 guard let dict = object as? NSDictionary else {
                     self.spinner.removeConnectingView()
-                    displayAlert(viewController: self, isError: true, message: errorDesc ?? "")
+                    showAlert(vc: self, title: "", message: errorDesc ?? "")
                     return
                 }
                 
@@ -909,7 +909,7 @@ class VerifyTransactionViewController: UIViewController, UINavigationControllerD
                 
                 guard let dict = object as? NSDictionary else {
                     self.spinner.removeConnectingView()
-                    displayAlert(viewController: self, isError: true, message: errorDesc ?? "")
+                    showAlert(vc: self, title: "", message: errorDesc ?? "")
                     return
                 }
                 
@@ -1440,7 +1440,7 @@ class VerifyTransactionViewController: UIViewController, UINavigationControllerD
                 
                 guard let txDict = object as? NSDictionary, let outputs = txDict["vout"] as? NSArray else {
                     self.spinner.removeConnectingView()
-                    displayAlert(viewController: self, isError: true, message: "Error decoding raw transaction")
+                    showAlert(vc: self, title: "", message: "Error decoding raw transaction")
                     return
                 }
                 
@@ -1491,7 +1491,7 @@ class VerifyTransactionViewController: UIViewController, UINavigationControllerD
                     
                     guard errorMessage.contains("No such mempool transaction") else {
                         self.spinner.removeConnectingView()
-                        displayAlert(viewController: self, isError: true, message: "Error parsing inputs: \(errorMessage)")
+                        showAlert(vc: self, title: "", message: "Error parsing inputs: \(errorMessage)")
                         return
                     }
                     
@@ -2186,7 +2186,7 @@ class VerifyTransactionViewController: UIViewController, UINavigationControllerD
             guard let walletDir = walletDir else {
                 DispatchQueue.main.async {
                     self.spinner.removeConnectingView()
-                    displayAlert(viewController: self, isError: true, message: "error getting wallets: \(message ?? "")")
+                    showAlert(vc: self, title: "", message: "error getting wallets: \(message ?? "")")
                 }
                 return
             }
@@ -2411,7 +2411,7 @@ class VerifyTransactionViewController: UIViewController, UINavigationControllerD
         DispatchQueue.main.async { [unowned vc = self] in
             let pasteBoard = UIPasteboard.general
             pasteBoard.string = vc.txid
-            displayAlert(viewController: vc, isError: false, message: "Transaction ID copied to clipboard")
+            showAlert(vc: vc, title: "", message: "Transaction ID copied to clipboard")
         }
     }
         

@@ -51,7 +51,7 @@ class LockedViewController: UIViewController {
             
             guard let locked = response as? NSArray else {
                 self.finishedLoading()
-                displayAlert(viewController: self, isError: true, message: errorMessage ?? "unknown error")
+                showAlert(vc: self, title: "", message: errorMessage ?? "unknown error")
                 return
             }
             
@@ -63,7 +63,7 @@ class LockedViewController: UIViewController {
             
             for lockedUtxo in locked {
                 guard let utxoDict = lockedUtxo as? [String:Any] else {
-                    displayAlert(viewController: self, isError: true, message: "Error decoding your locked UTXO's")
+                    showAlert(vc: self, title: "", message: "Error decoding your locked UTXO's")
                     return
                 }
                 
@@ -100,7 +100,7 @@ class LockedViewController: UIViewController {
     
     private func unlock(_ utxo: Utxo) {
         spinner.addConnectingView(vc: self, description: "unlocking...")
-        let param:Lock_Unspent = .init(["unlock": true, "transactions": [["txid":utxo.txid,"vout":utxo.vout]]])
+        let param:Lock_Unspent = .init(["unlock": true, "transactions": [["txid":utxo.txid,"vout":utxo.vout] as [String:Any]]])
         
         Reducer.sharedInstance.makeCommand(command: .lockunspent(param)) { (response, errorMessage) in
             guard let success = response as? Bool else {
@@ -108,7 +108,7 @@ class LockedViewController: UIViewController {
                     guard let self = self else { return }
                     
                     self.loadLockedUTxos()
-                    displayAlert(viewController: self, isError: true, message: errorMessage ?? "unknown error")
+                    showAlert(vc: self, title: "", message: errorMessage ?? "unknown error")
                 }
                 
                 return
@@ -128,7 +128,7 @@ class LockedViewController: UIViewController {
                     guard let self = self else { return }
                     
                     self.loadLockedUTxos()
-                    displayAlert(viewController: self, isError: true, message: "utxo was not locked")
+                    showAlert(vc: self, title: "", message: "utxo was not locked")
                 }
             }
         }

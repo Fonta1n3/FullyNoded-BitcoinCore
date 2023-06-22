@@ -105,7 +105,7 @@ class MainMenuViewController: UIViewController {
     override func viewDidAppear(_ animated: Bool) {
         if initialLoad {
             if !firstTimeHere() {
-                displayAlert(viewController: self, isError: true, message: "There was a critical error setting your devices encryption key, please delete and reinstall the app")
+                showAlert(vc: self, title: "", message: "There was a critical error setting your devices encryption key, please delete and reinstall the app")
             } else {
                 if mgr?.state != .started && mgr?.state != .connected  {
                     if KeyChain.getData("UnlockPassword") != nil {
@@ -116,7 +116,14 @@ class MainMenuViewController: UIViewController {
                         mgr?.start(delegate: self)
                         self.refreshNode()
                         self.removeBackView()
-                        self.loadTable()
+                        if let address = activeNode?.onionAddress {
+                            guard let decryptedAddress = Crypto.decrypt(address), let addressText = decryptedAddress.utf8String else { return }
+                            
+                            if addressText.hasPrefix("127.0.0.1:") || addressText.hasPrefix("localhost:") {
+                                self.loadTable()
+                            }
+                        }
+                        
                         DispatchQueue.main.async { [weak self] in
                             self?.torProgressLabel.isHidden = true
                             self?.progressView.isHidden = true
@@ -528,7 +535,7 @@ class MainMenuViewController: UIViewController {
             guard let blockchainInfo = blockchainInfo else {
                 
                 guard let message = message else {
-                    displayAlert(viewController: self, isError: true, message: "unknown error")
+                    showAlert(vc: self, title: "", message: "unknown error")
                     return
                 }
                 
@@ -572,7 +579,7 @@ class MainMenuViewController: UIViewController {
             
             guard let response = response else {
                 self.removeLoader()
-                displayAlert(viewController: self, isError: true, message: errorMessage ?? "unknown error")
+                showAlert(vc: self, title: "", message: errorMessage ?? "unknown error")
                 return
             }
             
@@ -593,7 +600,7 @@ class MainMenuViewController: UIViewController {
             
             guard let response = response else {
                 self.removeLoader()
-                displayAlert(viewController: self, isError: true, message: errorMessage!)
+                showAlert(vc: self, title: "", message: errorMessage!)
                 return
             }
             
@@ -614,7 +621,7 @@ class MainMenuViewController: UIViewController {
             
             guard let response = response else {
                 self.removeLoader()
-                displayAlert(viewController: self, isError: true, message: errorMessage ?? "unknown error")
+                showAlert(vc: self, title: "", message: errorMessage ?? "unknown error")
                 return
             }
             
@@ -635,7 +642,7 @@ class MainMenuViewController: UIViewController {
             
             guard let response = response else {
                 self.removeLoader()
-                displayAlert(viewController: self, isError: true, message: errorMessage ?? "unknown error")
+                showAlert(vc: self, title: "", message: errorMessage ?? "unknown error")
                 return
             }
             
@@ -656,7 +663,7 @@ class MainMenuViewController: UIViewController {
             
             guard let response = response else {
                 self.removeLoader()
-                displayAlert(viewController: self, isError: true, message: errorMessage ?? "unknown error")
+                showAlert(vc: self, title: "", message: errorMessage ?? "unknown error")
                 return
             }
             
@@ -677,7 +684,7 @@ class MainMenuViewController: UIViewController {
             
             guard let response = response else {
                 self.removeLoader()
-                displayAlert(viewController: self, isError: true, message: errorMessage ?? "unknown error")
+                showAlert(vc: self, title: "", message: errorMessage ?? "unknown error")
                 return
             }
             
@@ -752,7 +759,7 @@ class MainMenuViewController: UIViewController {
             if nodes != nil {
                 completion(nodes!)
             } else {
-                displayAlert(viewController: self, isError: true, message: "error getting nodes from coredata")
+                showAlert(vc: self, title: "", message: "error getting nodes from coredata")
                 completion(nil)
             }
         }
@@ -787,9 +794,7 @@ class MainMenuViewController: UIViewController {
                 if self.mgr?.state != .started && self.mgr?.state != .connected  {
                     self.mgr?.start(delegate: self)
                     
-                    if let node = self.activeNode {
-                        
-                    } else {
+                    if self.activeNode == nil {
                         showAlert(vc: self, title: "", message: "No active Bitcoin Core node, please toggle one on to utlize this view.")
                     }
                 }
@@ -881,10 +886,18 @@ extension MainMenuViewController: OnionManagerDelegate {
     func torConnFinished() {
         viewHasLoaded = true
         removeBackView()
-        if let activeNode = activeNode {
-            loadTable()
-        } else {
-            removeLoader()
+        
+        if let address = activeNode?.onionAddress {
+            guard let decryptedAddress = Crypto.decrypt(address), let addressText = decryptedAddress.utf8String else {
+                removeLoader()
+                return
+            }
+            
+            if addressText.contains(".onion:") {
+                self.loadTable()
+            } else {
+                removeLoader()
+            }
         }
         
         DispatchQueue.main.async { [weak self] in
@@ -897,13 +910,13 @@ extension MainMenuViewController: OnionManagerDelegate {
     }
     
     func torConnDifficulties() {
-        displayAlert(viewController: self, isError: true, message: "We are having issues connecting tor.")
+        showAlert(vc: self, title: "", message: "We are having issues connecting tor.")
         DispatchQueue.main.async { [weak self] in
             self?.torProgressLabel.isHidden = true
             self?.progressView.isHidden = true
             self?.blurView.isHidden = true
             self?.removeBackView()
-            if let activeNode = self?.activeNode {
+            if let _ = self?.activeNode {
                 self?.loadTable()
             }
         }

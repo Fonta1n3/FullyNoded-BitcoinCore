@@ -249,7 +249,7 @@ class SecurityCenterViewController: UIViewController, UITableViewDelegate, UITab
                 }
             } else {
                 connectingView.removeConnectingView()
-                displayAlert(viewController: self, isError: true, message: errorMessage ?? "")
+                showAlert(vc: self, title: "", message: errorMessage ?? "")
             }
         }
     }
@@ -268,7 +268,7 @@ class SecurityCenterViewController: UIViewController, UITableViewDelegate, UITab
                 } else {
                     alert.dismiss(animated: true, completion: {
                         DispatchQueue.main.async { [unowned vc = self] in
-                            displayAlert(viewController: vc, isError: true, message: "Passphrases did not match, wallet encryption failed")
+                            showAlert(vc: vc, title: "", message: "Passphrases did not match, wallet encryption failed")
                         }
                     })
                 }
@@ -329,7 +329,7 @@ class SecurityCenterViewController: UIViewController, UITableViewDelegate, UITab
                 } else {
                     alert.dismiss(animated: true, completion: {
                         DispatchQueue.main.async { [unowned vc = self] in
-                            displayAlert(viewController: vc, isError: true, message: "Passphrases did not match, update failed")
+                            showAlert(vc: vc, title: "", message: "Passphrases did not match, update failed")
                         }
                     })
                 }

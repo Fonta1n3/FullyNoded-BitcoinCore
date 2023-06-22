@@ -69,7 +69,7 @@ class FullyNodedWalletsViewController: UIViewController, UITableViewDelegate, UI
                     
                     self.spinner.removeConnectingView()
                     self.initialLoad = false
-                    displayAlert(viewController: self, isError: true, message: "error getting wallets: \(message ?? "")")
+                    showAlert(vc: self, title: "", message: "error getting wallets: \(message ?? "")")
                 }
                 return
             }

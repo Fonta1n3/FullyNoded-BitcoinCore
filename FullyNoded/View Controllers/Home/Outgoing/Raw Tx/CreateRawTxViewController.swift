@@ -645,7 +645,7 @@ class CreateRawTxViewController: UIViewController, UITextFieldDelegate, UITableV
             
             guard let result = response as? NSDictionary, let psbt1 = result["psbt"] as? String else {
                 self.spinner.removeConnectingView()
-                displayAlert(viewController: self, isError: true, message: errorMessage ?? "")
+                showAlert(vc: self, title: "", message: errorMessage ?? "")
                 return
             }
             
@@ -655,7 +655,7 @@ class CreateRawTxViewController: UIViewController, UITextFieldDelegate, UITableV
                 
                 guard let dict = response as? NSDictionary, let processedPSBT = dict["psbt"] as? String else {
                     self.spinner.removeConnectingView()
-                    displayAlert(viewController: self, isError: true, message: errorMessage ?? "")
+                    showAlert(vc: self, title: "", message: errorMessage ?? "")
                     return
                 }
                 
@@ -675,7 +675,7 @@ class CreateRawTxViewController: UIViewController, UITextFieldDelegate, UITableV
             
             guard let utxos = utxos else {
                 self.spinner.removeConnectingView()
-                displayAlert(viewController: self, isError: true, message: message ?? "error fetching utxo's")
+                showAlert(vc: self, title: "", message: message ?? "error fetching utxo's")
                 return
             }
             
@@ -725,7 +725,7 @@ class CreateRawTxViewController: UIViewController, UITextFieldDelegate, UITableV
                 
                 guard let result = response as? NSDictionary, let psbt1 = result["psbt"] as? String else {
                     self.spinner.removeConnectingView()
-                    displayAlert(viewController: self, isError: true, message: errorMessage ?? "")
+                    showAlert(vc: self, title: "", message: errorMessage ?? "")
                     return
                 }
                 
@@ -735,7 +735,7 @@ class CreateRawTxViewController: UIViewController, UITextFieldDelegate, UITableV
                     
                     guard let dict = response as? NSDictionary, let processedPSBT = dict["psbt"] as? String else {
                         self.spinner.removeConnectingView()
-                        displayAlert(viewController: self, isError: true, message: errorMessage ?? "")
+                        showAlert(vc: self, title: "", message: errorMessage ?? "")
                         return
                     }
                     
@@ -809,7 +809,7 @@ class CreateRawTxViewController: UIViewController, UITextFieldDelegate, UITableV
             
         } else if outputs.count > 0 && self.amountInput.text != "" || self.amountInput.text != "0.0" && self.addressInput.text != "" {
             spinner.removeConnectingView()
-            displayAlert(viewController: self, isError: true, message: "If you want to add multiple recipients please tap the \"+\" and add them all first.")
+            showAlert(vc: self, title: "", message: "If you want to add multiple recipients please tap the \"+\" and add them all first.")
             
         } else if outputs.count > 0 {
             getRawTx()
