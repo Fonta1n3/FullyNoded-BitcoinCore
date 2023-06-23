@@ -7,35 +7,35 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		0E137FB61EECE2D1785637D6726DFE8D /* TORThread.m in Sources */ = {isa = PBXBuildFile; fileRef = D3B553479A0AF617EE277A40AD6953D8 /* TORThread.m */; };
+		0688D4205602B7113C11380EF9A87314 /* TORAuthKey.m in Sources */ = {isa = PBXBuildFile; fileRef = FFE7E1BE77782400D77A3E94BE179020 /* TORAuthKey.m */; settings = {COMPILER_FLAGS = "-w -Xanalyzer -analyzer-disable-all-checks"; }; };
+		0FF832A616F93668651789DEB4F678AE /* TORCircuit.m in Sources */ = {isa = PBXBuildFile; fileRef = 8F6D736BF38E8A41095F51FDF6C147B1 /* TORCircuit.m */; settings = {COMPILER_FLAGS = "-w -Xanalyzer -analyzer-disable-all-checks"; }; };
+		1EDAD3500A254B4A66ADC78D75BDC891 /* TORThread.m in Sources */ = {isa = PBXBuildFile; fileRef = D3B553479A0AF617EE277A40AD6953D8 /* TORThread.m */; settings = {COMPILER_FLAGS = "-w -Xanalyzer -analyzer-disable-all-checks"; }; };
 		2611F177696E2A66F975380A6A454CF3 /* TORNode.h in Headers */ = {isa = PBXBuildFile; fileRef = C8CD7753C8AAB32351F98E98A4956CAE /* TORNode.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		26AE58409AEA2184A13D7F4708EA1F4A /* TORControlCommand.h in Headers */ = {isa = PBXBuildFile; fileRef = E035E3C619DF05A3877AF801772C2A40 /* TORControlCommand.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		2E130C16B421087BB848950F31D2CF04 /* TORCircuit.h in Headers */ = {isa = PBXBuildFile; fileRef = FE34F42BB67E40E77FECE8EB1D035BCE /* TORCircuit.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		2FA6361E249DB86F18C07F65845DBB02 /* Pods-FullyNoded-umbrella.h in Headers */ = {isa = PBXBuildFile; fileRef = B08F43248768C9C2F6F84613238D9B0F /* Pods-FullyNoded-umbrella.h */; settings = {ATTRIBUTES = (Public, ); }; };
-		335DEA30448AB10FBCB222B8277B1913 /* TORX25519KeyPair.m in Sources */ = {isa = PBXBuildFile; fileRef = 971CE27C675D01E45F462C8B8025D557 /* TORX25519KeyPair.m */; };
-		381B7BF30DBFAAC1DAE2B1880D164436 /* NSBundle+GeoIP.m in Sources */ = {isa = PBXBuildFile; fileRef = 824384084E72042E50C90D683F747183 /* NSBundle+GeoIP.m */; };
-		3A0596A742E2C53B27ECDBD23E7C068B /* TORController.m in Sources */ = {isa = PBXBuildFile; fileRef = 665B26F2CE2619C3DFDAC160031E7E62 /* TORController.m */; };
+		362A854C4085FD31647A8002158F4839 /* Tor-dummy.m in Sources */ = {isa = PBXBuildFile; fileRef = CA3A48FD68751EBC98E10C90C26C7C6E /* Tor-dummy.m */; };
+		40473DDE2568D46B7ECDFF510D80CF9B /* TORConfiguration.m in Sources */ = {isa = PBXBuildFile; fileRef = 69759139952B09B27E708A2F6A8E409D /* TORConfiguration.m */; settings = {COMPILER_FLAGS = "-w -Xanalyzer -analyzer-disable-all-checks"; }; };
+		413DE26E60E2B024A4B1264B883B9F6E /* TORX25519KeyPair.m in Sources */ = {isa = PBXBuildFile; fileRef = 971CE27C675D01E45F462C8B8025D557 /* TORX25519KeyPair.m */; settings = {COMPILER_FLAGS = "-w -Xanalyzer -analyzer-disable-all-checks"; }; };
 		436C1E979BE0B9A303FFC399A5A5D285 /* NSBundle+GeoIP.h in Headers */ = {isa = PBXBuildFile; fileRef = AB5FCD7FC796956A37A7499AEA57C460 /* NSBundle+GeoIP.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		45053561ADABECB5EA30D9C4EBA41A60 /* TORConfiguration.h in Headers */ = {isa = PBXBuildFile; fileRef = D6BAA01EEDFAF1A21AAFE26E4CDFCFE1 /* TORConfiguration.h */; settings = {ATTRIBUTES = (Public, ); }; };
-		45BC107449BDC788A2627D9BAC856A19 /* TORCircuit.m in Sources */ = {isa = PBXBuildFile; fileRef = 8F6D736BF38E8A41095F51FDF6C147B1 /* TORCircuit.m */; };
 		494DD925F853173BE2FF6FAD9D221ED1 /* TORAuthKey.h in Headers */ = {isa = PBXBuildFile; fileRef = 345B678C32CCCEE76C9068DD8356211E /* TORAuthKey.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		55666F657CB9E770BDA7C25EF74AA0EC /* TORNode.m in Sources */ = {isa = PBXBuildFile; fileRef = 48AD1195A0F5855FB2CEA1ADE6D4EC7E /* TORNode.m */; settings = {COMPILER_FLAGS = "-w -Xanalyzer -analyzer-disable-all-checks"; }; };
 		5AB51DA4FEBA799A220B1452D854D6B8 /* TORThread.h in Headers */ = {isa = PBXBuildFile; fileRef = 5ED8E218A3323A2CB794EE7446EF9B17 /* TORThread.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		5EF69D098AC20C9427FE3371AB1FE328 /* TOROnionAuth.h in Headers */ = {isa = PBXBuildFile; fileRef = F82C1E1484B849A53A6C21FC6BE0DB96 /* TOROnionAuth.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		63D9D6459EA8D96040080AB4C8AF57E3 /* TORLogging.h in Headers */ = {isa = PBXBuildFile; fileRef = 7A7B4287687890141C11FE3A24EE31CB /* TORLogging.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		7407B9D4EF22020D8AE5F5A8B46E21B9 /* TORLogging.m in Sources */ = {isa = PBXBuildFile; fileRef = 3946D476E050E82B2E72DE3059943C84 /* TORLogging.m */; settings = {COMPILER_FLAGS = "-w -Xanalyzer -analyzer-disable-all-checks"; }; };
 		744EA1083D5C7C6ED2B0941B71A28EF1 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 73010CC983E3809BECEE5348DA1BB8C6 /* Foundation.framework */; };
-		7716277E37BB3692F5F6A271210EE66E /* TORLogging.m in Sources */ = {isa = PBXBuildFile; fileRef = 3946D476E050E82B2E72DE3059943C84 /* TORLogging.m */; };
+		75B308037B68038578DA9B2A5255EB99 /* TOROnionAuth.m in Sources */ = {isa = PBXBuildFile; fileRef = 7720E1C67DFC78F999F4DF11932EE74B /* TOROnionAuth.m */; settings = {COMPILER_FLAGS = "-w -Xanalyzer -analyzer-disable-all-checks"; }; };
 		7E63089C6B01F434375F565B8F3F6C4C /* TORControlReplyCode.h in Headers */ = {isa = PBXBuildFile; fileRef = 0E2B3AADE8E48781F37E3665C8BCBC65 /* TORControlReplyCode.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		882F719501F7AC5F1EA547D21AC53306 /* NSCharacterSet+PredefinedSets.h in Headers */ = {isa = PBXBuildFile; fileRef = F685FD1A9516F1F6909040899AE9EF38 /* NSCharacterSet+PredefinedSets.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		96B8EF98B558C8269762339D213D02AA /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 73010CC983E3809BECEE5348DA1BB8C6 /* Foundation.framework */; };
-		9BA03406DD5644B87F3248E6686B40CF /* TOROnionAuth.m in Sources */ = {isa = PBXBuildFile; fileRef = 7720E1C67DFC78F999F4DF11932EE74B /* TOROnionAuth.m */; };
-		A041118A9C829A5C8C4A0AF329147FAB /* TORConfiguration.m in Sources */ = {isa = PBXBuildFile; fileRef = 69759139952B09B27E708A2F6A8E409D /* TORConfiguration.m */; };
-		C3AB25BEE855F2BD5C2464F2CBC6487B /* TORAuthKey.m in Sources */ = {isa = PBXBuildFile; fileRef = FFE7E1BE77782400D77A3E94BE179020 /* TORAuthKey.m */; };
+		A868AF69995A008EE0FD1611C38FBC25 /* NSBundle+GeoIP.m in Sources */ = {isa = PBXBuildFile; fileRef = 824384084E72042E50C90D683F747183 /* NSBundle+GeoIP.m */; settings = {COMPILER_FLAGS = "-w -Xanalyzer -analyzer-disable-all-checks"; }; };
 		CA7105E04D56896B16E47F6E8783C243 /* Pods-FullyNoded-dummy.m in Sources */ = {isa = PBXBuildFile; fileRef = 41C482957A3D3646B0E791AEF96172FF /* Pods-FullyNoded-dummy.m */; };
-		CBBCBE28EFD2CD840859921D60DD6710 /* Tor-dummy.m in Sources */ = {isa = PBXBuildFile; fileRef = CA3A48FD68751EBC98E10C90C26C7C6E /* Tor-dummy.m */; };
 		CD0222471D80141ECA2D6CEDBA1C1ACC /* Tor-umbrella.h in Headers */ = {isa = PBXBuildFile; fileRef = 55FAA47C00FC5E7BEC8806AC03ED764B /* Tor-umbrella.h */; settings = {ATTRIBUTES = (Public, ); }; };
-		DC790F7FC76922B0E49592B9092A205B /* TORNode.m in Sources */ = {isa = PBXBuildFile; fileRef = 48AD1195A0F5855FB2CEA1ADE6D4EC7E /* TORNode.m */; };
 		E1DC10B35695A90D54149E3F5014948C /* TORController.h in Headers */ = {isa = PBXBuildFile; fileRef = 5900C89E5FD510048AB8A4D86C1081CA /* TORController.h */; settings = {ATTRIBUTES = (Public, ); }; };
-		E53A32AC0C5A6AAFEC3741D1A60BE2A9 /* NSCharacterSet+PredefinedSets.m in Sources */ = {isa = PBXBuildFile; fileRef = BAF2BABA66BB18B0D0DA0F26C6918B4E /* NSCharacterSet+PredefinedSets.m */; };
+		EAF0D4B487627DBA676F37C22EBA4CB0 /* TORController.m in Sources */ = {isa = PBXBuildFile; fileRef = 665B26F2CE2619C3DFDAC160031E7E62 /* TORController.m */; settings = {COMPILER_FLAGS = "-w -Xanalyzer -analyzer-disable-all-checks"; }; };
+		EB28203EF2AB16698E02364DE0A0E573 /* NSCharacterSet+PredefinedSets.m in Sources */ = {isa = PBXBuildFile; fileRef = BAF2BABA66BB18B0D0DA0F26C6918B4E /* NSCharacterSet+PredefinedSets.m */; settings = {COMPILER_FLAGS = "-w -Xanalyzer -analyzer-disable-all-checks"; }; };
 		FE461BCC39DBA6E6DA81C6FEC6AC208F /* TORX25519KeyPair.h in Headers */ = {isa = PBXBuildFile; fileRef = 563DD86E3841E342DFB23ED0C24A6511 /* TORX25519KeyPair.h */; settings = {ATTRIBUTES = (Public, ); }; };
 /* End PBXBuildFile section */
 
@@ -293,7 +293,7 @@
 				A396C00411D3200C7880FE9275611553 /* [CP-User] Build OpenSSL */,
 				9C0C53D2DB55B8F699140E7A36D1E6B1 /* [CP-User] Build libevent */,
 				E6F145DAF81BCDB22DB2C7A297E24163 /* [CP-User] Build Tor */,
-				4685487245ACAD0BE9426A6714F06F1D /* Sources */,
+				248F3473BB64C7C3032E22398E4A9BAA /* Sources */,
 				59BE96C7E347CA6FFFE922F92E9AABBE /* Frameworks */,
 				FC2E86A8043D1F47F4AAA17760C498CE /* Resources */,
 			);
@@ -426,22 +426,22 @@
 /* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
-		4685487245ACAD0BE9426A6714F06F1D /* Sources */ = {
+		248F3473BB64C7C3032E22398E4A9BAA /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				381B7BF30DBFAAC1DAE2B1880D164436 /* NSBundle+GeoIP.m in Sources */,
-				E53A32AC0C5A6AAFEC3741D1A60BE2A9 /* NSCharacterSet+PredefinedSets.m in Sources */,
-				CBBCBE28EFD2CD840859921D60DD6710 /* Tor-dummy.m in Sources */,
-				C3AB25BEE855F2BD5C2464F2CBC6487B /* TORAuthKey.m in Sources */,
-				45BC107449BDC788A2627D9BAC856A19 /* TORCircuit.m in Sources */,
-				A041118A9C829A5C8C4A0AF329147FAB /* TORConfiguration.m in Sources */,
-				3A0596A742E2C53B27ECDBD23E7C068B /* TORController.m in Sources */,
-				7716277E37BB3692F5F6A271210EE66E /* TORLogging.m in Sources */,
-				DC790F7FC76922B0E49592B9092A205B /* TORNode.m in Sources */,
-				9BA03406DD5644B87F3248E6686B40CF /* TOROnionAuth.m in Sources */,
-				0E137FB61EECE2D1785637D6726DFE8D /* TORThread.m in Sources */,
-				335DEA30448AB10FBCB222B8277B1913 /* TORX25519KeyPair.m in Sources */,
+				A868AF69995A008EE0FD1611C38FBC25 /* NSBundle+GeoIP.m in Sources */,
+				EB28203EF2AB16698E02364DE0A0E573 /* NSCharacterSet+PredefinedSets.m in Sources */,
+				362A854C4085FD31647A8002158F4839 /* Tor-dummy.m in Sources */,
+				0688D4205602B7113C11380EF9A87314 /* TORAuthKey.m in Sources */,
+				0FF832A616F93668651789DEB4F678AE /* TORCircuit.m in Sources */,
+				40473DDE2568D46B7ECDFF510D80CF9B /* TORConfiguration.m in Sources */,
+				EAF0D4B487627DBA676F37C22EBA4CB0 /* TORController.m in Sources */,
+				7407B9D4EF22020D8AE5F5A8B46E21B9 /* TORLogging.m in Sources */,
+				55666F657CB9E770BDA7C25EF74AA0EC /* TORNode.m in Sources */,
+				75B308037B68038578DA9B2A5255EB99 /* TOROnionAuth.m in Sources */,
+				1EDAD3500A254B4A66ADC78D75BDC891 /* TORThread.m in Sources */,
+				413DE26E60E2B024A4B1264B883B9F6E /* TORX25519KeyPair.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

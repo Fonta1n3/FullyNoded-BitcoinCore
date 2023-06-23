@@ -56,7 +56,6 @@ class NodesViewController: UIViewController, UITableViewDelegate, UITableViewDat
             
             if self.nodeArray.count == 0 {
                 self.addNodePrompt()
-                //showAlert(vc: self, title: "", message: "No nodes added yet, tap the + sign to add one.")
             }
         }
     }
@@ -90,36 +89,74 @@ class NodesViewController: UIViewController, UITableViewDelegate, UITableViewDat
         cell.backgroundColor = #colorLiteral(red: 0.05172085258, green: 0.05855310153, blue: 0.06978280196, alpha: 1)
         
         let label = cell.viewWithTag(1) as! UILabel
-        let isActive = cell.viewWithTag(2) as! UISwitch
-        let background = cell.viewWithTag(3)!
-        let icon = cell.viewWithTag(4) as! UIImageView
         let button = cell.viewWithTag(5) as! UIButton
+        button.tintColor = .none
         
         button.restorationIdentifier = "\(indexPath.section)"
         button.addTarget(self, action: #selector(editNode(_:)), for: .touchUpInside)
         
-        background.clipsToBounds = true
-        background.layer.cornerRadius = 8
-        
         let nodeStruct = NodeStruct(dictionary: nodeArray[indexPath.section])
         
         label.text = nodeStruct.label
-        isActive.isOn = nodeArray[indexPath.section]["isActive"] as? Bool ?? false
-        isActive.restorationIdentifier = "\(indexPath.section)"
-        isActive.addTarget(self, action: #selector(setActiveNow(_:)), for: .touchUpInside)
         
-        if !isActive.isOn {
+        if !nodeStruct.isActive {
             label.textColor = .darkGray
+            cell.accessoryType = .none
+            cell.isSelected = false
         } else {
             label.textColor = .white
+            cell.accessoryType = .checkmark
+            cell.isSelected = true
+            cell.accessoryView?.frame = .init(x: 0, y: 0, width: 35, height: 35)
         }
         
-        icon.tintColor = .white
-        
-        icon.image = UIImage(systemName: "link")
-        background.backgroundColor = .systemBlue
-        
         return cell
+    }
+    
+    func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
+        let nodeStr = NodeStruct(dictionary: nodeArray[indexPath.row])
+        
+        CoreDataService.update(id: nodeStr.id!, keyToUpdate: "isActive", newValue: true, entity: .nodes) { [weak self] success in
+            guard let self = self else { return }
+            
+            if success {
+                ud.removeObject(forKey: "walletName")
+                
+                if nodeArray.count == 1 {
+                    reloadTable()
+                } else {
+                    for (i, node) in nodeArray.enumerated() {
+                        
+                        if i != indexPath.row {
+                            let str = NodeStruct(dictionary: node)
+                            
+                            if str.id != nodeStr.id {
+                                CoreDataService.update(id: str.id!, keyToUpdate: "isActive", newValue: false, entity: .nodes) { _ in }
+                            }
+                        }
+                        
+                        if i + 1 == nodeArray.count {
+                            CoreDataService.retrieveEntity(entityName: .nodes) { nodes in
+                                if nodes != nil {
+                                    DispatchQueue.main.async { [unowned vc = self] in
+                                        vc.nodeArray.removeAll()
+                                        for node in nodes! {
+                                            let str = NodeStruct(dictionary: node)
+                                            if str.id != nil {
+                                                vc.nodeArray.append(node)
+                                            }
+                                        }
+                                        vc.nodeTable.reloadData()
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            } else {
+                showAlert(vc: self, title: "", message: "Error updating node.")
+            }
+        }
     }
     
     func tableView(_ tableView: UITableView, heightForRowAt indexPath: IndexPath) -> CGFloat {
@@ -172,75 +209,26 @@ class NodesViewController: UIViewController, UITableViewDelegate, UITableViewDat
         }
     }
     
-    @objc func setActiveNow(_ sender: UISwitch) {        
-        impact()
-        
-        let restId = sender.restorationIdentifier ?? ""
-        let index = Int(restId) ?? 10000
-        
-        guard let selectedCell = nodeTable.cellForRow(at: IndexPath.init(row: 0, section: index)) else {
-            return
-        }
-        
-        let selectedSwitch = selectedCell.viewWithTag(2) as! UISwitch
-        let nodeStr = NodeStruct(dictionary: nodeArray[index])
-        
-        if index < nodeArray.count {
-            
-            CoreDataService.update(id: nodeStr.id!, keyToUpdate: "isActive", newValue: selectedSwitch.isOn, entity: .nodes) { [unowned vc = self] success in
-                if success {
-                    vc.ud.removeObject(forKey: "walletName")
-                    
-                    if vc.nodeArray.count == 1 {
-                        vc.reloadTable()
-                    }
-                } else {
-                    showAlert(vc: vc, title: "", message: "Error updating node.")
-                }
-            }
-            
-            if nodeArray.count > 1 {
-                                
-                for (i, node) in nodeArray.enumerated() {
-                    
-                    if i != index {
-                        let str = NodeStruct(dictionary: node)
-                        
-                        if str.id != nodeStr.id {
-                            CoreDataService.update(id: str.id!, keyToUpdate: "isActive", newValue: false, entity: .nodes) { _ in }
-                        }
-                    }
-                    
-                    if i + 1 == nodeArray.count {
-                        CoreDataService.retrieveEntity(entityName: .nodes) { nodes in
-                            if nodes != nil {
-                                DispatchQueue.main.async { [unowned vc = self] in
-                                    vc.nodeArray.removeAll()
-                                    for node in nodes! {
-                                        let str = NodeStruct(dictionary: node)
-                                        if str.id != nil {
-                                            vc.nodeArray.append(node)
-                                        }
-                                    }
-                                    vc.nodeTable.reloadData()
-                                    
-                                    if selectedSwitch.isOn {
-                                        NotificationCenter.default.post(name: .refreshNode, object: nil, userInfo: nil)
-                                    }
-                                    
-//                                    if !nodeStr.isJoinMarket {
-//                                        NotificationCenter.default.post(name: .refreshWallet, object: nil, userInfo: nil)
-//                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        } else {
-            print("node count is wrong")
-        }
-    }
+//    @objc func setActiveNow(_ sender: UISwitch) {
+//        impact()
+//
+//        let restId = sender.restorationIdentifier ?? ""
+//        let index = Int(restId) ?? 10000
+//
+//        guard let selectedCell = nodeTable.cellForRow(at: IndexPath.init(row: 0, section: index)) else {
+//            return
+//        }
+//
+//        let selectedSwitch = selectedCell.viewWithTag(2) as! UISwitch
+//        let nodeStr = NodeStruct(dictionary: nodeArray[index])
+//
+//        if index < nodeArray.count {
+//
+//
+//        } else {
+//            print("node count is wrong")
+//        }
+//    }
     
     func reloadTable() {
         CoreDataService.retrieveEntity(entityName: .nodes) { nodes in
@@ -319,8 +307,9 @@ class NodesViewController: UIViewController, UITableViewDelegate, UITableViewDat
                 DispatchQueue.main.async { [weak self] in
                     guard let self = self else { return }
                     
-                    NotificationCenter.default.post(name: .refreshNode, object: nil, userInfo: nil)
-                    self.tabBarController?.selectedIndex = 0
+                    self.reloadTable()
+                    //NotificationCenter.default.post(name: .refreshNode, object: nil, userInfo: nil)
+                    //self.tabBarController?.selectedIndex = 0
                 }
             } else {
                 showAlert(vc: self, title: "", message: "Error adding that node: \(errorMessage ?? "unknown")")
@@ -344,18 +333,16 @@ class NodesViewController: UIViewController, UITableViewDelegate, UITableViewDat
         }
         
         if segue.identifier == "segueToScanAddNode" {
-            if #available(macCatalyst 14.0, *) {
-                if let vc = segue.destination as? QRScannerViewController {
-                    vc.isQuickConnect = true
-                    vc.onDoneBlock = { [unowned thisVc = self] url in
-                        if url != nil {
-                            thisVc.addBtcRpcQr(url: url!)
-                        }
+            if let vc = segue.destination as? QRScannerViewController {
+                vc.isQuickConnect = true
+                vc.onDoneBlock = { [unowned thisVc = self] url in
+                    if url != nil {
+                        print("does this fire?")
+                        thisVc.addBtcRpcQr(url: url!)
                     }
                 }
-            } else {
-                // Fallback on earlier versions
             }
+            
         }
         
     }

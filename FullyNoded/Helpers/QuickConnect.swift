@@ -38,26 +38,7 @@ class QuickConnect {
         
         guard let rpcPassword = URLComponents(string: url)?.password,
               let rpcUser = URLComponents(string: url)?.user else {
-            // try jm here.
-            guard let certCheck = URL(string: url)?.value(for: "cert"),
-                  let certData = try? Data.decodeUrlSafeBase64(certCheck) else {
-                completion((false, "cert missing."))
-                return
-            }
-            
-            guard let encryptedCert = Crypto.encrypt(certData) else {
-                completion((false, "error encrypting your credentials"))
-                return
-            }
-            
-            newNode["cert"] = encryptedCert
-            newNode["onionAddress"] = torNodeHost
-            newNode["isLightning"] = false
-            newNode["isActive"] = true
-            newNode["uncleJim"] = false
-            newNode["label"] = "Join Market"
-            newNode["isJoinMarket"] = true
-            processNode(newNode, url, completion: completion)
+            completion((false, "No RPC credentials."))
             return
         }
         
@@ -66,14 +47,14 @@ class QuickConnect {
         }
         
         guard host != "", rpcUser != "", rpcPassword != "" else {
-            completion((false, "either the hostname, rpcuser or rpcpassword is empty"))
+            completion((false, "Either the hostname, rpcuser or rpcpassword is empty."))
             return
         }
         
         // Encrypt credentials
         guard let torNodeRPCPass = Crypto.encrypt(rpcPassword.dataUsingUTF8StringEncoding),
               let torNodeRPCUser = Crypto.encrypt(rpcUser.dataUsingUTF8StringEncoding) else {
-            completion((false, "error encrypting your credentials"))
+            completion((false, "Error encrypting your credentials."))
             return
         }
         

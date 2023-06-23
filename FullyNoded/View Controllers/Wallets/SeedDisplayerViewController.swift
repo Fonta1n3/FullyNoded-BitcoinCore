@@ -122,10 +122,17 @@ class SeedDisplayerViewController: UIViewController, UINavigationControllerDeleg
                 self.getPassword(seed)
             }
             
+            var wordsToShow = ""
+            var wordArray = seed.components(separatedBy: " ")
+            
+            for (i, word) in wordArray.enumerated() {
+                wordsToShow += "\(i + 1). \(word)  "
+            }
+            
             DispatchQueue.main.async { [weak self] in
                 guard let self = self else { return }
                 
-                self.textView.text = seed
+                self.textView.text = wordsToShow
             }
         }
     }
@@ -226,6 +233,13 @@ class SeedDisplayerViewController: UIViewController, UINavigationControllerDeleg
             showError(error: "Error deriving master key")
         }
     }
+    
+    private func xfp(seed: String) -> String? {
+        guard let masterKey = Keys.masterKey(words: seed, coinType: coinType, passphrase: "") else {
+            return nil
+        }
+        return Keys.fingerprint(masterKey: masterKey)
+    }
         
     private func getSegwitData(masterKey: String) {
         guard let xpub = Keys.bip84AccountXpub(masterKey: masterKey, coinType: coinType, account: 0),
@@ -283,9 +297,7 @@ class SeedDisplayerViewController: UIViewController, UINavigationControllerDeleg
                 
                 if self.version >= 210100 {
                     self.importDescriptors(name, fingerprint, self.primDesc, self.changeDesc, mk, completion: completion)
-                }// else {
-//                    self.importKeys(name, fingerprint, xpub, self.primDesc, completion: completion)
-//                }
+                }
             } else {
                 if let message = message {
                     self.spinner.removeConnectingView()
@@ -351,34 +363,6 @@ class SeedDisplayerViewController: UIViewController, UINavigationControllerDeleg
         }
     }
     
-//    private func importKeys(_ name: String,
-//                            _ fingerprint: String,
-//                            _ xpub: String,
-//                            _ desc: String,
-//                            completion: @escaping ((success: Bool, message: String?)) -> Void) {
-//        self.name = name
-//
-//        self.importPrimaryKeys(desc: desc) { [weak self] (success, errorMessage) in
-//            guard let self = self else { return }
-//
-//            if success {
-//                self.importChangeKeys(desc: self.changeSegwitDescriptor(fingerprint, xpub)) { (changeImported, errorDesc) in
-//
-//                    if changeImported {
-//                        completion((true, nil))
-//                    } else {
-//                        UserDefaults.standard.removeObject(forKey: "walletName")
-//                        self.showError(error: "Error importing change keys: \(errorDesc ?? "unknown error")")
-//                    }
-//                }
-//
-//            } else {
-//                UserDefaults.standard.removeObject(forKey: "walletName")
-//                self.showError(error: "Error importing primary keys: \(errorMessage ?? "unknown error")")
-//            }
-//        }
-//    }
-    
     private func getDescriptorInfo(desc: String, completion: @escaping ((String?)) -> Void) {
         let param:Get_Descriptor_Info = .init(["descriptor":desc])
         Reducer.sharedInstance.makeCommand(command: .getdescriptorinfo(param: param)) { (response, errorMessage) in
@@ -391,58 +375,22 @@ class SeedDisplayerViewController: UIViewController, UINavigationControllerDeleg
         }
     }
     
-//    private func importPrimaryKeys(desc: String, completion: @escaping ((success: Bool, errorMessage: String?)) -> Void) {
-//        getDescriptorInfo(desc: desc) { [weak self] descriptor in
-//            guard let self = self else { return }
-//
-//            if descriptor != nil {
-//                self.primDesc = descriptor!
-//                let params = "[{ \"desc\": \"\(descriptor!)\", \"timestamp\": \"now\", \"range\": [0,2500], \"watchonly\": true, \"label\": \"Fully Noded\", \"keypool\": true, \"internal\": false }], {\"rescan\": false}"
-//                self.importMulti(params: params, completion: completion)
-//            } else {
-//                UserDefaults.standard.removeObject(forKey: "walletName")
-//                self.showError(error: "error getting primary descriptor info")
-//            }
-//        }
-//    }
-    
-//    private func importChangeKeys(desc: String, completion: @escaping ((success: Bool, errorMessage: String?)) -> Void) {
-//        getDescriptorInfo(desc: desc) { [weak self] descriptor in
-//            guard let self = self else { return }
-//
-//            if descriptor != nil {
-//                self.changeDesc = descriptor!
-//                let params = "[{ \"desc\": \"\(descriptor!)\", \"timestamp\": \"now\", \"range\": [0,2500], \"watchonly\": true, \"keypool\": true, \"internal\": true }], {\"rescan\": false}"
-//                self.importMulti(params: params, completion: completion)
-//            } else {
-//                UserDefaults.standard.removeObject(forKey: "walletName")
-//                self.showError(error: "error getting change descriptor info")
-//            }
-//        }
-//    }
-    
-//    private func importMulti(params: String, completion: @escaping ((success: Bool, errorMessage: String?)) -> Void) {
-//        OnchainUtils.importMulti(params) { (imported, message) in
-//            if imported {
-//                completion((imported, message))
-//            } else {
-//                UserDefaults.standard.removeObject(forKey: "walletName")
-//                completion((false, message ?? "unknown error importing your keys"))
-//            }
-//        }
-//    }
-    
     private func encryptSeed(words: String, completion: @escaping ((Bool)) -> Void) {
+        guard let xfp = xfp(seed: words) else {
+            completion(false)
+            return
+        }
+        
         guard let encryptedWords = Crypto.encrypt(words.dataUsingUTF8StringEncoding) else {
             completion(false)
             return
         }
         
-        saveSigner(encryptedSigner: encryptedWords, completion: completion)
+        saveSigner(encryptedSigner: encryptedWords, xfp: xfp, completion: completion)
     }
     
-    private func saveSigner(encryptedSigner: Data, completion: @escaping ((Bool)) -> Void) {
-        let dict = ["id":UUID(), "words":encryptedSigner, "added": Date(), "label": "Single Sig"] as [String:Any]
+    private func saveSigner(encryptedSigner: Data, xfp: String, completion: @escaping ((Bool)) -> Void) {
+        let dict = ["id":UUID(), "words":encryptedSigner, "added": Date(), "label": "Single Sig: \(xfp)"] as [String:Any]
         CoreDataService.saveEntity(dict: dict, entityName: .signers) { success in
             completion(success)
         }

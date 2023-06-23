@@ -54,13 +54,9 @@ class UTXOViewController: UIViewController, UITextFieldDelegate, UINavigationCon
         unlockedUtxos.removeAll()
         selectedUTXOs.removeAll()
         inputArray.removeAll()
-    }
-    
-    private func checkForJmWallet() {
         guard let wallet = self.wallet else { return }
         loadUnlockedUtxos()
     }
-    
     
     @IBAction private func lockAction(_ sender: Any) {
         DispatchQueue.main.async { [weak self] in
@@ -149,6 +145,7 @@ class UTXOViewController: UIViewController, UITextFieldDelegate, UINavigationCon
     }
     
     private func finishedLoading() {
+        print("finishedLoading")
         DispatchQueue.main.async { [weak self] in
             guard let self = self else { return }
             
@@ -189,30 +186,27 @@ class UTXOViewController: UIViewController, UITextFieldDelegate, UINavigationCon
                 showAlert(vc: self, title: "No UTXO's", message: "")
                 return
             }
-            
-            DispatchQueue.background(delay: 0.0, completion: {
-                for (i, utxo) in utxos.enumerated() {
-                    
-                    var utxoDict = utxo.dict
-                    
-                    func finish() {
-                        self.unlockedUtxos.append(Utxo(utxoDict))
                         
-                        if i + 1 == utxos.count {
-                            self.unlockedUtxos = self.unlockedUtxos.sorted {
-                                $0.confs ?? 0 < $1.confs ?? 1
-                            }
-                            self.finishedLoading()
-                        }
+            for (i, utxo) in utxos.enumerated() {
+                var utxoDict = utxo.dict
+                
+                let amountBtc = utxo.amount!
+                utxoDict["amountSats"] = amountBtc.sats
+                print("self.fxRate: \(self.fxRate)")
+                if let fxrate = self.fxRate {
+                    utxoDict["amountFiat"] = (fxrate * amountBtc).fiatString
+                }
+                
+                self.unlockedUtxos.append(Utxo(utxoDict))
+                
+                if i + 1 == utxos.count {
+                    self.unlockedUtxos = self.unlockedUtxos.sorted {
+                        $0.confs ?? 0 < $1.confs ?? 1
                     }
-                    
-                    //let currency = UserDefaults.standard.object(forKey: "currency") as? String ?? "USD"
-                    let amountBtc = utxo.amount!
-                    utxoDict["amountSats"] = amountBtc.sats
-                    finish()
+                    self.finishedLoading()
                 }
             }
-        )}
+        }
     }
     
     private func removeSpinner() {

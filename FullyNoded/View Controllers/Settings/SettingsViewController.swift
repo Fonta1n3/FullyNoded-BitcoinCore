@@ -105,76 +105,57 @@ class SettingsViewController: UIViewController, UITableViewDelegate, UITableView
     }
     
     
-    func blockchainInfoCell(_ indexPath: IndexPath) -> UITableViewCell {
-        let blockchainInfoCell = settingsTable.dequeueReusableCell(withIdentifier: "toggleFxrateCell", for: indexPath)
-        configureCell(blockchainInfoCell)
+    func exchangeRateApiCell(_ indexPath: IndexPath) -> UITableViewCell {
+        let exchangeRateApiCell = settingsTable.dequeueReusableCell(withIdentifier: "checkmarkCell", for: indexPath)
+        configureCell(exchangeRateApiCell)
         
-        let label = blockchainInfoCell.viewWithTag(1) as! UILabel
+        let label = exchangeRateApiCell.viewWithTag(1) as! UILabel
         label.textColor = .lightGray
         label.adjustsFontSizeToFitWidth = true
         
-        let background = blockchainInfoCell.viewWithTag(2)!
+        let background = exchangeRateApiCell.viewWithTag(2)!
         background.clipsToBounds = true
         background.layer.cornerRadius = 8
         
-        let icon = blockchainInfoCell.viewWithTag(3) as! UIImageView
+        let icon = exchangeRateApiCell.viewWithTag(3) as! UIImageView
         icon.tintColor = .white
-        
-        let toggle = blockchainInfoCell.viewWithTag(4) as! UISwitch
-        toggle.addTarget(self, action: #selector(toggleBlockchainInfo(_:)), for: .valueChanged)
         
         let useBlockchainInfo = UserDefaults.standard.object(forKey: "useBlockchainInfo") as? Bool ?? true
         
-        toggle.setOn(useBlockchainInfo, animated: true)
-        label.text = "Blockchain.info"
         icon.image = UIImage(systemName: "dollarsign.circle")
         
-        if useBlockchainInfo {
-            background.backgroundColor = .systemBlue
-        } else {
-            background.backgroundColor = .systemGray
+        switch indexPath.row {
+        case 0:
+            label.text = "Blockchain.info"
+            if useBlockchainInfo {
+                background.backgroundColor = .systemBlue
+                exchangeRateApiCell.isSelected = true
+                exchangeRateApiCell.accessoryType = .checkmark
+            } else {
+                background.backgroundColor = .systemGray
+                exchangeRateApiCell.isSelected = false
+                exchangeRateApiCell.accessoryType = .none
+            }
+        case 1:
+            label.text = "Coindesk"
+            if !useBlockchainInfo {
+                background.backgroundColor = .systemBlue
+                exchangeRateApiCell.isSelected = true
+                exchangeRateApiCell.accessoryType = .checkmark
+            } else {
+                background.backgroundColor = .systemGray
+                exchangeRateApiCell.isSelected = false
+                exchangeRateApiCell.accessoryType = .none
+            }
+        default:
+            break
         }
         
-        return blockchainInfoCell
+        return exchangeRateApiCell
     }
-    
-    
-    func coinDeskCell(_ indexPath: IndexPath) -> UITableViewCell {
-        let coinDeskCell = settingsTable.dequeueReusableCell(withIdentifier: "toggleFxrateCell", for: indexPath)
-        configureCell(coinDeskCell)
-        
-        let label = coinDeskCell.viewWithTag(1) as! UILabel
-        label.textColor = .lightGray
-        label.adjustsFontSizeToFitWidth = true
-        
-        let background = coinDeskCell.viewWithTag(2)!
-        background.clipsToBounds = true
-        background.layer.cornerRadius = 8
-        
-        let icon = coinDeskCell.viewWithTag(3) as! UIImageView
-        icon.tintColor = .white
-        
-        let toggle = coinDeskCell.viewWithTag(4) as! UISwitch
-        toggle.addTarget(self, action: #selector(toggleCoindesk(_:)), for: .valueChanged)
-        
-        let useBlockchainInfo = UserDefaults.standard.object(forKey: "useBlockchainInfo") as? Bool ?? true
-        
-        toggle.setOn(!useBlockchainInfo, animated: true)
-        label.text = "Coindesk"
-        icon.image = UIImage(systemName: "dollarsign.circle")
-        
-        if useBlockchainInfo {
-            background.backgroundColor = .systemGray
-        } else {
-            background.backgroundColor = .systemBlue
-        }
-        
-        return coinDeskCell
-    }
-    
     
     func currencyCell(_ indexPath: IndexPath, _ currency: [String:String]) -> UITableViewCell {
-        let currencyCell = settingsTable.dequeueReusableCell(withIdentifier: "toggleCurrencyCell", for: indexPath)
+        let currencyCell = settingsTable.dequeueReusableCell(withIdentifier: "checkmarkCell", for: indexPath)
         configureCell(currencyCell)
         
         let label = currencyCell.viewWithTag(1) as! UILabel
@@ -188,24 +169,22 @@ class SettingsViewController: UIViewController, UITableViewDelegate, UITableView
         let icon = currencyCell.viewWithTag(3) as! UIImageView
         icon.tintColor = .white
         
-        let toggle = currencyCell.viewWithTag(4) as! UISwitch
         let currencyToUse = UserDefaults.standard.object(forKey: "currency") as? String ?? "USD"
         
         for (key, value) in currency {
             if currencyToUse == key {
                 background.backgroundColor = .systemGreen
+                currencyCell.accessoryType = .checkmark
+                currencyCell.isSelected = true
             } else {
                 background.backgroundColor = .systemGray
+                currencyCell.accessoryType = .none
+                currencyCell.isSelected = false
             }
-            
-            toggle.restorationIdentifier = key
-            toggle.setOn(currencyToUse == key, animated: true)
             
             label.text = key
             icon.image = UIImage(systemName: value)
         }
-        
-        toggle.addTarget(self, action: #selector(toggleCurrency(_:)), for: .valueChanged)
         
         return currencyCell
     }
@@ -217,11 +196,7 @@ class SettingsViewController: UIViewController, UITableViewDelegate, UITableView
             return settingsCell(indexPath)
             
         case 2:
-            if indexPath.row == 0 {
-                return blockchainInfoCell(indexPath)
-            } else {
-                return coinDeskCell(indexPath)
-            }
+            return exchangeRateApiCell(indexPath)
             
         case 3:
             let useBlockchainInfo = UserDefaults.standard.object(forKey: "useBlockchainInfo") as? Bool ?? true
@@ -319,6 +294,38 @@ class SettingsViewController: UIViewController, UITableViewDelegate, UITableView
                 self.performSegue(withIdentifier: "goToSecurity", sender: self)
             }
             
+        case 2:
+            switch indexPath.row {
+            case 0: UserDefaults.standard.setValue(true, forKey: "useBlockchainInfo")
+            case 1: UserDefaults.standard.setValue(false, forKey: "useBlockchainInfo")
+            default:
+                break
+            }
+            
+            DispatchQueue.main.async { [weak self] in
+                guard let self = self else { return }
+
+                self.settingsTable.reloadSections(.init(arrayLiteral: 2, 3), with: .none)
+            }
+            
+        case 3:
+            let useBlockchainInfo = UserDefaults.standard.object(forKey: "useBlockchainInfo") as? Bool ?? true
+            var currencies:[[String:String]] = []
+            if useBlockchainInfo {
+                currencies = blockchainInfoCurrencies
+            } else {
+                currencies = coindeskCurrencies
+            }
+            let currencyDict = currencies[indexPath.row]
+            for (key, _) in currencyDict {
+                UserDefaults.standard.setValue(key, forKey: "currency")
+                DispatchQueue.main.async { [weak self] in
+                    guard let self = self else { return }
+
+                    self.settingsTable.reloadSections(.init(arrayLiteral: 3), with: .none)
+                }
+            }
+            
         default:
             break
             
@@ -326,21 +333,21 @@ class SettingsViewController: UIViewController, UITableViewDelegate, UITableView
     }
     
     
-    @objc func toggleCurrency(_ sender: UISwitch) {
-        let currency = sender.restorationIdentifier!
-        
-        if sender.isOn {
-            UserDefaults.standard.setValue(currency, forKey: "currency")
-        } else {
-            UserDefaults.standard.setValue("USD", forKey: "currency")
-        }
-        
-        DispatchQueue.main.async { [weak self] in
-            guard let self = self else { return }
-
-            self.settingsTable.reloadSections(IndexSet(arrayLiteral: 3), with: .fade)
-        }
-    }
+//    @objc func toggleCurrency(_ sender: UISwitch) {
+//        let currency = sender.restorationIdentifier!
+//
+//        if sender.isOn {
+//            UserDefaults.standard.setValue(currency, forKey: "currency")
+//        } else {
+//            UserDefaults.standard.setValue("USD", forKey: "currency")
+//        }
+//
+//        DispatchQueue.main.async { [weak self] in
+//            guard let self = self else { return }
+//
+//            self.settingsTable.reloadSections(IndexSet(arrayLiteral: 3), with: .fade)
+//        }
+//    }
 
     
     private func saveFile(_ file: [String:Any]) {
@@ -367,37 +374,37 @@ class SettingsViewController: UIViewController, UITableViewDelegate, UITableView
     }
     
     
-    @objc func toggleBlockchainInfo(_ sender: UISwitch) {
-        UserDefaults.standard.setValue(sender.isOn, forKey: "useBlockchainInfo")
-        
-        DispatchQueue.main.async { [weak self] in
-            guard let self = self else { return }
-
-            self.settingsTable.reloadSections(IndexSet(arrayLiteral: 2, 3), with: .fade)
-        }
-    }
+//    @objc func toggleBlockchainInfo(_ sender: UISwitch) {
+//        UserDefaults.standard.setValue(sender.isOn, forKey: "useBlockchainInfo")
+//
+//        DispatchQueue.main.async { [weak self] in
+//            guard let self = self else { return }
+//
+//            self.settingsTable.reloadSections(IndexSet(arrayLiteral: 2, 3), with: .fade)
+//        }
+//    }
     
     
-    @objc func toggleCoindesk(_ sender: UISwitch) {
-        UserDefaults.standard.setValue(!sender.isOn, forKey: "useBlockchainInfo")
-        
-        let currency = UserDefaults.standard.object(forKey: "currency") as? String ?? "USD"
-        
-        if sender.isOn {
-            switch currency {
-            case "USD", "GBP", "EUR":
-                fallthrough
-            default:
-                UserDefaults.standard.setValue("USD", forKey: "currency")
-            }
-        }
-        
-        DispatchQueue.main.async { [weak self] in
-            guard let self = self else { return }
-
-            self.settingsTable.reloadSections(IndexSet(arrayLiteral: 2, 3), with: .fade)
-        }
-    }
+//    @objc func toggleCoindesk(_ sender: UISwitch) {
+//        UserDefaults.standard.setValue(!sender.isOn, forKey: "useBlockchainInfo")
+//
+//        let currency = UserDefaults.standard.object(forKey: "currency") as? String ?? "USD"
+//
+//        if sender.isOn {
+//            switch currency {
+//            case "USD", "GBP", "EUR":
+//                fallthrough
+//            default:
+//                UserDefaults.standard.setValue("USD", forKey: "currency")
+//            }
+//        }
+//
+//        DispatchQueue.main.async { [weak self] in
+//            guard let self = self else { return }
+//
+//            self.settingsTable.reloadSections(IndexSet(arrayLiteral: 2, 3), with: .fade)
+//        }
+//    }
         
 }
 

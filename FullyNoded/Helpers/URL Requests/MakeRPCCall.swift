@@ -23,25 +23,29 @@ class MakeRPCCall {
     func getActiveNode(completion: @escaping ((NodeStruct?) -> Void)) {
         CoreDataService.retrieveEntity(entityName: .nodes) { nodes in
             guard let nodes = nodes, nodes.count > 0 else {
-                completion((nil))
+                completion(nil)
                 return
             }
             var activeNode: [String:Any]?
-            for node in nodes {
+            
+            for (i, node) in nodes.enumerated() {
                 if let isActive = node["isActive"] as? Bool {
                     if isActive {
                         activeNode = node
+                        let n = NodeStruct(dictionary: node)
+                        self.activeNode = n
+                        completion(n)
+                        break
+                    }
+                }
+                
+                if i + 1 == nodes.count {
+                    guard let active = activeNode else {
+                        completion(nil)
+                        return
                     }
                 }
             }
-            guard let active = activeNode else {
-                completion((nil))
-                return
-            }
-            
-            let n = NodeStruct(dictionary: active)
-            self.activeNode = n
-            completion(n)
         }
     }
     
@@ -133,7 +137,7 @@ class MakeRPCCall {
                 guard let urlContent = data else {
                     
                     guard let error = error else {
-                        if self.attempts < 20 {
+                        if self.attempts < 10 {
                             self.executeRPCCommand(method: method, completion: completion)
                         } else {
                             self.attempts = 0
@@ -143,7 +147,7 @@ class MakeRPCCall {
                         return
                     }
                     
-                    if self.attempts < 20 {
+                    if self.attempts < 10 {
                         self.executeRPCCommand(method: method, completion: completion)
                     } else {
                         self.attempts = 0

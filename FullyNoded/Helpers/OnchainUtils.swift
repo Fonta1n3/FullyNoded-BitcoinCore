@@ -170,11 +170,11 @@ class OnchainUtils {
                 return
             }
             
-            var utxosToReturn = [Utxo]()
+            var utxosToReturn:[Utxo] = []
             
             for (i, dict) in response.enumerated() {
-                utxosToReturn.append(Utxo(dict))
-                
+                let utxoObject = Utxo(dict)
+                utxosToReturn.append(utxoObject)
                 if i + 1 == response.count {
                     completion((utxosToReturn, nil))
                 }

@@ -7,7 +7,6 @@
 //
 
 import UIKit
-import AVFoundation
 
 class NodeDetailViewController: UIViewController, UITextFieldDelegate, UINavigationControllerDelegate {
     
@@ -76,33 +75,33 @@ class NodeDetailViewController: UIViewController, UITextFieldDelegate, UINavigat
     }
     
     
-    @IBAction func showHostAction(_ sender: Any) {
-    #if targetEnvironment(macCatalyst)
-        // Code specific to Mac.
-        guard !isNostr, let _ = selectedNode, onionAddressField != nil, let hostAddress = onionAddressField.text, hostAddress != "" else {
-            showAlert(vc: self, title: "", message: "This feature only works once the node has been saved.")
-            return
-        }
-        let macName = UIDevice.current.name
-        if hostAddress.contains("127.0.0.1") || hostAddress.contains("localhost") || hostAddress.contains(macName) {
-            hostname = TorClient.sharedInstance.hostname()
-            if hostname != nil {
-                hostname = hostname?.replacingOccurrences(of: "\n", with: "")
-                isHost = true
-                DispatchQueue.main.async { [unowned vc = self] in
-                    vc.performSegue(withIdentifier: "segueToExportNode", sender: vc)
-                }
-            } else {
-                showAlert(vc: self, title: "", message: "There was an error getting your hostname for remote connection... Please make sure you are connected to the internet and that Tor successfully bootstrapped.")
-            }
-        } else {
-            showAlert(vc: self, title: "", message: "This feature can only be used with nodes which are running on the same computer as Fully Noded - Desktop.")
-        }
-    #else
-        // Code to exclude from Mac.
-        showAlert(vc: self, title: "", message: "This is a macOS feature only, when you use Fully Noded - Desktop, it has the ability to display a QR code you can scan with your iPhone or iPad to connect to your node remotely.")
-    #endif
-    }
+//    @IBAction func showHostAction(_ sender: Any) {
+//    #if targetEnvironment(macCatalyst)
+//        // Code specific to Mac.
+//        guard !isNostr, let _ = selectedNode, onionAddressField != nil, let hostAddress = onionAddressField.text, hostAddress != "" else {
+//            showAlert(vc: self, title: "", message: "This feature only works once the node has been saved.")
+//            return
+//        }
+//        let macName = UIDevice.current.name
+//        if hostAddress.contains("127.0.0.1") || hostAddress.contains("localhost") || hostAddress.contains(macName) {
+//            hostname = TorClient.sharedInstance.hostname()
+//            if hostname != nil {
+//                hostname = hostname?.replacingOccurrences(of: "\n", with: "")
+//                isHost = true
+//                DispatchQueue.main.async { [unowned vc = self] in
+//                    vc.performSegue(withIdentifier: "segueToExportNode", sender: vc)
+//                }
+//            } else {
+//                showAlert(vc: self, title: "", message: "There was an error getting your hostname for remote connection... Please make sure you are connected to the internet and that Tor successfully bootstrapped.")
+//            }
+//        } else {
+//            showAlert(vc: self, title: "", message: "This feature can only be used with nodes which are running on the same computer as Fully Noded - Desktop.")
+//        }
+//    #else
+//        // Code to exclude from Mac.
+//        showAlert(vc: self, title: "", message: "This is a macOS feature only, when you use Fully Noded - Desktop, it has the ability to display a QR code you can scan with your iPhone or iPad to connect to your node remotely.")
+//    #endif
+//    }
     
     
     @IBAction func scanQuickConnect(_ sender: Any) {
@@ -255,22 +254,26 @@ class NodeDetailViewController: UIViewController, UITextFieldDelegate, UINavigat
         if selectedNode != nil {
             let node = NodeStruct(dictionary: selectedNode!)
             if node.id != nil {
-                if node.label != "" {
-                    nodeLabel.text = node.label
-                }
-                
-                if node.rpcuser != nil {
-                    rpcUserField.text = decryptedValue(node.rpcuser!)
-                }
-                
-                if node.rpcpassword != nil {
-                    rpcPassword.text = decryptedValue(node.rpcpassword!)
-                }
-                                
-                if let enc = node.onionAddress {
-                    let decrypted = decryptedValue(enc)
-                    if onionAddressField != nil {
-                        onionAddressField.text = decrypted
+                DispatchQueue.main.async { [weak self] in
+                    guard let self = self else { return }
+                    
+                    if node.label != "" {
+                        nodeLabel.text = node.label
+                    }
+                    
+                    if node.rpcuser != nil {
+                        rpcUserField.text = decryptedValue(node.rpcuser!)
+                    }
+                    
+                    if node.rpcpassword != nil {
+                        rpcPassword.text = decryptedValue(node.rpcpassword!)
+                    }
+                                    
+                    if let enc = node.onionAddress {
+                        let decrypted = decryptedValue(enc)
+                        if onionAddressField != nil {
+                            onionAddressField.text = decrypted
+                        }
                     }
                 }
             }

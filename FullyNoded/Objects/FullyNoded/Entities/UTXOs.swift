@@ -7,7 +7,6 @@
 //
 
 import Foundation
-import UIKit
 
 public struct Utxo: CustomStringConvertible {
     
@@ -31,7 +30,6 @@ public struct Utxo: CustomStringConvertible {
     let txUUID: UUID?
     let amountFiat: String?
     let amountSats: String?
-    let lifehash: UIImage?
     let dict: [String:Any]
     let frozen: Bool?
     let path: String?
@@ -58,7 +56,6 @@ public struct Utxo: CustomStringConvertible {
         txUUID = dictionary["txUUID"] as? UUID
         amountFiat = dictionary["amountFiat"] as? String
         amountSats = dictionary["amountSats"] as? String
-        lifehash = dictionary["lifehash"] as? UIImage
         frozen = dictionary["frozen"] as? Bool
         path = dictionary["path"] as? String
         value = dictionary["value"] as? Int
