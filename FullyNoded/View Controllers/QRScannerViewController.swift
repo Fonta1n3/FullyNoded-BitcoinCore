@@ -21,7 +21,6 @@ class QRScannerViewController: UIViewController {
     private var qrString = ""
     private let uploadButton = UIButton()
     private let torchButton = UIButton()
-    private let closeButton = UIButton()
     private let downSwipe = UISwipeGestureRecognizer()
     var isQuickConnect = Bool()
     var isScanningAddress = Bool()
@@ -72,7 +71,6 @@ class QRScannerViewController: UIViewController {
             
             self.scanQRCode()
             self.addScannerButtons()
-            self.scannerView.addSubview(self.closeButton)
             self.spinner.removeConnectingView()
         }
     }
@@ -81,12 +79,10 @@ class QRScannerViewController: UIViewController {
         scannerView.isUserInteractionEnabled = true
         uploadButton.addTarget(self, action: #selector(chooseQRCodeFromLibrary), for: .touchUpInside)
         torchButton.addTarget(self, action: #selector(toggleTorchNow), for: .touchUpInside)
-        closeButton.addTarget(self, action: #selector(back), for: .touchUpInside)
         isTorchOn = false
         configureImagePicker()
         configureUploadButton()
         configureTorchButton()
-        configureCloseButton()
         configureDownSwipe()
     }
     
@@ -348,15 +344,9 @@ class QRScannerViewController: UIViewController {
         stopScanner()
     }
     
-    private func configureCloseButton() {
-        closeButton.frame = CGRect(x: view.frame.midX - 15, y: view.frame.maxY - 150, width: 30, height: 30)
-        closeButton.showsTouchWhenHighlighted = true
-        closeButton.setImage(UIImage(named: "Image-10"), for: .normal)
-    }
-    
     private func configureTorchButton() {
         torchButton.frame = CGRect(x: 17.5, y: 17.5, width: 35, height: 35)
-        torchButton.setImage(UIImage(named: "strobe.png"), for: .normal)
+        torchButton.setImage(UIImage(systemName: "bolt.fill"), for: .normal)
         torchButton.showsTouchWhenHighlighted = true
         addShadow(view: torchButton)
     }
@@ -364,7 +354,7 @@ class QRScannerViewController: UIViewController {
     private func configureUploadButton() {
         uploadButton.frame = CGRect(x: 17.5, y: 17.5, width: 35, height: 35)
         uploadButton.showsTouchWhenHighlighted = true
-        uploadButton.setImage(UIImage(named: "images.png"), for: .normal)
+        uploadButton.setImage(UIImage(systemName: "photo.fill"), for: .normal)
         addShadow(view: uploadButton)
     }
     

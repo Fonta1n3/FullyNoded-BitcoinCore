@@ -21,8 +21,8 @@
                     <view contentMode="scaleToFill" translatesAutoresizingMaskIntoConstraints="NO" id="pXx-EG-WdU" userLabel="Rounded Background">
                         <rect key="frame" x="0.0" y="0.0" width="320" height="203"/>
                         <subviews>
-                            <imageView userInteractionEnabled="NO" tag="13" contentMode="scaleToFill" horizontalHuggingPriority="251" verticalHuggingPriority="251" image="whiteCheck.png" translatesAutoresizingMaskIntoConstraints="NO" id="un5-bt-OPd">
-                                <rect key="frame" x="15" y="164" width="20" height="20"/>
+                            <imageView userInteractionEnabled="NO" tag="13" contentMode="scaleToFill" horizontalHuggingPriority="251" verticalHuggingPriority="251" image="checkmark" catalog="system" translatesAutoresizingMaskIntoConstraints="NO" id="un5-bt-OPd">
+                                <rect key="frame" x="15" y="166" width="20" height="16.5"/>
                                 <constraints>
                                     <constraint firstAttribute="width" constant="20" id="COx-eq-q6b"/>
                                     <constraint firstAttribute="width" secondItem="un5-bt-OPd" secondAttribute="height" id="Lyx-a4-lXk"/>
@@ -216,8 +216,8 @@
         </tableViewCell>
     </objects>
     <resources>
+        <image name="checkmark" catalog="system" width="128" height="114"/>
         <image name="lock.open" catalog="system" width="128" height="110"/>
-        <image name="whiteCheck.png" width="2048" height="2048"/>
         <systemColor name="secondaryLabelColor">
             <color red="0.23529411764705882" green="0.23529411764705882" blue="0.2627450980392157" alpha="0.59999999999999998" colorSpace="custom" customColorSpace="sRGB"/>
         </systemColor>

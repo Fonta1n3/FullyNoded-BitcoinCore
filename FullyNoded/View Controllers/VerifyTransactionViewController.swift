@@ -1098,7 +1098,6 @@ class VerifyTransactionViewController: UIViewController, UINavigationControllerD
                         "isOursBitcoind": false,// Hardcode at this stage and update before displaying
                         "isOursFullyNoded": false,
                         "walletLabel": "",
-                        "lifehash": LifeHash.image(addressString) ?? UIImage(),
                         "signable": false,
                         "signerLabel": "",
                         "isDust": amount < 0.00020000
@@ -1144,7 +1143,6 @@ class VerifyTransactionViewController: UIViewController, UINavigationControllerD
                                 
                                 self.inputTableArray[index]["amount"] = amountString
                                 self.inputTableArray[index]["address"] = addressString
-                                self.inputTableArray[index]["lifehash"] = LifeHash.image(addressString) ?? UIImage()
                                 self.inputTableArray[index]["isDust"] = amount < 0.00020000
                             }
                         }

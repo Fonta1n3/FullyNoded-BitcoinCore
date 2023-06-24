@@ -29,31 +29,19 @@ class CreateRawTxViewController: UIViewController, UITextFieldDelegate, UITableV
     var invoiceString = ""
     let fiatCurrency = UserDefaults.standard.object(forKey: "currency") as? String ?? "USD"
     
-    @IBOutlet weak private var batchOutlet: UIButton!
     @IBOutlet weak private var miningTargetLabel: UILabel!
     @IBOutlet weak private var satPerByteLabel: UILabel!
-    @IBOutlet weak private var sweepButton: UIStackView!
-    @IBOutlet weak private var segmentedControlOutlet: UISegmentedControl!
-    @IBOutlet weak private var fiatButtonOutlet: UIButton!
+    //@IBOutlet weak private var sweepButton: UIStackView!
     @IBOutlet weak private var fxRateLabel: UILabel!
     @IBOutlet weak private var denominationImage: UIImageView!
-    @IBOutlet weak private var amountIcon: UIView!
-    @IBOutlet weak private var addressIcon: UIView!
-    @IBOutlet weak private var recipientBackground: UIView!
-    @IBOutlet weak private var amountBackground: UIView!
-    @IBOutlet weak private var sliderViewBackground: UIView!
-    @IBOutlet weak private var feeIconBackground: UIView!
     @IBOutlet weak private var slider: UISlider!
     @IBOutlet weak private var addOutputOutlet: UIBarButtonItem!
     @IBOutlet weak private var playButtonOutlet: UIBarButtonItem!
     @IBOutlet weak private var amountInput: UITextField!
     @IBOutlet weak private var addressInput: UITextField!
     @IBOutlet weak private var amountLabel: UILabel!
-    @IBOutlet weak private var actionOutlet: UIButton!
-    @IBOutlet weak private var scanOutlet: UIButton!
     @IBOutlet weak private var receivingLabel: UILabel!
     @IBOutlet weak private var outputsTable: UITableView!
-    @IBOutlet weak private var addressImageView: UIImageView!
     @IBOutlet weak private var feeRateInputField: UITextField!
     @IBOutlet weak var coinSelectionControl: UISegmentedControl!
     
@@ -69,37 +57,28 @@ class CreateRawTxViewController: UIViewController, UITextFieldDelegate, UITableV
         outputsTable.dataSource = self
         outputsTable.tableFooterView = UIView(frame: .zero)
         outputsTable.alpha = 0
-        addressImageView.alpha = 0
         slider.isContinuous = false
         addTapGesture()
         
-        sliderViewBackground.layer.cornerRadius = 8
-        sliderViewBackground.layer.borderColor = UIColor.darkGray.cgColor
-        sliderViewBackground.layer.borderWidth = 0.5
-        sliderViewBackground.backgroundColor = #colorLiteral(red: 0.05172085258, green: 0.05855310153, blue: 0.06978280196, alpha: 1)
+//        sliderViewBackground.layer.cornerRadius = 8
+//        sliderViewBackground.layer.borderColor = UIColor.darkGray.cgColor
+//        sliderViewBackground.layer.borderWidth = 0.5
+        //sliderViewBackground.backgroundColor = #colorLiteral(red: 0.05172085258, green: 0.05855310153, blue: 0.06978280196, alpha: 1)
         
-        amountBackground.layer.cornerRadius = 8
-        amountBackground.layer.borderColor = UIColor.darkGray.cgColor
-        amountBackground.layer.borderWidth = 0.5
-        amountBackground.backgroundColor = #colorLiteral(red: 0.05172085258, green: 0.05855310153, blue: 0.06978280196, alpha: 1)
+//        amountBackground.layer.cornerRadius = 8
+//        amountBackground.layer.borderColor = UIColor.darkGray.cgColor
+//        amountBackground.layer.borderWidth = 0.5
+        //amountBackground.backgroundColor = #colorLiteral(red: 0.05172085258, green: 0.05855310153, blue: 0.06978280196, alpha: 1)
         
-        recipientBackground.layer.cornerRadius = 8
-        recipientBackground.layer.borderColor = UIColor.darkGray.cgColor
-        recipientBackground.layer.borderWidth = 0.5
-        recipientBackground.backgroundColor = #colorLiteral(red: 0.05172085258, green: 0.05855310153, blue: 0.06978280196, alpha: 1)
-        
-        amountIcon.layer.cornerRadius = 5
-        feeIconBackground.layer.cornerRadius = 5
-        addressIcon.layer.cornerRadius = 5
-        
-        addressImageView.layer.magnificationFilter = .nearest
+//        recipientBackground.layer.cornerRadius = 8
+//        recipientBackground.layer.borderColor = UIColor.darkGray.cgColor
+//        recipientBackground.layer.borderWidth = 0.5
+        //recipientBackground.backgroundColor = #colorLiteral(red: 0.05172085258, green: 0.05855310153, blue: 0.06978280196, alpha: 1)
         
         slider.addTarget(self, action: #selector(setFee), for: .allEvents)
         slider.maximumValue = 2 * -1
         slider.minimumValue = 432 * -1
-        
-        segmentedControlOutlet.setTitle(fiatCurrency.lowercased(), forSegmentAt: 2)
-        
+                
         if ud.object(forKey: "feeTarget") != nil {
             let numberOfBlocks = ud.object(forKey: "feeTarget") as! Int
             slider.value = Float(numberOfBlocks) * -1
@@ -135,19 +114,11 @@ class CreateRawTxViewController: UIViewController, UITextFieldDelegate, UITableV
             default:
                 break
             }
-            
-            DispatchQueue.main.async { [unowned vc = self] in
-                vc.segmentedControlOutlet.selectedSegmentIndex = index
-            }
-            
         } else {
             isBtc = true
             isFiat = false
             isSats = false
             btcEnabled()
-            DispatchQueue.main.async { [unowned vc = self] in
-                vc.segmentedControlOutlet.selectedSegmentIndex = 0
-            }
         }
         
         showFeeSetting()
@@ -450,7 +421,6 @@ class CreateRawTxViewController: UIViewController, UITextFieldDelegate, UITableV
     private func satsSelected() {
         DispatchQueue.main.async { [unowned vc = self] in
             vc.denominationImage.image = UIImage(systemName: "s.circle")
-            vc.amountIcon.backgroundColor = .systemPurple
             vc.spinner.removeConnectingView()
         }
     }
@@ -458,7 +428,6 @@ class CreateRawTxViewController: UIViewController, UITextFieldDelegate, UITableV
     private func btcEnabled() {
         DispatchQueue.main.async { [unowned vc = self] in
             vc.denominationImage.image = UIImage(systemName: "bitcoinsign.circle")
-            vc.amountIcon.backgroundColor = .systemIndigo
             vc.spinner.removeConnectingView()
         }
     }
@@ -491,9 +460,7 @@ class CreateRawTxViewController: UIViewController, UITextFieldDelegate, UITableV
                 default:
                     break
                 }
-                
-                self.amountIcon.backgroundColor = .systemBlue
-                
+                                
                 if UserDefaults.standard.object(forKey: "fiatAlert") == nil {
                     showAlert(vc: self, title: "\(self.fiatCurrency) denomination", message: "You may enter an amount denominated in \(self.fiatCurrency), we will calculate the equivalent amount in BTC based on the current exchange rate of \(fxrate.exchangeRate)")
                     UserDefaults.standard.set(true, forKey: "fiatAlert")
@@ -513,8 +480,6 @@ class CreateRawTxViewController: UIViewController, UITextFieldDelegate, UITableV
             guard let self = self else { return }
             
             self.addressInput.text = address
-            self.addressImageView.image = LifeHash.image(address)
-            self.addressImageView.alpha = 1
         }
     }
     
@@ -574,7 +539,7 @@ class CreateRawTxViewController: UIViewController, UITextFieldDelegate, UITableV
     
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         let cell = tableView.dequeueReusableCell(withIdentifier: "cell", for: indexPath)
-        cell.backgroundColor = view.backgroundColor
+        //cell.backgroundColor = view.backgroundColor
         if outputs.count > 0 {
             if outputs.count > 1 {
                 tableView.separatorColor = .darkGray
@@ -828,25 +793,25 @@ class CreateRawTxViewController: UIViewController, UITextFieldDelegate, UITableV
         
     //MARK: Textfield methods
     
-    func textFieldDidChangeSelection(_ textField: UITextField) {
-        guard textField == amountInput, let text = textField.text else { return }
-        
-        if text.doubleValue > 0.0 {
-            DispatchQueue.main.async {
-                self.sweepButton.alpha = 0
-            }
-        } else {
-            DispatchQueue.main.async {
-                self.sweepButton.alpha = 1
-            }
-        }
-        
-        if text == "" {
-            DispatchQueue.main.async {
-                self.sweepButton.alpha = 1
-            }
-        }
-    }
+//    func textFieldDidChangeSelection(_ textField: UITextField) {
+//        guard textField == amountInput, let text = textField.text else { return }
+//
+//        if text.doubleValue > 0.0 {
+//            DispatchQueue.main.async {
+//                self.sweepButton.alpha = 0
+//            }
+//        } else {
+//            DispatchQueue.main.async {
+//                self.sweepButton.alpha = 1
+//            }
+//        }
+//
+//        if text == "" {
+//            DispatchQueue.main.async {
+//                self.sweepButton.alpha = 1
+//            }
+//        }
+//    }
     
     func textField(_ textField: UITextField, shouldChangeCharactersIn range: NSRange, replacementString string: String) -> Bool {
         guard textField == amountInput, let text = textField.text, string != "" else { return true }
@@ -970,7 +935,6 @@ class CreateRawTxViewController: UIViewController, UITextFieldDelegate, UITableV
                 if amount != nil {
                     amountText = amount!.avoidNotation
                     self.amountInput.text = amountText
-                    self.segmentedControlOutlet.selectedSegmentIndex = 0
                     self.isFiat = false
                     self.isBtc = true
                     self.isSats = false

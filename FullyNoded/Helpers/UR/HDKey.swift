@@ -8,7 +8,6 @@
 import SwiftUI
 import URKit
 import LibWally
-import LifeHash
 
 final class HDKey_: ModelObject {
     let id: UUID
@@ -447,26 +446,26 @@ extension HDKey_ {
     }
 }
 
-extension HDKey_: Fingerprintable {
-    var fingerprintData: Data {
-        var result: [CBOR] = []
-
-        result.append(CBOR.byteString(keyData.bytes))
-
-        if let chainCode = chainCode {
-            result.append(CBOR.byteString(chainCode.bytes))
-        } else {
-            result.append(CBOR.null)
-        }
-        
-        if let useinfo = useInfo {
-            result.append(CBOR.unsignedInt(UInt64(useinfo.asset.rawValue)))
-            result.append(CBOR.unsignedInt(UInt64(useinfo.network.rawValue)))
-        }
-        
-        return Data(result.encode())
-    }
-}
+//extension HDKey_: Fingerprintable {
+//    var fingerprintData: Data {
+//        var result: [CBOR] = []
+//
+//        result.append(CBOR.byteString(keyData.bytes))
+//
+//        if let chainCode = chainCode {
+//            result.append(CBOR.byteString(chainCode.bytes))
+//        } else {
+//            result.append(CBOR.null)
+//        }
+//        
+//        if let useinfo = useInfo {
+//            result.append(CBOR.unsignedInt(UInt64(useinfo.asset.rawValue)))
+//            result.append(CBOR.unsignedInt(UInt64(useinfo.network.rawValue)))
+//        }
+//        
+//        return Data(result.encode())
+//    }
+//}
 
 extension ext_key: CustomStringConvertible {
     public var description: String {

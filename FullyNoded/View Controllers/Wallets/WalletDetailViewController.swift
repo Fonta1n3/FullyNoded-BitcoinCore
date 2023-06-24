@@ -810,7 +810,7 @@ class WalletDetailViewController: UIViewController, UITextFieldDelegate, UITable
         let textLabel = UILabel()
         textLabel.textAlignment = .left
         textLabel.font = UIFont.systemFont(ofSize: 20, weight: .semibold)
-        textLabel.textColor = .white
+        //textLabel.textColor = .white
         textLabel.frame = CGRect(x: 43, y: 0, width: 300, height: 50)
         textLabel.center.y = background.center.y
         
