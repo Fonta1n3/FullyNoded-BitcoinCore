@@ -426,9 +426,9 @@ class ActiveWalletViewController: UIViewController {
     
     private func onchainBalancesCell(_ indexPath: IndexPath) -> UITableViewCell {
         let cell = walletTable.dequeueReusableCell(withIdentifier: "OnBalancesCell", for: indexPath)
-        cell.layer.borderColor = UIColor.lightGray.cgColor
-        cell.layer.borderWidth = 0.5
-        cell.backgroundColor = #colorLiteral(red: 0.05172085258, green: 0.05855310153, blue: 0.06978280196, alpha: 1)
+//        cell.layer.borderColor = UIColor.lightGray.cgColor
+//        cell.layer.borderWidth = 0.5
+        //cell.backgroundColor = #colorLiteral(red: 0.05172085258, green: 0.05855310153, blue: 0.06978280196, alpha: 1)
         
 //        let iconImageView = cell.viewWithTag(67) as! UIImageView
 //        iconImageView.image = .init(systemName: "link")
@@ -463,9 +463,9 @@ class ActiveWalletViewController: UIViewController {
     private func transactionsCell(_ indexPath: IndexPath) -> UITableViewCell {
         let cell = walletTable.dequeueReusableCell(withIdentifier: "TransactionCell", for: indexPath)
         cell.selectionStyle = .none
-        cell.layer.borderColor = UIColor.lightGray.cgColor
-        cell.layer.borderWidth = 0.5
-        cell.backgroundColor = #colorLiteral(red: 0.05172085258, green: 0.05855310153, blue: 0.06978280196, alpha: 1)
+//        cell.layer.borderColor = UIColor.lightGray.cgColor
+//        cell.layer.borderWidth = 0.5
+        //cell.backgroundColor = #colorLiteral(red: 0.05172085258, green: 0.05855310153, blue: 0.06978280196, alpha: 1)
         
         let categoryImage = cell.viewWithTag(1) as! UIImageView
         let amountLabel = cell.viewWithTag(2) as! UILabel
@@ -558,7 +558,7 @@ class ActiveWalletViewController: UIViewController {
             categoryImage.image = UIImage(systemName: "arrow.up.right")
             categoryImage.tintColor = .systemRed
             
-            amountLabel.textColor = UIColor.darkGray
+            amountLabel.textColor = .none
             
             var amountText = ""
             
@@ -598,7 +598,7 @@ class ActiveWalletViewController: UIViewController {
     private func blankCell() -> UITableViewCell {
         let cell = UITableViewCell()
         cell.selectionStyle = .none
-        cell.backgroundColor = #colorLiteral(red: 0.05172085258, green: 0.05855310153, blue: 0.06978280196, alpha: 1)
+        //cell.backgroundColor = #colorLiteral(red: 0.05172085258, green: 0.05855310153, blue: 0.06978280196, alpha: 1)
         return cell
     }
     
@@ -1122,27 +1122,34 @@ extension ActiveWalletViewController: UITableViewDelegate {
     func tableView(_ tableView: UITableView, viewForHeaderInSection section: Int) -> UIView? {
         let header = UIView()
         header.backgroundColor = UIColor.clear
-        header.frame = CGRect(x: 0, y: 0, width: view.frame.size.width - 32, height: 40)
+        header.frame = CGRect(x: 0, y: 0, width: view.frame.size.width - 32, height: 25)
         
         let textLabel = UILabel()
         textLabel.textAlignment = .left
         textLabel.font = UIFont.systemFont(ofSize: 17, weight: .regular)
         textLabel.textColor = .secondaryLabel
-        textLabel.frame = CGRect(x: 0, y: 0, width: 400, height: 25)
+        
         
         let sortButton = UIButton()
         let sortImage = UIImage(systemName: "arrow.up.arrow.down.circle", withConfiguration: UIImage.SymbolConfiguration.init(scale: .large))
         sortButton.setImage(sortImage, for: .normal)
-        sortButton.frame = CGRect(x: textLabel.frame.minX - 60, y: 0, width: 40, height: 40)
+        sortButton.frame = CGRect(x: textLabel.frame.minX - 60, y: 0, width: 25, height: 25)
         sortButton.center.y = textLabel.center.y
         sortButton.showsTouchWhenHighlighted = true
         sortButton.addTarget(self, action: #selector(sortTxs(_:)), for: .touchUpInside)
         
         switch section {
         case 0:
-            textLabel.text = walletLabel
+            textLabel.frame = CGRect(x: 0, y: 12, width: 400, height: 25)
+            if walletLabel == "" {
+                textLabel.text = "Balance"
+            } else {
+                textLabel.text = walletLabel
+            }
+            
             
         case 1:
+            textLabel.frame = CGRect(x: 0, y: 0, width: 400, height: 25)
             textLabel.text = "Transactions"
             if self.transactionArray.count > 0 {
                 header.addSubview(sortButton)
@@ -1157,10 +1164,10 @@ extension ActiveWalletViewController: UITableViewDelegate {
     }
     
     func tableView(_ tableView: UITableView, heightForHeaderInSection section: Int) -> CGFloat {
-        if section == 0 || section == 1 {
-            return 50
+        if section == 0 {
+            return 40
         } else {
-            return 1
+            return 30
         }
     }
     

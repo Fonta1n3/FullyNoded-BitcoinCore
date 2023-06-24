@@ -44,7 +44,7 @@ class UTXOCell: UITableViewCell {
         layer.borderWidth = 0.5
         layer.cornerRadius = 8
         
-        roundeBackgroundView.backgroundColor = #colorLiteral(red: 0.05172085258, green: 0.05855310153, blue: 0.06978280196, alpha: 1)
+        //roundeBackgroundView.backgroundColor = #colorLiteral(red: 0.05172085258, green: 0.05855310153, blue: 0.06978280196, alpha: 1)
         
         isChangeBackground.clipsToBounds = true
         isSolvableBackground.clipsToBounds = true
@@ -142,10 +142,10 @@ class UTXOCell: UITableViewCell {
 
         if utxo.isSelected {
             checkMarkImageView.alpha = 1
-            self.roundeBackgroundView.backgroundColor = .darkGray
+            //self.roundeBackgroundView.backgroundColor = .darkGray
         } else {
             checkMarkImageView.alpha = 0
-            self.roundeBackgroundView.backgroundColor = #colorLiteral(red: 0.05172085258, green: 0.05855310153, blue: 0.06978280196, alpha: 1)
+            //self.roundeBackgroundView.backgroundColor = #colorLiteral(red: 0.05172085258, green: 0.05855310153, blue: 0.06978280196, alpha: 1)
         }
         
         if utxo.solvable != nil {
@@ -193,7 +193,7 @@ class UTXOCell: UITableViewCell {
                 UIView.animate(withDuration: 0.2, animations: {
                     self.alpha = 1
                     self.checkMarkImageView.alpha = 1
-                    self.roundeBackgroundView.backgroundColor = .darkGray
+                    //self.roundeBackgroundView.backgroundColor = .darkGray
                     
                 })
             }
@@ -212,7 +212,7 @@ class UTXOCell: UITableViewCell {
                 
                 UIView.animate(withDuration: 0.2, animations: {
                     self.alpha = 1
-                    self.roundeBackgroundView.backgroundColor = #colorLiteral(red: 0.05172085258, green: 0.05855310153, blue: 0.06978280196, alpha: 1)
+                    //self.roundeBackgroundView.backgroundColor = #colorLiteral(red: 0.05172085258, green: 0.05855310153, blue: 0.06978280196, alpha: 1)
                     
                 })
             }

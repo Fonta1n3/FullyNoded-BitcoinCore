@@ -100,16 +100,11 @@ class MainMenuViewController: UIViewController {
                 showAlert(vc: self, title: "", message: "There was a critical error setting your devices encryption key, please delete and reinstall the app")
             } else {
                 if mgr?.state != .started && mgr?.state != .connected  {
-                    if KeyChain.getData("UnlockPassword") != nil {
-                        if isUnlocked {
-                            startLoading()
-                        }
-                    } else {
+                    if KeyChain.getData("UnlockPassword") == nil {
                         startLoading()
                     }
                 }
             }
-            initialLoad = false
         } else {
             if self.activeNode == nil {
                 MakeRPCCall.sharedInstance.getActiveNode { [weak self] node in
@@ -448,18 +443,14 @@ class MainMenuViewController: UIViewController {
         
         case .peerInfo:
             if peerInfo != nil {
-                label.text = "Peer count \(peerInfo.outgoingCount) outgoing / \(peerInfo.incomingCount) incoming"
+                label.text = "Peers \(peerInfo.outgoingCount) outgoing / \(peerInfo.incomingCount) incoming"
                 icon.image = UIImage(systemName: "person.3")
-                //background.backgroundColor = .systemIndigo
-                //chevron.alpha = 1
             }
             
         case .miningInfo:
             if miningInfo != nil {
                 label.text = miningInfo.hashrate + " " + "EH/s mining hashrate"
                 icon.image = UIImage(systemName: "speedometer")
-                //background.backgroundColor = .systemRed
-                //chevron.alpha = 0
             }
         
         case .upTime:
@@ -485,97 +476,6 @@ class MainMenuViewController: UIViewController {
                 //background.backgroundColor = .systemGray
                 //chevron.alpha = 0
             }
-            
-            
-            
-            
-//        case .verificationProgress:
-//            if blockchainInfo != nil {
-//
-//            }
-            
-//        case .totalSupply:
-//            if uptimeInfo != nil {
-//                label.text = "Verify total supply"
-//                icon.image = UIImage(systemName: "person.fill.checkmark")
-//                //background.backgroundColor = .systemYellow
-//                //chevron.alpha = 1
-//            }
-            
-//        case .nodeVersion:
-//            if networkInfo != nil {
-//
-//            }
-            
-//        case .blockchainNetwork:
-//            if blockchainInfo != nil {
-//                label.text = blockchainInfo.network.capitalized
-//                icon.image = UIImage(systemName: "bitcoinsign.circle")
-////                switch blockchainInfo.network {
-////                case "test":
-////                    //background.backgroundColor = #colorLiteral(red: 0.4399289489, green: 0.9726744294, blue: 0.2046178877, alpha: 1)
-////                case "main":
-////                    //background.backgroundColor = #colorLiteral(red: 0.9629253745, green: 0.5778557658, blue: 0.1043280438, alpha: 1)
-////                case "regtest":
-////                    //background.backgroundColor = #colorLiteral(red: 0.2165609896, green: 0.7795373201, blue: 0.9218732715, alpha: 1)
-////                case "signet":
-////                    //background.backgroundColor = #colorLiteral(red: 0.8719944954, green: 0.9879228473, blue: 0.07238187641, alpha: 1)
-////                default:
-////                    //background.backgroundColor = .systemTeal
-////                }
-//                //chevron.alpha = 1
-//            }
-            
-//        case .peerConnections:
-//            if peerInfo != nil {
-//
-//            }
-            
-//        case .blockchainState:
-//            if blockchainInfo != nil {
-//                if blockchainInfo.pruned {
-//                    label.text = "Pruned"
-//                    icon.image = UIImage(systemName: "rectangle.compress.vertical")
-//
-//                } else if !blockchainInfo.pruned {
-//                    label.text = "Not pruned"
-//                    icon.image = UIImage(systemName: "rectangle.expand.vertical")
-//                }
-//                //background.backgroundColor = .systemPurple
-//                //chevron.alpha = 1
-//            }
-            
-        //case .miningHashrate:
-            
-            
-//        case .currentBlockHeight:
-//            if blockchainInfo != nil {
-//
-//            }
-            
-//        case .miningDifficulty:
-//            if blockchainInfo != nil {
-//
-//            }
-            
-//        case .blockchainSizeOnDisc:
-//            if blockchainInfo != nil {
-//
-//            }
-            
-        //case .memPool:
-            
-            
-        //case .feeRate:
-            
-            
-//        case .p2pHiddenService:
-//            if networkInfo != nil {
-//
-//            }
-            
-        //case .nodeUptime:
-            
             
         default:
             break
@@ -619,17 +519,19 @@ class MainMenuViewController: UIViewController {
                     showAlert(vc: self, title: "Connection issue...", message: message)
                 }
                 
-                self.removeLoader()
+                removeLoader()
                 
                 return
             }
             
             DispatchQueue.main.async { [weak self] in
                 guard let self = self else { return }
-                self.headerLabel.textColor = .none
+                impact()
+                initialLoad = false
+                headerLabel.textColor = .none
                 self.blockchainInfo = blockchainInfo
-                self.mainMenu.reloadSections(IndexSet(arrayLiteral: Section.blockchainInfo.rawValue), with: .fade)
-                self.getPeerInfo()
+                mainMenu.reloadSections(IndexSet(arrayLiteral: Section.blockchainInfo.rawValue), with: .fade)
+                getNetworkInfo()
             }
         }
     }
@@ -647,9 +549,10 @@ class MainMenuViewController: UIViewController {
             DispatchQueue.main.async { [weak self] in
                 guard let self = self else { return }
                 
-                self.peerInfo = PeerInfo(dictionary: response)
-                self.mainMenu.reloadSections(IndexSet(arrayLiteral: Section.peerInfo.rawValue), with: .fade)
-                self.getNetworkInfo()
+                impact()
+                peerInfo = PeerInfo(dictionary: response)
+                mainMenu.reloadSections(IndexSet(arrayLiteral: Section.peerInfo.rawValue), with: .fade)
+                getMiningInfo()
             }
         }
     }
@@ -667,10 +570,10 @@ class MainMenuViewController: UIViewController {
             DispatchQueue.main.async { [weak self] in
                 guard let self = self else { return }
                 
-                self.networkInfo = NetworkInfo(dictionary: response)
-                self.mainMenu.reloadSections(IndexSet(arrayLiteral:
-                                                        Section.networkInfo.rawValue), with: .fade)
-                self.getMiningInfo()
+                impact()
+                networkInfo = NetworkInfo(dictionary: response)
+                mainMenu.reloadSections(IndexSet(arrayLiteral: Section.networkInfo.rawValue), with: .fade)
+                getPeerInfo()
             }
         }
     }
@@ -688,6 +591,7 @@ class MainMenuViewController: UIViewController {
             DispatchQueue.main.async { [weak self] in
                 guard let self = self else { return }
                 
+                impact()
                 self.miningInfo = MiningInfo(dictionary: response)
                 self.mainMenu.reloadSections(IndexSet(arrayLiteral: Section.miningInfo.rawValue), with: .fade)
                 self.getUptime()
@@ -708,6 +612,7 @@ class MainMenuViewController: UIViewController {
             DispatchQueue.main.async { [weak self] in
                 guard let self = self else { return }
                 
+                impact()
                 self.uptimeInfo = Uptime(dictionary: response)
                 self.mainMenu.reloadSections(IndexSet(arrayLiteral: Section.upTime.rawValue), with: .fade)
                 self.getMempoolInfo()
@@ -728,6 +633,7 @@ class MainMenuViewController: UIViewController {
             DispatchQueue.main.async { [weak self] in
                 guard let self = self else { return }
                 
+                impact()
                 self.mempoolInfo = MempoolInfo(dictionary: response)
                 self.mainMenu.reloadSections(IndexSet(arrayLiteral: Section.mempoolInfo.rawValue), with: .fade)
                 self.getFeeInfo()
@@ -748,6 +654,7 @@ class MainMenuViewController: UIViewController {
             DispatchQueue.main.async { [weak self] in
                 guard let self = self else { return }
                 
+                impact()
                 self.feeInfo = FeeInfo(dictionary: response)
                 self.mainMenu.reloadSections(IndexSet(arrayLiteral: Section.feeInfo.rawValue), with: .fade)
                 self.removeLoader()
@@ -875,39 +782,7 @@ extension MainMenuViewController {
         case .feeInfo:
             return "Fee info"
         }
-        
-//        switch section {
-//        case .verificationProgress:
-//            return "Progress"
-//        case .nodeUptime:
-//            return "Uptime"
-//        case .blockchainNetwork:
-//            return "Network"
-//        case .nodeVersion:
-//            return "Version"
-//        case .peerConnections:
-//            return "Peers"
-//        case .currentBlockHeight:
-//            return "Blockheight"
-//        case .memPool:
-//            return "Mempool"
-//        case .p2pHiddenService:
-//            return "Hidden service p2p"
-//        case .miningHashrate:
-//            return "Hashrate"
-//        case .miningDifficulty:
-//            return "Difficulty"
-//        case .blockchainSizeOnDisc:
-//            return "Blockchain size on disc"
-//        case .feeRate:
-//            return "Fee rate"
-//        case .blockchainState:
-//            return "Blockchain state"
-//        case .totalSupply:
-//            return "Audit total supply"
-//        }
     }
-    
 }
 
 extension MainMenuViewController: OnionManagerDelegate {
@@ -924,18 +799,15 @@ extension MainMenuViewController: OnionManagerDelegate {
             guard let decryptedAddress = Crypto.decrypt(address), let addressText = decryptedAddress.utf8String else {
                 return
             }
-            
             if addressText.contains(".onion:") {
                 self.loadNode(node: activeNode!)
             }
         } else {
             removeLoader()
         }
-        
         DispatchQueue.main.async { [weak self] in
             self?.hideTorProgress(hide: true)
         }
-        
         timeStamp()
     }
     
@@ -944,9 +816,6 @@ extension MainMenuViewController: OnionManagerDelegate {
         DispatchQueue.main.async { [weak self] in
             self?.hideTorProgress(hide: true)
             self?.removeBackView()
-            if let node = self?.activeNode {
-                self?.loadNode(node: node)
-            }
         }
     }
 }
@@ -1026,8 +895,6 @@ extension MainMenuViewController: UITableViewDelegate {
             textLabel.frame = CGRect(x: 0, y: 0, width: 300, height: 20)
         }
         
-        
-        
         if let section = Section(rawValue: section) {
             textLabel.text = headerName(for: section)
         }
@@ -1048,157 +915,6 @@ extension MainMenuViewController: UITableViewDelegate {
     func tableView(_ tableView: UITableView, heightForRowAt indexPath: IndexPath) -> CGFloat {
         return 54
     }
-    
-//    func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
-//        switch Section(rawValue: indexPath.section) {
-//        case .verificationProgress:
-//            if blockchainInfo != nil {
-//                command = "getblockchaininfo"
-//                detailHeaderText = headerName(for: .verificationProgress)
-//                if blockchainInfo.progress == "Fully verified" {
-//                    detailImageTint = .green
-//                    detailImage = UIImage(systemName: "checkmark.seal")!
-//                } else {
-//                    detailImageTint = .systemRed
-//                    detailImage = UIImage(systemName: "exclamationmark.triangle")!
-//                }
-//                detailSubheaderText = blockchainInfo.progressString
-//                detailTextDescription = """
-//                Don't trust, verify!
-//
-//                Simply put the "verification progress" field lets you know what percentage of the blockchain's transactions have been verified by your node. The value your node returns is a decimal number between 0.0 and 1.0. 1 meaning your node has verified 100% of the transactions on the blockchain. As new transactions and blocks are always being added to the blockchain your node is constantly catching up and this field will generally be a number such as "0.99999974646", never quite reaching 1 (although it is possible). Fully Noded checks if this number is greater than 0.99 (e.g. 0.999) and if it is we consider your node's copy of the blockchain to be "Fully Verified".
-//
-//                Fully Noded makes the bitcoin-cli getblockchaininfo call to your node in order to get the "verification progress" of your node. Your node is always verifying each transaction that is broadcast onto the Bitcoin network. This is the fundamental reason to run your own node. If you use someone elses node you are trusting them to verify your utxo's which defeats the purpose of Bitcoin in the first place. Bitcoin was invented to disintermediate 3rd parties, removing trust from the foundation of our financial system, reintroducing that trust defeats Bitcoin's purpose. This is why it is so important to run your own node.
-//
-//                During the initial block download your node proccesses each transaction starting from the genesis block, ensuring all the inputs and outputs of each transaction balance out with future transactions, this is possible because all transactions can be traced back to their coinbase transaction (also known as a "block reward"). This is true whether your node is pruned or not. In this way your node verifies all new transactions are valid, preventing double spending or inflation of the Bitcoin supply. You can think of it as preventing the counterfeiting of bitcoins as it would be impossible for an attacker to fake historic transactions in order to make the new one appear valid.
-//                """
-//                segueToShowDetail()
-//            }
-//
-//        case .totalSupply:
-//            if feeInfo != nil {
-//                command = "gettxoutsetinfo"
-//                detailHeaderText = headerName(for: .totalSupply)
-//                detailSubheaderText = "Use your own node to verify total supply"
-//                detailImage = UIImage(systemName: "person.fill.checkmark")!
-//                detailImageTint = .systemYellow
-//                detailTextDescription = """
-//                Fully Noded uses the bitcoin-cli gettxoutsetinfo command to determine the total amount of mined Bitcoins. This command can take considerable time to load, usually around 30 seconds so please be patient while it loads.
-//
-//                With this command you can at anytime verify all the Bitcoins that have ever been issued without using any third parties at all.
-//                """
-//                segueToShowDetail()
-//            }
-//
-//        case .nodeVersion:
-//            if networkInfo != nil {
-//                command = "getnetworkinfo"
-//                detailHeaderText = headerName(for: .nodeVersion)
-//                detailImageTint = .systemBlue
-//                detailImage = UIImage(systemName: "v.circle")!
-//                detailSubheaderText = "Bitcoin Core v\(networkInfo.version)"
-//                detailTextDescription = """
-//                The current version number of your node's software.
-//
-//                Fully Noded makes the bitcoin-cli getnetworkinfo command to your node in order to obtain information about your node's connection to the Bitcoin peer to peer network. The command returns your node's current version number along with other info regarding your connections. To get the version number Fully Noded looks specifically at the "subversion" field.
-//
-//                See the list of releases for each version along with detailed release notes.
-//                """
-//                segueToShowDetail()
-//            }
-//
-//        case .blockchainNetwork:
-//            if blockchainInfo != nil {
-//                command = "getblockchaininfo"
-//                detailHeaderText = headerName(for: .blockchainNetwork)
-//                detailSubheaderText = blockchainInfo.network.capitalized
-//                if blockchainInfo.network == "test chain" {
-//                    detailImageTint = .green
-//                } else if blockchainInfo.network == "main chain" {
-//                    detailImageTint = .systemOrange
-//                } else {
-//                    detailImageTint = .systemTeal
-//                }
-//                detailImage = UIImage(systemName: "bitcoinsign.circle")!
-//                switch blockchainInfo.network {
-//                case "test":
-//                    detailImageTint = #colorLiteral(red: 0.4399289489, green: 0.9726744294, blue: 0.2046178877, alpha: 1)
-//                case "main":
-//                    detailImageTint = #colorLiteral(red: 0.9629253745, green: 0.5778557658, blue: 0.1043280438, alpha: 1)
-//                case "regtest":
-//                    detailImageTint = #colorLiteral(red: 0.2165609896, green: 0.7795373201, blue: 0.9218732715, alpha: 1)
-//                case "signet":
-//                    detailImageTint = #colorLiteral(red: 0.8719944954, green: 0.9879228473, blue: 0.07238187641, alpha: 1)
-//                default:
-//                    detailImageTint = .systemTeal
-//                }
-//
-//                detailTextDescription = """
-//                Fully Noded makes the bitcoin-cli getblockchaininfo command to determine which network your node is running on. Your node can run three different chain's simultaneously; "main", "test" and "regtest". Fully Noded is capable of connecting to either one. To launch mutliple chains simultaneously you would want to run the "bitcoind" command with the "-chain=test", "-chain=regtest" arguments or omit the argument to run the main chain.
-//
-//                It should be noted when running multiple chains simultaneously you can not specifiy the network in your bitcoin.conf file.
-//
-//                The main chain is of course the real one, where real bitcoin can be spent and received.
-//
-//                The test chain is called "testnet3" and is mostly for users who would like to test new functionality or get familiar with how bitcoin really works before commiting real funds. Its also usefull for developers and stress testing.
-//
-//                The regtest chain is for developers who want to create their own personal blockchain, it is incredibly handy for developing bitcoin software as no internet is required and you can mine your own test bitcoins instantly. You may even setup multiple nodes and simulate specific kinds of network conditions.
-//
-//                Fully Noded talks to each node via a port. Generally mainnet uses the default port 8332, testnet 18332 and regtest 18443. However because Fully Noded works over Tor we actually use what are called virtual ports under the hood. The rpcports as just mentioned are only ever exposed to your nodes localhost meaning they are only accessible remotely via a Tor hidden service.
-//                """
-//                segueToShowDetail()
-//            }
-//
-//        case .peerConnections:
-//            if peerInfo != nil {
-//                command = "getpeerinfo"
-//                detailHeaderText = headerName(for: .peerConnections)
-//                detailSubheaderText = "\(peerInfo.outgoingCount) outgoing / \(peerInfo.incomingCount) incoming"
-//                detailImage = UIImage(systemName: "person.3")!
-//                detailImageTint = .systemIndigo
-//                detailTextDescription = """
-//                Fully Noded makes the bitcoin-cli getpeerinfo command to your node in order to find out how many peers you are connected to.
-//
-//                You can have a number of incoming and outgoing peers, these are other nodes which your node is connected to over the peer to peer network (p2p). In order to receive incoming connections you can either forward port 8333 from your router or (more easily) use bitcoin core's built in functionality to create a hidden service using Tor to get incoming connections on, that way you can get incoming connections but do not need to forward a port.
-//
-//                The p2p network is where your node receives all the information it needs about historic transactions when carrying out its initial block download and verification as well as all newly broadcast transactions.
-//
-//                All new potential transactions are broadcast to the p2p network and whenever a peer learns of a new transaction it immedietly validates it and lets all of its peers know about the transaction, this is how bitcoin transactions propogate across the network. This way all nodes can stay up to date on the latest blocks/transactions.
-//
-//                Check out this link for a deeper dive into the Bitcoin p2p network.
-//                """
-//                segueToShowDetail()
-//            }
-//
-//        case .blockchainState:
-//            if blockchainInfo != nil {
-//                command = "getblockchaininfo"
-//                detailHeaderText = headerName(for: .blockchainState)
-//                if blockchainInfo.pruned {
-//                    detailSubheaderText = "Pruned"
-//                    detailImage = UIImage(systemName: "rectangle.compress.vertical")!
-//
-//                } else if !blockchainInfo.pruned {
-//                    detailSubheaderText = "Not pruned"
-//                    detailImage = UIImage(systemName: "rectangle.expand.vertical")!
-//                }
-//                detailImageTint = .systemPurple
-//                detailTextDescription = """
-//                Fully Noded makes the bitcoin-cli getblockchaininfo command to determine the blockchain's state. When configuring your node you can set "prune=1" or specifiy a size in mebibytes to prune the blockchain to.
-//
-//                In this way you can avoid having to keep an entire copy of the blockchain on your computer, the minimum size is 550 mebibytes and the full current size is around 320gb.
-//
-//                Pruned nodes still verify and validate every single transaction so no trust is needed to prune your node, however you can lose some convenient functionality like restoring old wallets that you may want to migrate to your new node.
-//
-//                Once your initial block download and verification completes you can not "rescan" the blockchain past your prune height which is the block at which have pruned from.
-//                """
-//                segueToShowDetail()
-//            }
-//
-//        default:
-//            break
-//        }
-//    }
     
 }
 

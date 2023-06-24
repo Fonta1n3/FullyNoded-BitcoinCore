@@ -16,7 +16,6 @@ class InvoiceViewController: UIViewController, UITextFieldDelegate {
     var nativeSegwit = Bool()
     var p2shSegwit = Bool()
     var legacy = Bool()
-    let spinner = ConnectingView()
     let qrGenerator = QRGenerator()
     var isHDInvoice = Bool()
     var descriptor = ""
@@ -25,10 +24,11 @@ class InvoiceViewController: UIViewController, UITextFieldDelegate {
     var isBtc = false
     var isSats = false
     var isFiat = false
+    var refreshButton = UIBarButtonItem()
+    var dataRefresher = UIBarButtonItem()
+    let spinner = UIActivityIndicatorView(style: .medium)
     
     @IBOutlet weak var invoiceHeader: UILabel!
-    @IBOutlet weak var denominationControl: UISegmentedControl!
-    @IBOutlet weak var addressImageView: UIImageView!
     @IBOutlet var amountField: UITextField!
     @IBOutlet var labelField: UITextField!
     @IBOutlet var qrView: UIImageView!
@@ -45,7 +45,6 @@ class InvoiceViewController: UIViewController, UITextFieldDelegate {
         configureView(fieldsBackground)
         configureView(addressBackground)
         configureView(invoiceBackground)
-        addressImageView.layer.magnificationFilter = .nearest
         confirgureFields()
         configureTap()
         getAddressSettings()
@@ -54,15 +53,34 @@ class InvoiceViewController: UIViewController, UITextFieldDelegate {
         invoiceText.text = ""
         qrView.image = generateQrCode(key: "bitcoin:")
         generateOnchainInvoice()
-        
-        if isFiat || isBtc {
-            isBtc = true
-            denominationControl.selectedSegmentIndex = 0
-        } else if isSats {
-            denominationControl.selectedSegmentIndex = 1
+    }
+    
+    private func addNavBarSpinner() {
+        DispatchQueue.main.async { [weak self] in
+            guard let self = self else { return }
+            
+            spinner.frame = CGRect(x: 0, y: 0, width: 20, height: 20)
+            dataRefresher = UIBarButtonItem(customView: self.spinner)
+            navigationItem.setRightBarButton(self.dataRefresher, animated: true)
+            spinner.startAnimating()
+            spinner.alpha = 1
         }
     }
     
+    private func removeLoader() {
+        DispatchQueue.main.async { [weak self] in
+            guard let self = self else { return }
+            
+            spinner.stopAnimating()
+            spinner.alpha = 0
+            refreshButton = UIBarButtonItem(barButtonSystemItem: .refresh, target: self, action: #selector(refreshData(_:)))
+            navigationItem.setRightBarButton(refreshButton, animated: true)
+        }
+    }
+    
+    @objc func refreshData(_ sender: Any) {
+        generateOnchainInvoice()
+    }
     
     @IBAction func switchDenominationsAction(_ sender: UISegmentedControl) {
         switch sender.selectedSegmentIndex {
@@ -126,17 +144,14 @@ class InvoiceViewController: UIViewController, UITextFieldDelegate {
         }
     }
     
-    
     @IBAction func shareAddressAction(_ sender: Any) {
         shareText(addressString)
     }
-    
     
     @IBAction func copyAddressAction(_ sender: Any) {
         UIPasteboard.general.string = addressString
         showAlert(vc: self, title: "", message: "Address copied ✓")
     }
-    
     
     @IBAction func shareQrAction(_ sender: Any) {
         DispatchQueue.main.async { [weak self] in
@@ -168,7 +183,7 @@ class InvoiceViewController: UIViewController, UITextFieldDelegate {
     }
     
     func generateOnchainInvoice() {
-        spinner.addConnectingView(vc: self, description: "fetching address...")
+        addNavBarSpinner()
         
         addressOutlet.text = ""
         
@@ -239,8 +254,7 @@ class InvoiceViewController: UIViewController, UITextFieldDelegate {
             self.addressOutlet.text = address
             self.addressString = address
             self.updateQRImage()
-            self.addressImageView.image = LifeHash.image(address)
-            self.spinner.removeConnectingView()
+            removeLoader()
         }
     }
         
@@ -260,7 +274,7 @@ class InvoiceViewController: UIViewController, UITextFieldDelegate {
         Reducer.sharedInstance.makeCommand(command: .getnewaddress(param: params)) { [weak self] (response, errorMessage) in
             guard let self = self else { return }
             guard let address = response as? String else {
-                self.spinner.removeConnectingView()
+                removeLoader()
                 
                 showAlert(vc: self, title: "Error", message: errorMessage ?? "unknown error fetching address")
                 
