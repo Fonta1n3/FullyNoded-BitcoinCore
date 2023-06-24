@@ -26,7 +26,6 @@ class NodeDetailViewController: UIViewController, UITextFieldDelegate, UINavigat
     @IBOutlet weak var passwordHeader: UILabel!
     @IBOutlet weak var usernameHeader: UILabel!
     @IBOutlet weak var scanQROutlet: UIBarButtonItem!
-    @IBOutlet weak var header: UILabel!
     @IBOutlet var nodeLabel: UITextField!
     @IBOutlet var rpcUserField: UITextField!
     @IBOutlet var rpcPassword: UITextField!
@@ -49,7 +48,6 @@ class NodeDetailViewController: UIViewController, UITextFieldDelegate, UINavigat
         onionAddressField.isSecureTextEntry = false
         saveButton.clipsToBounds = true
         saveButton.layer.cornerRadius = 8
-        header.text = "Node Credentials"
         navigationController?.delegate = self
     }
     
@@ -73,36 +71,6 @@ class NodeDetailViewController: UIViewController, UITextFieldDelegate, UINavigat
         
         UIApplication.shared.open(url)
     }
-    
-    
-//    @IBAction func showHostAction(_ sender: Any) {
-//    #if targetEnvironment(macCatalyst)
-//        // Code specific to Mac.
-//        guard !isNostr, let _ = selectedNode, onionAddressField != nil, let hostAddress = onionAddressField.text, hostAddress != "" else {
-//            showAlert(vc: self, title: "", message: "This feature only works once the node has been saved.")
-//            return
-//        }
-//        let macName = UIDevice.current.name
-//        if hostAddress.contains("127.0.0.1") || hostAddress.contains("localhost") || hostAddress.contains(macName) {
-//            hostname = TorClient.sharedInstance.hostname()
-//            if hostname != nil {
-//                hostname = hostname?.replacingOccurrences(of: "\n", with: "")
-//                isHost = true
-//                DispatchQueue.main.async { [unowned vc = self] in
-//                    vc.performSegue(withIdentifier: "segueToExportNode", sender: vc)
-//                }
-//            } else {
-//                showAlert(vc: self, title: "", message: "There was an error getting your hostname for remote connection... Please make sure you are connected to the internet and that Tor successfully bootstrapped.")
-//            }
-//        } else {
-//            showAlert(vc: self, title: "", message: "This feature can only be used with nodes which are running on the same computer as Fully Noded - Desktop.")
-//        }
-//    #else
-//        // Code to exclude from Mac.
-//        showAlert(vc: self, title: "", message: "This is a macOS feature only, when you use Fully Noded - Desktop, it has the ability to display a QR code you can scan with your iPhone or iPad to connect to your node remotely.")
-//    #endif
-//    }
-    
     
     @IBAction func scanQuickConnect(_ sender: Any) {
         segueToScanNow()

@@ -14,10 +14,10 @@ class LogInViewController: UIViewController, UITextFieldDelegate {
     var onDoneBlock: (() -> Void)?
     let passwordInput = UITextField()
     let lockView = UIView()
-    let touchIDButton = UIButton()
+    let touchIDButton = UIButton(type: .roundedRect)
     let imageView = UIImageView()
     let fingerPrintView = UIImageView()
-    let nextButton = UIButton()
+    let nextButton = UIButton(type: .roundedRect)
     let nextAttemptLabel = UILabel()
     var timeToDisable = 2.0
     var timer: Timer?
@@ -37,7 +37,7 @@ class LogInViewController: UIViewController, UITextFieldDelegate {
         passwordInput.delegate = self
         passwordInput.returnKeyType = .done
 
-        lockView.backgroundColor = .black
+        lockView.backgroundColor = .systemBackground
         lockView.alpha = 1
 
         imageView.image = UIImage(named: "logo_grey.png")
@@ -57,8 +57,8 @@ class LogInViewController: UIViewController, UITextFieldDelegate {
         passwordInput.layer.borderColor = UIColor.lightGray.cgColor
 
         touchIDButton.setImage(UIImage(systemName: "faceid"), for: .normal)
-        touchIDButton.tintColor = .systemTeal
-        touchIDButton.backgroundColor = UIColor.clear
+        //touchIDButton.tintColor = .systemTeal
+        //touchIDButton.backgroundColor = UIColor.clear
         touchIDButton.addTarget(self, action: #selector(authenticationWithTouchID), for: .touchUpInside)
         touchIDButton.showsTouchWhenHighlighted = true
 
@@ -209,11 +209,12 @@ class LogInViewController: UIViewController, UITextFieldDelegate {
 
             self.nextButton.removeFromSuperview()
             self.nextButton.showsTouchWhenHighlighted = true
-            self.nextButton.setTitle("next", for: .normal)
-            self.nextButton.setTitleColor(.systemTeal, for: .normal)
+            self.nextButton.setTitle("Next", for: .normal)
+            
+            //self.nextButton.setTitleColor(.systemTeal, for: .normal)
             self.nextButton.titleLabel?.font = UIFont.systemFont(ofSize: 17)
             self.nextButton.addTarget(self, action: #selector(self.nextButtonAction), for: .touchUpInside)
-            self.nextButton.backgroundColor = #colorLiteral(red: 0.1215686275, green: 0.1294117647, blue: 0.1411764706, alpha: 1)
+            //self.nextButton.backgroundColor = #colorLiteral(red: 0.1215686275, green: 0.1294117647, blue: 0.1411764706, alpha: 1)
             self.nextButton.clipsToBounds = true
             self.nextButton.layer.cornerRadius = 8
             self.view.addSubview(self.nextButton)

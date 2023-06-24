@@ -24,8 +24,6 @@ class NodesViewController: UIViewController, UITableViewDelegate, UITableViewDat
         nodeTable.tableFooterView = UIView(frame: .zero)
         addButton = UIBarButtonItem(barButtonSystemItem: .add, target: self, action: #selector(addNode))
         editButton = UIBarButtonItem(barButtonSystemItem: .edit, target: self, action: #selector(editNodes))
-        addButton.tintColor = .systemTeal
-        editButton.tintColor = .systemTeal
         self.navigationItem.setRightBarButtonItems([addButton, editButton], animated: true)
     }
     
@@ -86,7 +84,7 @@ class NodesViewController: UIViewController, UITableViewDelegate, UITableViewDat
         let cell = tableView.dequeueReusableCell(withIdentifier: "node", for: indexPath)
         cell.layer.borderColor = UIColor.lightGray.cgColor
         cell.layer.borderWidth = 0.5
-        cell.backgroundColor = #colorLiteral(red: 0.05172085258, green: 0.05855310153, blue: 0.06978280196, alpha: 1)
+        //cell.backgroundColor = #colorLiteral(red: 0.05172085258, green: 0.05855310153, blue: 0.06978280196, alpha: 1)
         
         let label = cell.viewWithTag(1) as! UILabel
         let button = cell.viewWithTag(5) as! UIButton
@@ -100,11 +98,11 @@ class NodesViewController: UIViewController, UITableViewDelegate, UITableViewDat
         label.text = nodeStruct.label
         
         if !nodeStruct.isActive {
-            label.textColor = .darkGray
+            label.textColor = .secondaryLabel
             cell.accessoryType = .none
             cell.isSelected = false
         } else {
-            label.textColor = .white
+            label.textColor = .none
             cell.accessoryType = .checkmark
             cell.isSelected = true
             cell.accessoryView?.frame = .init(x: 0, y: 0, width: 35, height: 35)
@@ -114,11 +112,14 @@ class NodesViewController: UIViewController, UITableViewDelegate, UITableViewDat
     }
     
     func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
+        print("didSelectRowAt")
         let nodeStr = NodeStruct(dictionary: nodeArray[indexPath.row])
         
         CoreDataService.update(id: nodeStr.id!, keyToUpdate: "isActive", newValue: true, entity: .nodes) { [weak self] success in
             guard let self = self else { return }
             
+            
+                        
             if success {
                 ud.removeObject(forKey: "walletName")
                 
@@ -127,30 +128,43 @@ class NodesViewController: UIViewController, UITableViewDelegate, UITableViewDat
                 } else {
                     for (i, node) in nodeArray.enumerated() {
                         
-                        if i != indexPath.row {
-                            let str = NodeStruct(dictionary: node)
-                            
-                            if str.id != nodeStr.id {
-                                CoreDataService.update(id: str.id!, keyToUpdate: "isActive", newValue: false, entity: .nodes) { _ in }
-                            }
-                        }
-                        
-                        if i + 1 == nodeArray.count {
-                            CoreDataService.retrieveEntity(entityName: .nodes) { nodes in
-                                if nodes != nil {
-                                    DispatchQueue.main.async { [unowned vc = self] in
-                                        vc.nodeArray.removeAll()
-                                        for node in nodes! {
-                                            let str = NodeStruct(dictionary: node)
-                                            if str.id != nil {
-                                                vc.nodeArray.append(node)
+                        func finish() {
+                            if i + 1 == self.nodeArray.count {
+                                CoreDataService.retrieveEntity(entityName: .nodes) { nodes in
+                                    if nodes != nil {
+                                        DispatchQueue.main.async { [unowned vc = self] in
+                                            vc.nodeArray.removeAll()
+                                            for (x, node) in nodes!.enumerated() {
+                                                let str = NodeStruct(dictionary: node)
+                                                if str.id != nil {
+                                                    vc.nodeArray.append(node)
+                                                }
+                                                if x + 1 == nodes!.count {
+                                                    vc.nodeTable.reloadData()
+                                                }
                                             }
+                                            
                                         }
-                                        vc.nodeTable.reloadData()
                                     }
                                 }
                             }
                         }
+                        
+                        if i != indexPath.row {
+                            let str = NodeStruct(dictionary: node)
+                            
+                            //if str.id != nodeStr.id {
+                                CoreDataService.update(id: str.id!, keyToUpdate: "isActive", newValue: false, entity: .nodes) { updated in
+                                    print("node updated: \(updated)")
+                                    
+                                    finish()
+                                }
+                            //}
+                        } else {
+                            finish()
+                        }
+                        
+                        
                     }
                 }
             } else {
@@ -180,9 +194,6 @@ class NodesViewController: UIViewController, UITableViewDelegate, UITableViewDat
         } else {
             editButton = UIBarButtonItem(title: "Edit", style: .plain, target: self, action: #selector(editNodes))
         }
-        
-        addButton.tintColor = .systemTeal
-        editButton.tintColor = .systemTeal
         
         self.navigationItem.setRightBarButtonItems([addButton, editButton], animated: true)
     }

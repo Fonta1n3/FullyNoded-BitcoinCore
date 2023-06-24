@@ -57,11 +57,6 @@ class VerifyTransactionViewController: UIViewController, UINavigationControllerD
     @IBOutlet weak private var bumpFeeOutlet: UIButton!
     @IBOutlet weak private var signOutlet: UIButton!
     @IBOutlet weak private var sendOutlet: UIButton!
-    @IBOutlet weak private var exportBackgroundView: UIView!
-    @IBOutlet weak private var bumpFeeBackgroundView: UIView!
-    @IBOutlet weak private var signBackgroundView: UIView!
-    @IBOutlet weak private var sendBackgroundView: UIView!
-    @IBOutlet weak private var buttonsBackgroundView: UIVisualEffectView!
     
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -185,42 +180,34 @@ class VerifyTransactionViewController: UIViewController, UINavigationControllerD
     }
     
     private func enableExportButton() {
-        enableView(exportBackgroundView)
         enableButton(exportButtonOutlet)
     }
     
     private func enableBumpFeeButton() {
-        enableView(bumpFeeBackgroundView)
         enableButton(bumpFeeOutlet)
     }
     
     private func enableSignButton() {
-        enableView(signBackgroundView)
         enableButton(signOutlet)
     }
     
     private func enableSendButton() {
-        enableView(sendBackgroundView)
         enableButton(sendOutlet)
     }
     
     private func disableSendButton() {
-        disableView(sendBackgroundView)
         disableButton(sendOutlet)
     }
     
     private func disableSignButton() {
-        disableView(signBackgroundView)
         disableButton(signOutlet)
     }
     
     private func disableBumpButton() {
         disableButton(bumpFeeOutlet)
-        disableView(bumpFeeBackgroundView)
     }
     
     private func disableExportButton() {
-        disableView(exportBackgroundView)
         disableButton(exportButtonOutlet)
     }
     
@@ -229,14 +216,6 @@ class VerifyTransactionViewController: UIViewController, UINavigationControllerD
         disableBumpButton()
         disableSignButton()
         disableExportButton()
-        
-        buttonsBackgroundView.clipsToBounds = true
-        buttonsBackgroundView.layer.cornerRadius = 8
-        
-        roundCorners(exportBackgroundView)
-        roundCorners(bumpFeeBackgroundView)
-        roundCorners(signBackgroundView)
-        roundCorners(sendBackgroundView)
         
         let tap: UITapGestureRecognizer = UITapGestureRecognizer(target: self, action: #selector(dismissKeyboard))
         view.addGestureRecognizer(tap)
@@ -1625,7 +1604,7 @@ class VerifyTransactionViewController: UIViewController, UINavigationControllerD
         }
         
         mempoolAcceptCell.selectionStyle = .none
-        label.textColor = .lightGray
+        //label.textColor = .lightGray
         label.adjustsFontSizeToFitWidth = true
         return mempoolAcceptCell
     }
@@ -1643,7 +1622,7 @@ class VerifyTransactionViewController: UIViewController, UINavigationControllerD
         imageView.image = UIImage(systemName: "rectangle.and.paperclip")
         txidLabel.text = txid
         txidCell.selectionStyle = .none
-        txidLabel.textColor = .lightGray
+        //txidLabel.textColor = .lightGray
         txidLabel.adjustsFontSizeToFitWidth = true
         return txidCell
     }
@@ -1660,7 +1639,6 @@ class VerifyTransactionViewController: UIViewController, UINavigationControllerD
         let inputTypeLabel = inputCell.viewWithTag(6) as! UILabel
         let utxoLabel = inputCell.viewWithTag(7) as! UILabel
         let isChangeImageView = inputCell.viewWithTag(8) as! UIImageView
-        let lifehashImageView = inputCell.viewWithTag(9) as! UIImageView
         let isDustImageView = inputCell.viewWithTag(10) as! UIImageView
         let backgroundView1 = inputCell.viewWithTag(11)!
         let backgroundView2 = inputCell.viewWithTag(12)!
@@ -1685,7 +1663,6 @@ class VerifyTransactionViewController: UIViewController, UINavigationControllerD
         descTextView.layer.cornerRadius = 8
         descTextView.layer.borderWidth = 0.5
         descTextView.layer.borderColor = UIColor.darkGray.cgColor
-        lifehashImageView.layer.magnificationFilter = .nearest
         
         if indexPath.row < inputTableArray.count {
             let input = inputTableArray[indexPath.row]
@@ -1702,7 +1679,6 @@ class VerifyTransactionViewController: UIViewController, UINavigationControllerD
             
             utxoLabel.text = label
             descTextView.text = desc
-            lifehashImageView.image = lifehash
             sigsImageView.image = UIImage(systemName: "signature")
             
             inputIndexLabel.text = "Input #\(input["index"] as! Int)"
@@ -1783,7 +1759,6 @@ class VerifyTransactionViewController: UIViewController, UINavigationControllerD
         let outputAmountLabel = outputCell.viewWithTag(2) as! UILabel
         let outputAddressLabel = outputCell.viewWithTag(3) as! UILabel
         let outputIsOursImage = outputCell.viewWithTag(4) as! UIImageView
-        let lifehashImageView = outputCell.viewWithTag(5) as! UIImageView
         let verifiedByFnImageView = outputCell.viewWithTag(6) as! UIImageView
         let labelLabel = outputCell.viewWithTag(7) as! UILabel
         let isChangeImageView = outputCell.viewWithTag(8) as! UIImageView
@@ -1812,7 +1787,6 @@ class VerifyTransactionViewController: UIViewController, UINavigationControllerD
         descTextView.layer.cornerRadius = 8
         descTextView.layer.borderWidth = 0.5
         descTextView.layer.borderColor = UIColor.darkGray.cgColor
-        lifehashImageView.layer.magnificationFilter = .nearest
         
         signableImageView.tintColor = .white
         isDustImageView.tintColor = .white
@@ -1837,8 +1811,6 @@ class VerifyTransactionViewController: UIViewController, UINavigationControllerD
             
             labelLabel.text = label
             descTextView.text = desc
-            lifehashImageView.layer.magnificationFilter = .nearest
-            lifehashImageView.image = lifehash
             
             outputIndexLabel.text = "Output #\(output["index"] as! Int)"
             outputAmountLabel.text = "\((output["amount"] as! String))"
@@ -1935,7 +1907,7 @@ class VerifyTransactionViewController: UIViewController, UINavigationControllerD
         configureCell(miningFeeCell)
         
         let miningLabel = miningFeeCell.viewWithTag(1) as! UILabel
-        miningLabel.textColor = .lightGray
+        //miningLabel.textColor = .lightGray
         
         let imageView = miningFeeCell.viewWithTag(2) as! UIImageView
         imageView.tintColor = .white
@@ -1972,7 +1944,7 @@ class VerifyTransactionViewController: UIViewController, UINavigationControllerD
         configureCell(etaCell)
         
         let etaLabel = etaCell.viewWithTag(1) as! UILabel
-        etaLabel.textColor = .lightGray
+        //etaLabel.textColor = .lightGray
         
         let imageView = etaCell.viewWithTag(2) as! UIImageView
         imageView.tintColor = .white
@@ -2816,7 +2788,7 @@ extension VerifyTransactionViewController: UITableViewDelegate {
         let textLabel = UILabel()
         textLabel.textAlignment = .left
         textLabel.font = UIFont.systemFont(ofSize: 20, weight: .regular)
-        textLabel.textColor = .white
+        textLabel.textColor = .secondaryLabel
         textLabel.frame = CGRect(x: 0, y: 0, width: 300, height: 50)
         
         if unsignedPsbt == "" && signedRawTx == "" {
@@ -2843,7 +2815,7 @@ extension VerifyTransactionViewController: UITableViewDelegate {
                 textLabel.text = "Transaction ID"
                 let copyButton = UIButton()
                 let copyImage = UIImage(systemName: "doc.on.doc")!
-                copyButton.tintColor = .systemTeal
+                //copyButton.tintColor = .systemTeal
                 copyButton.setImage(copyImage, for: .normal)
                 copyButton.addTarget(self, action: #selector(copyTxid), for: .touchUpInside)
                 copyButton.frame = CGRect(x: header.frame.maxX - 70, y: 0, width: 50, height: 50)

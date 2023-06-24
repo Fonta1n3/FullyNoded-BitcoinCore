@@ -68,7 +68,7 @@ class SettingsViewController: UIViewController, UITableViewDelegate, UITableView
         cell.selectionStyle = .none
         cell.layer.borderColor = UIColor.lightGray.cgColor
         cell.layer.borderWidth = 0.5
-        cell.backgroundColor = #colorLiteral(red: 0.05172085258, green: 0.05855310153, blue: 0.06978280196, alpha: 1)
+        //cell.backgroundColor = #colorLiteral(red: 0.05172085258, green: 0.05855310153, blue: 0.06978280196, alpha: 1)
     }
     
     private func settingsCell(_ indexPath: IndexPath) -> UITableViewCell {
@@ -76,7 +76,7 @@ class SettingsViewController: UIViewController, UITableViewDelegate, UITableView
         configureCell(settingsCell)
         
         let label = settingsCell.viewWithTag(1) as! UILabel
-        label.textColor = .lightGray
+        //label.textColor = .
         label.adjustsFontSizeToFitWidth = true
         
         let background = settingsCell.viewWithTag(2)!
@@ -110,7 +110,7 @@ class SettingsViewController: UIViewController, UITableViewDelegate, UITableView
         configureCell(exchangeRateApiCell)
         
         let label = exchangeRateApiCell.viewWithTag(1) as! UILabel
-        label.textColor = .lightGray
+        //label.textColor = .lightGray
         label.adjustsFontSizeToFitWidth = true
         
         let background = exchangeRateApiCell.viewWithTag(2)!
@@ -159,7 +159,7 @@ class SettingsViewController: UIViewController, UITableViewDelegate, UITableView
         configureCell(currencyCell)
         
         let label = currencyCell.viewWithTag(1) as! UILabel
-        label.textColor = .lightGray
+        //label.textColor = .lightGray
         label.adjustsFontSizeToFitWidth = true
         
         let background = currencyCell.viewWithTag(2)!
@@ -221,8 +221,8 @@ class SettingsViewController: UIViewController, UITableViewDelegate, UITableView
         header.frame = CGRect(x: 0, y: 0, width: view.frame.size.width - 32, height: 50)
         let textLabel = UILabel()
         textLabel.textAlignment = .left
-        textLabel.font = UIFont.systemFont(ofSize: 20, weight: .regular)
-        textLabel.textColor = .white
+        textLabel.font = UIFont.systemFont(ofSize: 17, weight: .regular)
+        textLabel.textColor = .secondaryLabel
         textLabel.frame = CGRect(x: 0, y: 0, width: 300, height: 50)
         switch section {
         case 0:
