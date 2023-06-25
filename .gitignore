@@ -127,3 +127,4 @@ Pods
 *.xcworkspace
 
 .DS_Store
+*.xcuserstate
