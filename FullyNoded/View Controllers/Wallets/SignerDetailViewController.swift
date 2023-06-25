@@ -95,9 +95,9 @@ class SignerDetailViewController: UIViewController, UINavigationControllerDelega
     
     private func configureField(_ field: UIView) {
         field.clipsToBounds = true
-        field.layer.cornerRadius = 8
-        field.layer.borderWidth = 0.5
-        field.layer.borderColor = UIColor.lightGray.cgColor
+//        field.layer.cornerRadius = 8
+//        field.layer.borderWidth = 0.5
+//        field.layer.borderColor = UIColor.lightGray.cgColor
     }
     
     private func reloadTable() {
@@ -612,7 +612,7 @@ class SignerDetailViewController: UIViewController, UINavigationControllerDelega
     
     private func segmentedControll(_ x: CGFloat, _ selectedSegmentIndex: Int) -> UISegmentedControl {
         let segmentedControll = UISegmentedControl(items: ["text", "ur"])
-        segmentedControll.frame = CGRect(x: x, y: 10, width: 100, height: 30)
+        segmentedControll.frame = CGRect(x: x, y: -5, width: 100, height: 30)
         segmentedControll.setTitle("text", forSegmentAt: 0)
         segmentedControll.setTitle("ur", forSegmentAt: 1)
         segmentedControll.selectedSegmentIndex = selectedSegmentIndex
@@ -623,8 +623,8 @@ class SignerDetailViewController: UIViewController, UINavigationControllerDelega
     private func exportQrButton(_ x: CGFloat) -> UIButton {
         let qrButton = UIButton()
         qrButton.setImage(.init(systemName: "qrcode"), for: .normal)
-        qrButton.imageView?.tintColor = .systemTeal
-        qrButton.frame = CGRect(x: x, y: 5, width: 40, height: 40)
+        //qrButton.imageView?.tintColor = .systemTeal
+        qrButton.frame = CGRect(x: x, y: -10, width: 40, height: 40)
         qrButton.showsTouchWhenHighlighted = true
         qrButton.addTarget(self, action: #selector(exportQr(_:)), for: .touchUpInside)
         return qrButton
@@ -633,8 +633,8 @@ class SignerDetailViewController: UIViewController, UINavigationControllerDelega
     private func createWalletButton(_ x: CGFloat) -> UIButton {
         let createWalletButton = UIButton()
         createWalletButton.setImage(.init(systemName: "plus"), for: .normal)
-        createWalletButton.imageView?.tintColor = .systemTeal
-        createWalletButton.frame = CGRect(x: x, y: 5, width: 40, height: 40)
+        //createWalletButton.imageView?.tintColor = .systemTeal
+        createWalletButton.frame = CGRect(x: x, y: -10, width: 40, height: 40)
         createWalletButton.showsTouchWhenHighlighted = true
         createWalletButton.addTarget(self, action: #selector(createWallet), for: .touchUpInside)
         return createWalletButton
@@ -644,7 +644,7 @@ class SignerDetailViewController: UIViewController, UINavigationControllerDelega
         let deleteButton = UIButton()
         deleteButton.setImage(.init(systemName: "trash"), for: .normal)
         deleteButton.imageView?.tintColor = .systemRed
-        deleteButton.frame = CGRect(x: x, y: 5, width: 40, height: 40)
+        deleteButton.frame = CGRect(x: x, y: -10, width: 40, height: 40)
         deleteButton.showsTouchWhenHighlighted = true
         return deleteButton
     }
@@ -1092,7 +1092,7 @@ extension SignerDetailViewController: UITableViewDelegate {
         titleLabel.lineBreakMode = .byWordWrapping
         titleLabel.backgroundColor = .clear
         titleLabel.font = .systemFont(ofSize: 14)
-        titleLabel.textColor = .systemGreen
+        titleLabel.textColor = .tertiaryLabel
         
         let text = tableDict[section]["footerText"] as? String ?? ""
         titleLabel.text = text
@@ -1197,7 +1197,7 @@ extension SignerDetailViewController: UITableViewDelegate {
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         let cell = tableView.dequeueReusableCell(withIdentifier: "defaultCell", for: indexPath)
         cell.textLabel?.numberOfLines = 0
-        cell.textLabel?.textColor = .lightGray
+        //cell.textLabel?.textColor = .lightGray
         cell.textLabel?.sizeToFit()
         cell.sizeToFit()
         cell.selectionStyle = .none
@@ -1273,13 +1273,13 @@ extension SignerDetailViewController: UITableViewDelegate {
     func tableView(_ tableView: UITableView, viewForHeaderInSection section: Int) -> UIView? {
         let header = UIView()
         header.backgroundColor = UIColor.clear
-        header.frame = CGRect(x: 0, y: 0, width: view.frame.size.width - 32, height: 50)
+        header.frame = CGRect(x: 0, y: 0, width: view.frame.size.width - 32, height: 25)
         
         let textLabel = UILabel()
         textLabel.textAlignment = .left
-        textLabel.font = UIFont.systemFont(ofSize: 20, weight: .regular)
-        textLabel.textColor = .white
-        textLabel.frame = CGRect(x: 0, y: 0, width: 300, height: 50)
+        textLabel.font = UIFont.systemFont(ofSize: 17, weight: .regular)
+        textLabel.textColor = .secondaryLabel
+        textLabel.frame = CGRect(x: 0, y: 0, width: 300, height: 25)
         
         let selectedSegmentIndex = tableDict[section]["selectedSegmentIndex"] as? Int ?? 0
                 
@@ -1339,7 +1339,7 @@ extension SignerDetailViewController: UITableViewDelegate {
     }
     
     func tableView(_ tableView: UITableView, heightForHeaderInSection section: Int) -> CGFloat {
-        return 50
+        return 30
     }
     
 }

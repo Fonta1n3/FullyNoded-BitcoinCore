@@ -12,63 +12,29 @@ import LocalAuthentication
 class LogInViewController: UIViewController, UITextFieldDelegate {
 
     var onDoneBlock: (() -> Void)?
-    let passwordInput = UITextField()
-    let lockView = UIView()
-    let touchIDButton = UIButton(type: .roundedRect)
-    let imageView = UIImageView()
     let fingerPrintView = UIImageView()
-    let nextButton = UIButton(type: .roundedRect)
     let nextAttemptLabel = UILabel()
     var timeToDisable = 2.0
     var timer: Timer?
     var secondsRemaining = 2
     var tapGesture:UITapGestureRecognizer!
-    var resetButton = UIButton()
     var isRessetting = false
     var initialLoad = true
-
+    @IBOutlet weak var nextButton: UIButton!
+    @IBOutlet weak var touchIdButton: UIButton!
+    @IBOutlet weak var passwordInput: UITextField!
+    @IBOutlet weak var resetButton: UIButton!
+    
     override func viewDidLoad() {
         super.viewDidLoad()
 
         tapGesture = UITapGestureRecognizer(target: self, action: #selector(self.dismissKeyboard (_:)))
         tapGesture.numberOfTapsRequired = 1
         self.view.addGestureRecognizer(tapGesture)
-
+        resetButton.alpha = 0
         passwordInput.delegate = self
-        passwordInput.returnKeyType = .done
-
-        lockView.backgroundColor = .systemBackground
-        lockView.alpha = 1
-
-        imageView.image = UIImage(named: "logo_grey.png")
-        imageView.alpha = 1
-
-        passwordInput.keyboardType = .default
         passwordInput.autocapitalizationType = .none
         passwordInput.autocorrectionType = .no
-        passwordInput.layer.cornerRadius = 10
-        passwordInput.alpha = 0
-        passwordInput.placeholder = "password"
-        passwordInput.isSecureTextEntry = true
-        passwordInput.returnKeyType = .go
-        passwordInput.textAlignment = .center
-        passwordInput.keyboardAppearance = .dark
-        passwordInput.layer.borderWidth = 0.5
-        passwordInput.layer.borderColor = UIColor.lightGray.cgColor
-
-        touchIDButton.setImage(UIImage(systemName: "faceid"), for: .normal)
-        //touchIDButton.tintColor = .systemTeal
-        //touchIDButton.backgroundColor = UIColor.clear
-        touchIDButton.addTarget(self, action: #selector(authenticationWithTouchID), for: .touchUpInside)
-        touchIDButton.showsTouchWhenHighlighted = true
-
-        #if !targetEnvironment(macCatalyst)
-            touchIDButton.alpha = 1
-        #else
-            touchIDButton.alpha = 0
-        #endif
-
-        view.addSubview(lockView)
 
         guard let timeToDisableOnKeychain = KeyChain.getData("TimeToDisable") else {
             let _ = KeyChain.set("2.0".utf8, forKey: "TimeToDisable")
@@ -84,26 +50,18 @@ class LogInViewController: UIViewController, UITextFieldDelegate {
     override func viewDidAppear(_ animated: Bool) {
         if initialLoad {
             initialLoad = false
-            lockView.addSubview(imageView)
-            lockView.addSubview(passwordInput)
             passwordInput.removeGestureRecognizer(tapGesture)
-            addNextButton(inputView: passwordInput)
 
             let ud = UserDefaults.standard
+            let bioMetricsDisabled = ud.object(forKey: "bioMetricsDisabled") as? Bool ?? false
 
-            if ud.object(forKey: "bioMetricsDisabled") == nil {
-                touchIDButton.removeFromSuperview()
-                lockView.addSubview(touchIDButton)
-            }
-
-            showUnlockScreen()
-
-            DispatchQueue.main.async {
-                UIImpactFeedbackGenerator().impactOccurred()
-            }
-
-            if ud.object(forKey: "bioMetricsDisabled") == nil {
-                authenticationWithTouchID()
+            if bioMetricsDisabled {
+                touchIdButton.removeFromSuperview()
+            } else {
+                if !bioMetricsDisabled {
+                    touchIdButton.alpha = 1
+                    authenticationWithTouchID()
+                }
             }
 
             configureTimeoutLabel()
@@ -114,25 +72,26 @@ class LogInViewController: UIViewController, UITextFieldDelegate {
         }
     }
     
-    private func addResetPassword() {
-        resetButton.removeFromSuperview()
-        resetButton.showsTouchWhenHighlighted = true
-        resetButton.setTitle("reset app", for: .normal)
-        resetButton.addTarget(self, action: #selector(promptToReset), for: .touchUpInside)
-        resetButton.setTitleColor(.systemRed, for: .normal)
-        view.addSubview(resetButton)
-    }
-
-    override func viewDidLayoutSubviews() {
-        lockView.frame = self.view.frame
-        imageView.frame = CGRect(x: self.view.center.x - 40, y: 40, width: 80, height: 80)
-        passwordInput.frame = CGRect(x: 50, y: imageView.frame.maxY + 80, width: view.frame.width - 100, height: 50)
-        nextButton.frame = CGRect(x: self.view.center.x - 40, y: passwordInput.frame.maxY + 15, width: 80, height: 35)
-        touchIDButton.frame = CGRect(x: self.view.center.x - 30, y: self.nextButton.frame.maxY + 20, width: 60, height: 60)
-        resetButton.frame = CGRect(x: self.view.center.x - 50, y: self.nextButton.frame.maxY + 100, width: 100, height: 60)
+    @IBAction func touchIdAction(_ sender: Any) {
+        authenticationWithTouchID()
     }
     
-    @objc func promptToReset() {
+    
+    private func addResetPassword() {
+        resetButton.alpha = 1
+    }
+    
+    @IBAction func resetAction(_ sender: Any) {
+        promptToReset()
+    }
+    
+    @IBAction func unlockAction(_ sender: Any) {
+        nextButtonAction()
+    }
+    
+    
+    
+    private func promptToReset() {
         DispatchQueue.main.async { [weak self] in
             guard let self = self else { return }
             
@@ -203,33 +162,6 @@ class LogInViewController: UIViewController, UITextFieldDelegate {
         }
     }
 
-    func addNextButton(inputView: UITextField) {
-        DispatchQueue.main.async { [weak self] in
-            guard let self = self else { return }
-
-            self.nextButton.removeFromSuperview()
-            self.nextButton.showsTouchWhenHighlighted = true
-            self.nextButton.setTitle("Next", for: .normal)
-            
-            //self.nextButton.setTitleColor(.systemTeal, for: .normal)
-            self.nextButton.titleLabel?.font = UIFont.systemFont(ofSize: 17)
-            self.nextButton.addTarget(self, action: #selector(self.nextButtonAction), for: .touchUpInside)
-            //self.nextButton.backgroundColor = #colorLiteral(red: 0.1215686275, green: 0.1294117647, blue: 0.1411764706, alpha: 1)
-            self.nextButton.clipsToBounds = true
-            self.nextButton.layer.cornerRadius = 8
-            self.view.addSubview(self.nextButton)
-        }
-    }
-
-    func showUnlockScreen() {
-        UIView.animate(withDuration: 0.2, animations: {
-            self.passwordInput.alpha = 1
-            #if !targetEnvironment(macCatalyst)
-                self.touchIDButton.alpha = 1
-            #endif
-        })
-    }
-
     @objc func nextButtonAction() {
         guard passwordInput.text != "" else {
             shakeAlert(viewToShake: passwordInput)
@@ -256,23 +188,13 @@ class LogInViewController: UIViewController, UITextFieldDelegate {
         DispatchQueue.main.async { [weak self] in
             guard let self = self else { return }
             
-            self.touchIDButton.removeFromSuperview()
-            self.nextButton.removeFromSuperview()
+            self.passwordInput.text = ""
             
-            UIView.animate(withDuration: 0.2, animations: {
-                self.passwordInput.alpha = 0
-                
-            }, completion: { _ in
-                self.passwordInput.text = ""
-                self.imageView.removeFromSuperview()
-                self.passwordInput.removeFromSuperview()
-                
-                DispatchQueue.main.async {
-                    self.dismiss(animated: true) {
-                        self.onDoneBlock!()
-                    }
+            DispatchQueue.main.async {
+                self.dismiss(animated: true) {
+                    self.onDoneBlock!()
                 }
-            })
+            }
         }
     }
 

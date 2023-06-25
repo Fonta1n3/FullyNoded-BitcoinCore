@@ -67,11 +67,11 @@ class NodesViewController: UIViewController, UITableViewDelegate, UITableViewDat
     }
     
     func numberOfSections(in tableView: UITableView) -> Int {
-        return nodeArray.count
+        return 1
     }
     
     func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-        return 1
+        return nodeArray.count
     }
     
     private func decryptedValue(_ encryptedValue: Data) -> String {
@@ -82,8 +82,8 @@ class NodesViewController: UIViewController, UITableViewDelegate, UITableViewDat
     
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         let cell = tableView.dequeueReusableCell(withIdentifier: "node", for: indexPath)
-        cell.layer.borderColor = UIColor.lightGray.cgColor
-        cell.layer.borderWidth = 0.5
+//        cell.layer.borderColor = UIColor.lightGray.cgColor
+//        cell.layer.borderWidth = 0.5
         //cell.backgroundColor = #colorLiteral(red: 0.05172085258, green: 0.05855310153, blue: 0.06978280196, alpha: 1)
         
         let label = cell.viewWithTag(1) as! UILabel
@@ -93,7 +93,7 @@ class NodesViewController: UIViewController, UITableViewDelegate, UITableViewDat
         button.restorationIdentifier = "\(indexPath.section)"
         button.addTarget(self, action: #selector(editNode(_:)), for: .touchUpInside)
         
-        let nodeStruct = NodeStruct(dictionary: nodeArray[indexPath.section])
+        let nodeStruct = NodeStruct(dictionary: nodeArray[indexPath.row])
         
         label.text = nodeStruct.label
         
@@ -117,9 +117,7 @@ class NodesViewController: UIViewController, UITableViewDelegate, UITableViewDat
         
         CoreDataService.update(id: nodeStr.id!, keyToUpdate: "isActive", newValue: true, entity: .nodes) { [weak self] success in
             guard let self = self else { return }
-            
-            
-                        
+                                    
             if success {
                 ud.removeObject(forKey: "walletName")
                 

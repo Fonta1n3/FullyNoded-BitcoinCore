@@ -40,9 +40,9 @@ class UTXOCell: UITableViewCell {
     override func awakeFromNib() {
         super.awakeFromNib()
         
-        layer.borderColor = UIColor.lightGray.cgColor
-        layer.borderWidth = 0.5
-        layer.cornerRadius = 8
+//        layer.borderColor = UIColor.lightGray.cgColor
+//        layer.borderWidth = 0.5
+//        layer.cornerRadius = 8
         
         //roundeBackgroundView.backgroundColor = #colorLiteral(red: 0.05172085258, green: 0.05855310153, blue: 0.06978280196, alpha: 1)
         

@@ -31,7 +31,7 @@ class ImportWallet {
         wallet["label"] = label
         wallet["id"] = UUID()
         wallet["blockheight"] = Int64(blockheight)
-        wallet["maxIndex"] = 2500
+        wallet["maxIndex"] = 100
         wallet["index"] = 0
         
         var descStruct = Descriptor(primDescriptor)

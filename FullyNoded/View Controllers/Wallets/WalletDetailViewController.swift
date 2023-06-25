@@ -720,9 +720,9 @@ class WalletDetailViewController: UIViewController, UITextFieldDelegate, UITable
     
     private func configureCell(_ cell: UITableViewCell) {
         cell.selectionStyle = .none
-        cell.layer.cornerRadius = 8
-        cell.layer.borderWidth = 0.5
-        cell.layer.borderColor = UIColor.darkGray.cgColor
+//        cell.layer.cornerRadius = 8
+//        cell.layer.borderWidth = 0.5
+//        cell.layer.borderColor = UIColor.darkGray.cgColor
     }
     
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
@@ -794,43 +794,42 @@ class WalletDetailViewController: UIViewController, UITextFieldDelegate, UITable
     func tableView(_ tableView: UITableView, viewForHeaderInSection section: Int) -> UIView? {
         let header = UIView()
         header.backgroundColor = UIColor.clear
-        header.frame = CGRect(x: 0, y: 0, width: view.frame.size.width - 32, height: 60)
+        header.frame = CGRect(x: 0, y: 0, width: view.frame.size.width - 32, height: 30)
         
-        let background = UIView()
-        background.frame = CGRect(x: 0, y: header.frame.minY + 25, width: 35, height: 35)
-        background.clipsToBounds = true
-        background.layer.cornerRadius = 5
-        background.center.y = header.center.y
+//        let background = UIView()
+//        background.frame = CGRect(x: 0, y: header.frame.minY + 25, width: 35, height: 35)
+//        background.clipsToBounds = true
+//        background.layer.cornerRadius = 5
+//        background.center.y = header.center.y
         
         let icon = UIImageView()
-        icon.frame = CGRect(x: 5, y: 5, width: 25, height: 25)
-        icon.tintColor = .white
+        icon.frame = CGRect(x: 0, y: 0, width: 25, height: 25)
+        //icon.tintColor = .white
         icon.contentMode = .scaleAspectFit
         
         let textLabel = UILabel()
         textLabel.textAlignment = .left
-        textLabel.font = UIFont.systemFont(ofSize: 20, weight: .semibold)
-        //textLabel.textColor = .white
-        textLabel.frame = CGRect(x: 43, y: 0, width: 300, height: 50)
-        textLabel.center.y = background.center.y
+        textLabel.font = UIFont.systemFont(ofSize: 17, weight: .regular)
+        textLabel.textColor = .secondaryLabel
+        textLabel.frame = CGRect(x: 38, y: 0, width: 300, height: 20)
+        textLabel.center.y = header.center.y
         
         if let section = Section(rawValue: section) {
-            let (text, image, color) = headerName(for: section)
+            let (text, image) = headerName(for: section)
             
             textLabel.text = text
             icon.image = image
-            background.backgroundColor = color
         }
         
-        background.addSubview(icon)
-        header.addSubview(background)
+        //background.addSubview(icon)
+        header.addSubview(icon)
         header.addSubview(textLabel)
         
         return header
     }
     
     func tableView(_ tableView: UITableView, heightForHeaderInSection section: Int) -> CGFloat {
-        return 60
+        return 30
     }
     
     @objc func updateAddressExplorer(_ sender: UISegmentedControl) {
@@ -1025,32 +1024,32 @@ class WalletDetailViewController: UIViewController, UITextFieldDelegate, UITable
 
 extension WalletDetailViewController {
     
-    private func headerName(for section: Section) -> (text: String, icon: UIImage, color: UIColor) {
+    private func headerName(for section: Section) -> (text: String, icon: UIImage) {
         switch section {
         case .label:
-            return ("Label", UIImage(systemName: "rectangle.and.paperclip")!, .systemBlue)
+            return ("Label", UIImage(systemName: "rectangle.and.paperclip")!)
         case .walletExport:
-            return ("Wallet export", UIImage(systemName: "square.and.arrow.up")!, .systemIndigo)
+            return ("Wallet export", UIImage(systemName: "square.and.arrow.up")!)
         case .backupQr:
-            return ("Backup QR", UIImage(systemName: "qrcode")!, .systemGreen)
+            return ("Backup QR", UIImage(systemName: "qrcode")!)
         case .exportFile:
-            return ("Backup file", UIImage(systemName: "folder")!, .systemPink)
+            return ("Backup file", UIImage(systemName: "folder")!)
         case .filename:
-            return ("Bitcoin Core filename", UIImage(systemName: "rectangle.and.paperclip")!, .systemOrange)
+            return ("Bitcoin Core filename", UIImage(systemName: "rectangle.and.paperclip")!)
         case .receiveDesc:
-            return ("Receive descriptor - keypool", UIImage(systemName: "arrow.down.left")!, .systemBlue)
+            return ("Receive descriptor - keypool", UIImage(systemName: "arrow.down.left")!)
         case .changeDesc:
-            return ("Change descriptor - keypool", UIImage(systemName: "arrow.2.circlepath")!, .systemPurple)
+            return ("Change descriptor - keypool", UIImage(systemName: "arrow.2.circlepath")!)
         case .currentIndex:
-            return ("Current address index", UIImage(systemName: "number")!, .systemGreen)
+            return ("Current address index", UIImage(systemName: "number")!)
         case .maxIndex:
-            return ("Gap limit", UIImage(systemName: "exclamationmark.triangle")!, .systemRed)
+            return ("Gap limit", UIImage(systemName: "exclamationmark.triangle")!)
         case .signer:
-            return ("Signers", UIImage(systemName: "pencil.and.ellipsis.rectangle")!, .darkGray)
+            return ("Signers", UIImage(systemName: "pencil.and.ellipsis.rectangle")!)
         case .watching:
-            return ("Watching descriptors", UIImage(systemName: "eye")!, .systemOrange)
+            return ("Watching descriptors", UIImage(systemName: "eye")!)
         case .addressExplorer:
-            return ("Address explorer", UIImage(systemName: "list.number")!, .systemBlue)
+            return ("Address explorer", UIImage(systemName: "list.number")!)
         }
     }
     

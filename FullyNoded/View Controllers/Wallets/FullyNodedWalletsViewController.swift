@@ -213,69 +213,59 @@ class FullyNodedWalletsViewController: UIViewController, UITableViewDelegate, UI
     }
     
     func tableView(_ tableView: UITableView, heightForRowAt indexPath: IndexPath) -> CGFloat {
-        return 54
+        return 65
     }
     
     func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-        return 1
+        return wallets.count
     }
     
     func numberOfSections(in tableView: UITableView) -> Int {
-        return wallets.count
+        return 1
     }
     
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         let cell = tableView.dequeueReusableCell(withIdentifier: "fnWalletCell", for: indexPath)
         cell.selectionStyle = .none
-        cell.layer.borderColor = UIColor.lightGray.cgColor
-        cell.layer.borderWidth = 0.5
+//        cell.layer.borderColor = UIColor.lightGray.cgColor
+//        cell.layer.borderWidth = 0.5
         cell.sizeToFit()
         let label = cell.viewWithTag(1) as! UILabel
         label.numberOfLines = 0
         label.lineBreakMode = .byWordWrapping
         label.sizeToFit()
         let button = cell.viewWithTag(2) as! UIButton
-        let toggle = cell.viewWithTag(3) as! UISwitch
-        let wallet = wallets[indexPath.section]
+        let wallet = wallets[indexPath.row]
         let btcBalance = (wallet["balance"] as? Double ?? 0.0)
         let walletStruct = Wallet(dictionary: wallet)
         label.text = walletStruct.label + "\n\(btcBalance.btc) / \((btcBalance * fxRate).balanceText)"
-        button.restorationIdentifier = "\(indexPath.section)"
-        toggle.restorationIdentifier = "\(indexPath.section)"
+        button.restorationIdentifier = "\(indexPath.row)"
         button.addTarget(self, action: #selector(goToDetail(_:)), for: .touchUpInside)
-        toggle.addTarget(self, action: #selector(toggleAction(_:)), for: .valueChanged)
         if self.existingActiveWalletName == walletStruct.name {
-            toggle.setOn(true, animated: true)
+            cell.accessoryType = .checkmark
+            cell.isSelected = true
         } else {
-            toggle.setOn(false, animated: true)
+            cell.accessoryType = .none
+            cell.isSelected = false
         }
         return cell
     }
     
-    @objc func toggleAction(_ sender: UISwitch) {
-        if sender.restorationIdentifier != nil {
-            if let section = Int(sender.restorationIdentifier!) {
-                let name = Wallet(dictionary: wallets[section]).name
-                if sender.isOn {
-                    DispatchQueue.main.async { [weak self] in
-                        guard let self = self else { return }
-                        
-                        self.existingActiveWalletName = name
-                        UserDefaults.standard.set(name, forKey: "walletName")
-                        NotificationCenter.default.post(name: .refreshWallet, object: nil, userInfo: nil)
-                        self.navigationController?.popViewController(animated: true)
-                    }
-                } else {
-                    UserDefaults.standard.removeObject(forKey: "walletName")
-                }
-            }
+    func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
+        let wallet = Wallet(dictionary: wallets[indexPath.row])
+        UserDefaults.standard.set(wallet.name, forKey: "walletName")
+        existingActiveWalletName = wallet.name
+        DispatchQueue.main.async { [weak self] in
+            guard let self = self else { return }
+            walletsTable.reloadData()
+            NotificationCenter.default.post(name: .refreshWallet, object: nil, userInfo: nil)
         }
     }
     
     @objc func goToDetail(_ sender: UIButton) {
         if sender.restorationIdentifier != nil {
-            if let section = Int(sender.restorationIdentifier!) {
-                walletId = Wallet(dictionary: wallets[section]).id
+            if let row = Int(sender.restorationIdentifier!) {
+                walletId = Wallet(dictionary: wallets[row]).id
                 goToDetail()
             }
         }

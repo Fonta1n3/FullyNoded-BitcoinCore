@@ -66,9 +66,6 @@ class SettingsViewController: UIViewController, UITableViewDelegate, UITableView
     
     private func configureCell(_ cell: UITableViewCell) {
         cell.selectionStyle = .none
-        cell.layer.borderColor = UIColor.lightGray.cgColor
-        cell.layer.borderWidth = 0.5
-        //cell.backgroundColor = #colorLiteral(red: 0.05172085258, green: 0.05855310153, blue: 0.06978280196, alpha: 1)
     }
     
     private func settingsCell(_ indexPath: IndexPath) -> UITableViewCell {
@@ -79,23 +76,23 @@ class SettingsViewController: UIViewController, UITableViewDelegate, UITableView
         //label.textColor = .
         label.adjustsFontSizeToFitWidth = true
         
-        let background = settingsCell.viewWithTag(2)!
-        background.clipsToBounds = true
-        background.layer.cornerRadius = 8
+//        let background = settingsCell.viewWithTag(2)!
+//        background.clipsToBounds = true
+//        background.layer.cornerRadius = 8
         
         let icon = settingsCell.viewWithTag(3) as! UIImageView
-        icon.tintColor = .white
+        //icon.tintColor = .white
         
         switch indexPath.section {
         case 0:
             label.text = "Node manager"
-            icon.image = UIImage(systemName: "desktopcomputer")
-            background.backgroundColor = .systemBlue
+            icon.image = UIImage(systemName: "server.rack")
+            //background.backgroundColor = .systemBlue
             
         case 1:
             label.text = "Security Center"
             icon.image = UIImage(systemName: "lock.shield")
-            background.backgroundColor = .systemOrange
+            //background.backgroundColor = .systemOrange
             
         default:
             break
@@ -113,37 +110,37 @@ class SettingsViewController: UIViewController, UITableViewDelegate, UITableView
         //label.textColor = .lightGray
         label.adjustsFontSizeToFitWidth = true
         
-        let background = exchangeRateApiCell.viewWithTag(2)!
-        background.clipsToBounds = true
-        background.layer.cornerRadius = 8
+//        let background = exchangeRateApiCell.viewWithTag(2)!
+//        background.clipsToBounds = true
+//        background.layer.cornerRadius = 8
         
         let icon = exchangeRateApiCell.viewWithTag(3) as! UIImageView
-        icon.tintColor = .white
+        //icon.tintColor = .white
         
         let useBlockchainInfo = UserDefaults.standard.object(forKey: "useBlockchainInfo") as? Bool ?? true
         
-        icon.image = UIImage(systemName: "dollarsign.circle")
+        icon.image = UIImage(systemName: "server.rack")
         
         switch indexPath.row {
         case 0:
             label.text = "Blockchain.info"
             if useBlockchainInfo {
-                background.backgroundColor = .systemBlue
+                //background.backgroundColor = .systemBlue
                 exchangeRateApiCell.isSelected = true
                 exchangeRateApiCell.accessoryType = .checkmark
             } else {
-                background.backgroundColor = .systemGray
+                //background.backgroundColor = .systemGray
                 exchangeRateApiCell.isSelected = false
                 exchangeRateApiCell.accessoryType = .none
             }
         case 1:
             label.text = "Coindesk"
             if !useBlockchainInfo {
-                background.backgroundColor = .systemBlue
+                //background.backgroundColor = .systemBlue
                 exchangeRateApiCell.isSelected = true
                 exchangeRateApiCell.accessoryType = .checkmark
             } else {
-                background.backgroundColor = .systemGray
+                //background.backgroundColor = .systemGray
                 exchangeRateApiCell.isSelected = false
                 exchangeRateApiCell.accessoryType = .none
             }
@@ -159,29 +156,27 @@ class SettingsViewController: UIViewController, UITableViewDelegate, UITableView
         configureCell(currencyCell)
         
         let label = currencyCell.viewWithTag(1) as! UILabel
-        //label.textColor = .lightGray
         label.adjustsFontSizeToFitWidth = true
         
-        let background = currencyCell.viewWithTag(2)!
-        background.clipsToBounds = true
-        background.layer.cornerRadius = 8
+//        let background = currencyCell.viewWithTag(2)!
+//        background.clipsToBounds = true
+//        background.layer.cornerRadius = 8
                 
         let icon = currencyCell.viewWithTag(3) as! UIImageView
-        icon.tintColor = .white
+        //icon.tintColor = .white
         
         let currencyToUse = UserDefaults.standard.object(forKey: "currency") as? String ?? "USD"
         
         for (key, value) in currency {
             if currencyToUse == key {
-                background.backgroundColor = .systemGreen
+                //background.backgroundColor = .systemGreen
                 currencyCell.accessoryType = .checkmark
                 currencyCell.isSelected = true
             } else {
-                background.backgroundColor = .systemGray
+                //background.backgroundColor = .systemGray
                 currencyCell.accessoryType = .none
                 currencyCell.isSelected = false
             }
-            
             label.text = key
             icon.image = UIImage(systemName: value)
         }

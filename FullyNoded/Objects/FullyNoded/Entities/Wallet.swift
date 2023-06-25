@@ -21,6 +21,7 @@ public struct Wallet: CustomStringConvertible {
     var watching:[String]?
     let account:Int16
     let blockheight:Int
+    let isActive:Bool
     var dict: [String:Any]
     
     init(dictionary: [String: Any]) {
@@ -36,6 +37,7 @@ public struct Wallet: CustomStringConvertible {
         watching = dictionary["watching"] as? [String]
         account = dictionary["account"] as? Int16 ?? 0
         blockheight = Int(exactly: dictionary["blockheight"] as? Int64 ?? 0)!
+        isActive = dictionary["isActive"] as? Bool ?? (UserDefaults.standard.string(forKey: "walletName") == name)
     }
     
     public var description: String {

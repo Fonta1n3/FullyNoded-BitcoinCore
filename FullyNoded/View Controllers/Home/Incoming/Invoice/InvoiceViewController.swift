@@ -124,8 +124,8 @@ class InvoiceViewController: UIViewController, UITextFieldDelegate {
     private func configureView(_ view: UIView) {
         view.clipsToBounds = true
         view.layer.cornerRadius = 8
-        view.layer.borderColor = UIColor.darkGray.cgColor
-        view.layer.borderWidth = 0.5
+//        view.layer.borderColor = UIColor.darkGray.cgColor
+//        view.layer.borderWidth = 0.5
     }
     
     

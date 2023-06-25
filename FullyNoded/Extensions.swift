@@ -98,12 +98,8 @@ extension Array where Element == UInt8 {
 }
 
 public extension String {
-    var pong: String {
-        return self.replacingOccurrences(of: "PING", with: "PONG")
-    }
-    
     var btc: String {
-        return self + " btc"
+        return self
     }
     
     var sats: String {

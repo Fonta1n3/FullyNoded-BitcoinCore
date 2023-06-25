@@ -511,18 +511,18 @@ class CreateRawTxViewController: UIViewController, UITextFieldDelegate, UITableV
                 if seconds < 3600 {
                     DispatchQueue.main.async {
                         //less then an hour
-                        label.text = "Target: \(numberOfBlocks) blocks ~\(seconds / 60) minutes"
+                        label.text = "\(numberOfBlocks) blocks ~\(seconds / 60) minutes"
                     }
                 } else {
                     DispatchQueue.main.async {
                         //more then an hour
-                        label.text = "Target: \(numberOfBlocks) blocks ~\(seconds / 3600) hours"
+                        label.text = "\(numberOfBlocks) blocks ~\(seconds / 3600) hours"
                     }
                 }
             } else {
                 DispatchQueue.main.async {
                     //more then a day
-                    label.text = "Target: \(numberOfBlocks) blocks ~\(seconds / 86400) days"
+                    label.text = "\(numberOfBlocks) blocks ~\(seconds / 86400) days"
                 }
             }
             updateFeeSetting()
@@ -896,7 +896,11 @@ class CreateRawTxViewController: UIViewController, UITextFieldDelegate, UITableV
             guard let response = response, let feeRate = response["feeRate"] as? String else { return }
             
             DispatchQueue.main.async {
-                self.satPerByteLabel.text = "\(feeRate)"
+                if feeRate.contains("no feerate found") {
+                    self.satPerByteLabel.text = "no fee data"
+                } else {
+                    self.satPerByteLabel.text = "\(feeRate)"
+                }
             }
         }
     }

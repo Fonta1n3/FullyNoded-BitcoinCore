@@ -36,7 +36,7 @@ class SecurityCenterViewController: UIViewController, UITableViewDelegate, UITab
     }
     
     func tableView(_ tableView: UITableView, heightForHeaderInSection section: Int) -> CGFloat {
-        return 50
+        return 25
     }
 
     func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
@@ -52,21 +52,21 @@ class SecurityCenterViewController: UIViewController, UITableViewDelegate, UITab
         cell.selectionStyle = .none
         let label = cell.viewWithTag(2) as! UILabel
         let icon = cell.viewWithTag(1) as! UIImageView
-        let background = cell.viewWithTag(3)!
-        background.clipsToBounds = true
-        background.layer.cornerRadius = 8
+//        let background = cell.viewWithTag(3)!
+//        background.clipsToBounds = true
+//        background.layer.cornerRadius = 8
         
-        cell.clipsToBounds = true
-        cell.layer.cornerRadius = 8
-        cell.layer.borderWidth = 0.5
-        cell.layer.borderColor = UIColor.lightGray.cgColor
-        cell.backgroundColor = #colorLiteral(red: 0.05172085258, green: 0.05855310153, blue: 0.06978280196, alpha: 1)
+        //cell.clipsToBounds = true
+        //cell.layer.cornerRadius = 8
+            //cell.layer.borderWidth = 0.5
+            //cell.layer.borderColor = UIColor.lightGray.cgColor
+            //cell.backgroundColor = #colorLiteral(red: 0.05172085258, green: 0.05855310153, blue: 0.06978280196, alpha: 1)
         
         switch indexPath.section {
         case 0:
             icon.image = UIImage(systemName: "lock.shield")
             label.text = "V3 Authentication Key"
-            background.backgroundColor = .systemGreen
+            //background.backgroundColor = .systemGreen
             
         case 1:
             if KeyChain.getData("UnlockPassword") != nil {
@@ -77,40 +77,40 @@ class SecurityCenterViewController: UIViewController, UITableViewDelegate, UITab
                 icon.image = UIImage(systemName: "plus")
             }
             
-            background.backgroundColor = .systemBlue
+            //background.backgroundColor = .systemBlue
             
         case 2:
             switch indexPath.row {
-            case 0: label.text = "Set Passphrase"; icon.image = UIImage(systemName: "plus"); background.backgroundColor = .systemPink
-            case 1: label.text = "Change Passphrase"; icon.image = UIImage(systemName: "arrow.clockwise") ; background.backgroundColor = .systemGreen
-            case 2: label.text = "Encrypt"; icon.image = UIImage(systemName: "lock.shield"); background.backgroundColor = .systemOrange
-            case 3: label.text = "Decrypt"; icon.image = UIImage(systemName: "lock.open"); background.backgroundColor = .systemIndigo
+            case 0: label.text = "Set Passphrase"; icon.image = UIImage(systemName: "plus")//; background.backgroundColor = .systemPink
+            case 1: label.text = "Change Passphrase"; icon.image = UIImage(systemName: "arrow.clockwise")// ; background.backgroundColor = .systemGreen
+            case 2: label.text = "Encrypt"; icon.image = UIImage(systemName: "lock.shield")//; background.backgroundColor = .systemOrange
+            case 3: label.text = "Decrypt"; icon.image = UIImage(systemName: "lock.open")//; background.backgroundColor = .systemIndigo
             default: break}
                         
         case 3:
             if ud.object(forKey: "bioMetricsDisabled") != nil {
                 label.text = "Disabled"
-                label.textColor = .darkGray
+                label.textColor = .none
                 icon.image = UIImage(systemName: "eye.slash")
             } else {
                 label.text = "Enabled"
-                label.textColor = .lightGray
+                label.textColor = .secondaryLabel
                 icon.image = UIImage(systemName: "eye")
             }
             
-            background.backgroundColor = .systemPurple
+            //background.backgroundColor = .systemPurple
             
         case 4:
             if ud.object(forKey: "passphrasePrompt") != nil {
                 label.text = "On"
-                label.textColor = .lightGray
+                label.textColor = .secondaryLabel
                 icon.image = UIImage(systemName: "checkmark.circle")
-                background.backgroundColor = .systemGreen
+                //background.backgroundColor = .systemGreen
             } else {
                 label.text = "Off"
-                label.textColor = .darkGray
+                label.textColor = .none
                 icon.image = UIImage(systemName: "xmark.circle")
-                background.backgroundColor = .systemRed
+                //background.backgroundColor = .systemRed
             }
                         
         default:
@@ -124,12 +124,12 @@ class SecurityCenterViewController: UIViewController, UITableViewDelegate, UITab
     func tableView(_ tableView: UITableView, viewForHeaderInSection section: Int) -> UIView? {
         let header = UIView()
         header.backgroundColor = UIColor.clear
-        header.frame = CGRect(x: 0, y: 0, width: view.frame.size.width - 32, height: 50)
+        header.frame = CGRect(x: 0, y: 0, width: view.frame.size.width - 32, height: 25)
         let textLabel = UILabel()
         textLabel.textAlignment = .left
-        textLabel.font = UIFont.systemFont(ofSize: 20, weight: .regular)
-        textLabel.textColor = .white
-        textLabel.frame = CGRect(x: 0, y: 0, width: 200, height: 50)
+        textLabel.font = UIFont.systemFont(ofSize: 17, weight: .regular)
+        textLabel.textColor = .secondaryLabel
+        textLabel.frame = CGRect(x: 0, y: 0, width: 200, height: 20)
         switch section {
         case 0:
             textLabel.text = "Tor Authentication"

@@ -2235,16 +2235,16 @@ class VerifyTransactionViewController: UIViewController, UINavigationControllerD
         }
     }
     
-    private func configureView(_ view: UIView) {
-        view.clipsToBounds = true
-        view.layer.cornerRadius = 8
-        view.layer.borderColor = UIColor.lightGray.cgColor
-        view.layer.borderWidth = 0.5
-    }
+//    private func configureView(_ view: UIView) {
+//        view.clipsToBounds = true
+//        view.layer.cornerRadius = 8
+//        view.layer.borderColor = UIColor.lightGray.cgColor
+//        view.layer.borderWidth = 0.5
+//    }
     
     private func configureCell(_ cell: UITableViewCell) {
         cell.selectionStyle = .none
-        configureView(cell)
+        //configureView(cell)
     }
     
     private func satsPerByte() -> Double {
