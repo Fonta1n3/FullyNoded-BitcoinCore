@@ -1,9 +1,8 @@
 
 # Fully Noded®
 
-<img src="./FullyNoded/Images/1024_fully noded logo.png" alt="" width="100"/> <br/> [<img src="./Images/appstore.png" alt="download fully noded on the app store" width="100"/>](https://apps.apple.com/us/app/fully-noded/id1436425586) <br/> [<img src="./Images/macos_badge.png" alt="download fully noded for macos" width="100"/>](https://apps.apple.com/us/app/fully-noded-desktop/id1530816100?mt=12) <br/>
+<img src="./FullyNoded/Images/logo_grey.png" alt="" width="100"/> <br/> [<img src="./Images/appstore.png" alt="download fully noded on the app store" width="100"/>](https://apps.apple.com/us/app/fully-noded/id1436425586) <br/> [<img src="./Images/macos_badge.png" alt="download fully noded for macos" width="100"/>](https://apps.apple.com/us/app/fully-noded-desktop/id1530816100?mt=12) <br/>
 
-<img src="./Images/home.png" alt="home" width="400"/> <img src="./Images/wallet.png" alt="home" width="400"/> <br/>
 
 Self sovereign, secure, powerful, easy to use **wallet** that utilizes your own [Bitcoin Core](https://github.com/bitcoin/bitcoin) node as a backend. Providing an easy to use interface to interact with your nodes non wallet capabilities. Fully Noded® wallets are powered by PSBT's and descriptors. Fully Noded® acts as an offline signer using your node as a watch-only wallet. 
 
