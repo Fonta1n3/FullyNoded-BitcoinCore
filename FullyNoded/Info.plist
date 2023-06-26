@@ -5,7 +5,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
-	<string>Fully Noded</string>
+	<string>FN - Bitcoin Core</string>
 	<key>CFBundleDocumentTypes</key>
 	<array>
 		<dict>

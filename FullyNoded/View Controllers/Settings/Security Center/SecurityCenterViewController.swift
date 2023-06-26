@@ -90,11 +90,9 @@ class SecurityCenterViewController: UIViewController, UITableViewDelegate, UITab
         case 3:
             if ud.object(forKey: "bioMetricsDisabled") != nil {
                 label.text = "Disabled"
-                label.textColor = .none
                 icon.image = UIImage(systemName: "eye.slash")
             } else {
                 label.text = "Enabled"
-                label.textColor = .secondaryLabel
                 icon.image = UIImage(systemName: "eye")
             }
             
@@ -103,12 +101,10 @@ class SecurityCenterViewController: UIViewController, UITableViewDelegate, UITab
         case 4:
             if ud.object(forKey: "passphrasePrompt") != nil {
                 label.text = "On"
-                label.textColor = .secondaryLabel
                 icon.image = UIImage(systemName: "checkmark.circle")
                 //background.backgroundColor = .systemGreen
             } else {
                 label.text = "Off"
-                label.textColor = .none
                 icon.image = UIImage(systemName: "xmark.circle")
                 //background.backgroundColor = .systemRed
             }
