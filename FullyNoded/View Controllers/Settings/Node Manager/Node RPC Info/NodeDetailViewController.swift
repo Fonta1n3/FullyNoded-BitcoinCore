@@ -44,10 +44,6 @@ class NodeDetailViewController: UIViewController, UITextFieldDelegate, UINavigat
         rpcPassword.delegate = self
         rpcUserField.delegate = self
         onionAddressField.delegate = self
-        rpcPassword.isSecureTextEntry = true
-        onionAddressField.isSecureTextEntry = false
-        saveButton.clipsToBounds = true
-        saveButton.layer.cornerRadius = 8
         navigationController?.delegate = self
     }
     

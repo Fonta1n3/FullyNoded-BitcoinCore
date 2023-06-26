@@ -112,7 +112,6 @@ class NodesViewController: UIViewController, UITableViewDelegate, UITableViewDat
     }
     
     func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
-        print("didSelectRowAt")
         let nodeStr = NodeStruct(dictionary: nodeArray[indexPath.row])
         
         CoreDataService.update(id: nodeStr.id!, keyToUpdate: "isActive", newValue: true, entity: .nodes) { [weak self] success in
@@ -200,8 +199,8 @@ class NodesViewController: UIViewController, UITableViewDelegate, UITableViewDat
         CoreDataService.deleteEntity(id: nodeId, entityName: .nodes) { [unowned vc = self] success in
             if success {
                 DispatchQueue.main.async { [unowned vc = self] in
-                    vc.nodeArray.remove(at: indexPath.section)
-                    vc.nodeTable.deleteSections(IndexSet.init(arrayLiteral: indexPath.section), with: .fade)
+                    vc.nodeArray.remove(at: indexPath.row)
+                    vc.nodeTable.deleteSections(IndexSet.init(arrayLiteral: indexPath.row), with: .fade)
                 }
             } else {
                 showAlert(vc: vc, title: "", message: "Error deleting that node.")

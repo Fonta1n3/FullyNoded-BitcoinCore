@@ -99,7 +99,7 @@ class MainMenuViewController: UIViewController {
             if !firstTimeHere() {
                 showAlert(vc: self, title: "", message: "There was a critical error setting your devices encryption key, please delete and reinstall the app")
             } else {
-                if mgr?.state != .started && mgr?.state != .connected  {
+                if mgr?.state != .started && mgr?.state != .connected && mgr?.state != .refreshing  {
                     if KeyChain.getData("UnlockPassword") == nil {
                         startLoading()
                     }
@@ -736,7 +736,7 @@ class MainMenuViewController: UIViewController {
                 
                 isUnlocked = true
                 
-                if mgr?.state != .started && mgr?.state != .connected  {
+                if mgr?.state != .started && mgr?.state != .connected && mgr?.state != .refreshing  {
                     startLoading()
                 }
             }
