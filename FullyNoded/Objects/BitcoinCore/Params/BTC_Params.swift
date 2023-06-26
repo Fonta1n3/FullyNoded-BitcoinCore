@@ -158,6 +158,8 @@ public struct Import_Descriptors: CustomStringConvertible {
             let internal_ = request["internal"] as? Bool ?? false
             let label = request["label"] as? String ?? ""
             
+            print("range: \(range)")
+            
             if range.count > 0 {
                 let part = [
                     "desc":desc,

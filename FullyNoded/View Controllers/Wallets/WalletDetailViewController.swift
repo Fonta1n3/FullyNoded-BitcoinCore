@@ -117,7 +117,7 @@ class WalletDetailViewController: UIViewController, UITextFieldDelegate, UITable
         OnchainUtils.getDescriptorInfo(p) { (descriptorInfo, message) in
             guard let descriptorInfo = descriptorInfo else { return }
             let desc = descriptorInfo.descriptor
-            let param:Derive_Addresses = .init(["descriptor":desc, "range":[0,100]])
+            let param:Derive_Addresses = .init(["descriptor":desc, "range":[0,999]])
             OnchainUtils.deriveAddresses(param: param) { [weak self] (response, message) in
                 if let addr = response as? NSArray {
                     for (i, address) in addr.enumerated() {
@@ -846,7 +846,7 @@ class WalletDetailViewController: UIViewController, UITextFieldDelegate, UITable
     }
     
     @objc func increaseGapLimit() {
-        var max = Int(wallet.maxIndex) + 100
+        var max = Int(wallet.maxIndex) + 999
         if max > 99999 {
             max = 99999
         }
@@ -907,25 +907,28 @@ class WalletDetailViewController: UIViewController, UITextFieldDelegate, UITable
             var requests:[[String:Any]] = []
             var request:[String:Any] = [:]
             request["desc"] = descriptor
-            request["range"] = [wallet.maxIndex, maxRange]
+            request["range"] = [0, maxRange] as [Int]
             request["timestamp"] = "now"
+            request["next_index"] = Int(wallet.maxIndex) + 1
             
             if descriptor.contains(wallet.changeDescriptor) {
                 request["internal"] = true
-                
+
             } else {
                 request["label"] = wallet.label
             }
-            
+
             requests = [request]
             paramDict["requests"] = requests
             let param:Import_Descriptors = .init(paramDict)
             
-            importDesc(param: param) { [weak self] success in
-                if success {
-                    self?.importDescriptors(index: index + 1, maxRange: maxRange, descriptorsToImport: descriptorsToImport)
+            OnchainUtils.importDescriptors(param) { [weak self] (imported, message) in
+                guard let self = self else { return }
+                spinner.removeConnectingView()
+                if imported {
+                    importDescriptors(index: index + 1, maxRange: maxRange, descriptorsToImport: descriptorsToImport)
                 } else {
-                    self?.showError(error: "Error importing a recovery descriptor.")
+                    showAlert(vc: self, title: "Error increasing kepool.", message: message ?? "Unknown.")
                 }
             }
         } else {
@@ -959,12 +962,6 @@ class WalletDetailViewController: UIViewController, UITextFieldDelegate, UITable
             alert.addAction(UIAlertAction(title: "Cancel", style: .cancel, handler: { action in }))
             alert.popoverPresentationController?.sourceView = self.view
             self.present(alert, animated: true, completion: nil)
-        }
-    }
-    
-    private func importDesc(param: Import_Descriptors, completion: @escaping ((Bool)) -> Void) {
-        OnchainUtils.importDescriptors(param) { (imported, _) in
-            completion(imported)
         }
     }
     

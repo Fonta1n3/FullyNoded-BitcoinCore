@@ -331,7 +331,7 @@ class SeedDisplayerViewController: UIViewController, UINavigationControllerDeleg
                         [
                             "desc": self.primDesc,
                             "active": true,
-                            "range": [0,2500],
+                            "range": [0,999],
                             "next_index": 0,
                             "timestamp": "now",
                             "internal": false
@@ -339,7 +339,7 @@ class SeedDisplayerViewController: UIViewController, UINavigationControllerDeleg
                         [
                             "desc": self.changeDesc,
                             "active": true,
-                            "range": [0,2500],
+                            "range": [0,999],
                             "next_index": 0,
                             "timestamp": "now",
                             "internal": true
@@ -403,7 +403,7 @@ class SeedDisplayerViewController: UIViewController, UINavigationControllerDeleg
         dict["receiveDescriptor"] = primDesc
         dict["type"] = type.stringValue
         dict["name"] = name
-        dict["maxIndex"] = Int64(2500)
+        dict["maxIndex"] = Int64(999)
         dict["index"] = Int64(0)
         dict["blockheight"] = blockheight
         dict["account"] = 0
