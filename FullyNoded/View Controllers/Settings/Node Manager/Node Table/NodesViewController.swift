@@ -200,7 +200,7 @@ class NodesViewController: UIViewController, UITableViewDelegate, UITableViewDat
             if success {
                 DispatchQueue.main.async { [unowned vc = self] in
                     vc.nodeArray.remove(at: indexPath.row)
-                    vc.nodeTable.deleteSections(IndexSet.init(arrayLiteral: indexPath.row), with: .fade)
+                    vc.nodeTable.deleteRows(at: [indexPath], with: .fade)
                 }
             } else {
                 showAlert(vc: vc, title: "", message: "Error deleting that node.")
