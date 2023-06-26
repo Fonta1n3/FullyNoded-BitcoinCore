@@ -1,28 +1,19 @@
 
 # Fully Noded®
 
-<img src="./Images/1024_fully noded logo.png" alt="" width="100"/> <br/> [<img src="./Images/appstore.png" alt="download fully noded on the app store" width="100"/>](https://apps.apple.com/us/app/fully-noded/id1436425586) <br/> [<img src="./Images/macos_badge.png" alt="download fully noded for macos" width="100"/>](https://apps.apple.com/us/app/fully-noded-desktop/id1530816100?mt=12) <br/>
+<img src="./FullyNoded/Images/1024_fully noded logo.png" alt="" width="100"/> <br/> [<img src="./Images/appstore.png" alt="download fully noded on the app store" width="100"/>](https://apps.apple.com/us/app/fully-noded/id1436425586) <br/> [<img src="./Images/macos_badge.png" alt="download fully noded for macos" width="100"/>](https://apps.apple.com/us/app/fully-noded-desktop/id1530816100?mt=12) <br/>
 
 <img src="./Images/home.png" alt="home" width="400"/> <img src="./Images/wallet.png" alt="home" width="400"/> <br/>
 
-Self sovereign, secure, powerful, easy to use **wallet** that utilizes your own [Bitcoin Core](https://github.com/bitcoin/bitcoin) node as a backend. Providing an easy to use interface to interact with your nodes non wallet capabilities. Fully Noded® wallets are powered by PSBT's and descriptors. Fully Noded® acts as an offline signer using your node as a watch-only wallet as well as giving you full unfettered access to every wallet.dat in your nodes `.bitcoin` directory. [C-Lightning](https://github.com/ElementsProject/lightning) and [LND](https://github.com/lightningnetwork/lnd) compatible for instant, unfairly cheap payments.
+Self sovereign, secure, powerful, easy to use **wallet** that utilizes your own [Bitcoin Core](https://github.com/bitcoin/bitcoin) node as a backend. Providing an easy to use interface to interact with your nodes non wallet capabilities. Fully Noded® wallets are powered by PSBT's and descriptors. Fully Noded® acts as an offline signer using your node as a watch-only wallet. 
 
 ## Build from source
 <br/><img src="./Images/build_from_source.png" alt="" width="400"/><br/>
 * Download Xcode
-* `git clone https://github.com/Fonta1n3/FullyNoded.git`
+* `git clone https://github.com/Fonta1n3/FullyNoded-BitcoinCore.git`
 * `cd FullyNoded`
 * Double click `FullyNoded.xcodeproj`
 * Click the play button in the top left bar of Xcode to run the app
-
-## Reproducible builds
-* Go to [releases](https://github.com/Fonta1n3/FullyNoded/releases)
-* Download the `SHA256SUMS` file and open it with a text editor
-* `FullyNoded.app.zip` and `source.zip` are reproducible
-* In a terminal run `shasum -a 256 FullyNoded.app.zip` (or whichever file you would like) the output should match what you see in the `SHA256SUMS` text file for the respective file
-* All files are signed with my pgp key `1C72 2776 3647 A221 6E02 E539 025E 9AD2 D3AC 0FCA` fontainedenton@googlemail.com
-* To run the app you can double click the `FullyNoded.app.zip` file (Xcode not required)
-* to run via source code just unzip `source.zip`, double click the folder, and double click `FullyNoded.xcodeproj` which will launch the source code via Xcode
 
 ## Getting started
 
@@ -56,10 +47,6 @@ Downloading the Fully Noded® iOS app is **100% free** because it is important t
 However, developing and supporting this project is hard work and costs real money. Please help support the development of this project!
 
 * [GitHub Sponsors](https://github.com/sponsors/fonta1n3)
-* ⚡️ [Tor lightning donation](http://56uo4htoxdt2tgh6zui5v2q7c4ax43dd3fwueiurgqdw7lpunn2cikqd.onion:5599/donation) (Tor browser required)
-* 🔗 [Bitcoin](bitcoin:bc1q6xw40gsm86yk78dlfun70nt7meh2nq9j7sc7ym?message=FullyNoded%20Donations) `bc1q6xw40gsm86yk78dlfun70nt7meh2nq9j7sc7ym`
-* The preferred method of donation is via the app itself, simply tap the ♥️ button when creating a transaction and it will automatically load a donation address which is derived from a hard coded xpub within the app:<br/><br/>
-<img src="./Images/donation.jpg" alt="download fully noded on the app store" width="250"/><br/>
 
 ## Why Fully Noded®?
 
@@ -79,11 +66,9 @@ However, developing and supporting this project is hard work and costs real mone
 
 * [Wallet usage](./Docs/Wallets)
 * [Bitcoin Core (node) related](./Docs/Bitcoin-Core)
-* [Importing a wallet from Specter](./Docs/Wallets/Specter.md)
 * [Quick Connect uri](./Docs/Quick-Connect-QR.md)
 * [How does it work?](./Docs/How-does-it-work.md)
 * [Recovery](./Docs/Wallets/Recovery.md)
-* [Lightning](./Docs/Lightning.md)
 
 ## Medium Posts
 
