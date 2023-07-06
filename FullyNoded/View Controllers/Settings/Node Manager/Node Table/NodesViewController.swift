@@ -90,7 +90,7 @@ class NodesViewController: UIViewController, UITableViewDelegate, UITableViewDat
         let button = cell.viewWithTag(5) as! UIButton
         button.tintColor = .none
         
-        button.restorationIdentifier = "\(indexPath.section)"
+        button.restorationIdentifier = "\(indexPath.row)"
         button.addTarget(self, action: #selector(editNode(_:)), for: .touchUpInside)
         
         let nodeStruct = NodeStruct(dictionary: nodeArray[indexPath.row])
@@ -175,10 +175,10 @@ class NodesViewController: UIViewController, UITableViewDelegate, UITableViewDat
     }
     
     @objc func editNode(_ sender: UIButton) {
-        guard let id = sender.restorationIdentifier, let section = Int(id) else { return }
+        guard let id = sender.restorationIdentifier, let row = Int(id) else { return }
         DispatchQueue.main.async { [weak self] in
             guard let self = self else { return }
-            self.selectedIndex = section
+            self.selectedIndex = row
             self.performSegue(withIdentifier: "updateNode", sender: self)
         }
     }
@@ -210,33 +210,12 @@ class NodesViewController: UIViewController, UITableViewDelegate, UITableViewDat
     
     func tableView(_ tableView: UITableView, commit editingStyle: UITableViewCell.EditingStyle, forRowAt indexPath: IndexPath) {
         if editingStyle == UITableViewCell.EditingStyle.delete {
-            let node = NodeStruct(dictionary: nodeArray[indexPath.section])
+            let node = NodeStruct(dictionary: nodeArray[indexPath.row])
             if node.id != nil {
                 deleteNode(nodeId: node.id!, indexPath: indexPath)
             }
         }
     }
-    
-//    @objc func setActiveNow(_ sender: UISwitch) {
-//        impact()
-//
-//        let restId = sender.restorationIdentifier ?? ""
-//        let index = Int(restId) ?? 10000
-//
-//        guard let selectedCell = nodeTable.cellForRow(at: IndexPath.init(row: 0, section: index)) else {
-//            return
-//        }
-//
-//        let selectedSwitch = selectedCell.viewWithTag(2) as! UISwitch
-//        let nodeStr = NodeStruct(dictionary: nodeArray[index])
-//
-//        if index < nodeArray.count {
-//
-//
-//        } else {
-//            print("node count is wrong")
-//        }
-//    }
     
     func reloadTable() {
         CoreDataService.retrieveEntity(entityName: .nodes) { nodes in

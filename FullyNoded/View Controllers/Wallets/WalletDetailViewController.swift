@@ -859,7 +859,7 @@ class WalletDetailViewController: UIViewController, UITextFieldDelegate, UITable
             DispatchQueue.main.async { [weak self] in
                 guard let self = self else { return }
                 
-                let alert = UIAlertController(title: "Increase the gap limit to \(max)?", message: "Selecting yes will trigger a series of calls to your node to import \(max - (Int(self.wallet.maxIndex) + 1)) additional keys for each descriptor your wallet holds. This can take a bit of time so please be patient and wait for the spinner to dismiss.", preferredStyle: self.alertStyle)
+                let alert = UIAlertController(title: "Increase the keypool to \(max) keys?", message: "Selecting yes will trigger a series of calls to your node to import \(max - (Int(self.wallet.maxIndex) + 1)) additional keys for each descriptor your wallet holds. This can take a bit of time so please be patient and wait for the spinner to dismiss.", preferredStyle: self.alertStyle)
                 
                 alert.addAction(UIAlertAction(title: "Yes", style: .default, handler: { action in
                     self.importUpdatedIndex(maxRange: max)
@@ -928,7 +928,7 @@ class WalletDetailViewController: UIViewController, UITextFieldDelegate, UITable
                 if imported {
                     importDescriptors(index: index + 1, maxRange: maxRange, descriptorsToImport: descriptorsToImport)
                 } else {
-                    showAlert(vc: self, title: "Error increasing kepool.", message: message ?? "Unknown.")
+                    showAlert(vc: self, title: "Error increasing keypool.", message: message ?? "Unknown.")
                 }
             }
         } else {
@@ -1040,7 +1040,7 @@ extension WalletDetailViewController {
         case .currentIndex:
             return ("Current address index", UIImage(systemName: "number")!)
         case .maxIndex:
-            return ("Gap limit", UIImage(systemName: "exclamationmark.triangle")!)
+            return ("Keypool", UIImage(systemName: "exclamationmark.triangle")!)
         case .signer:
             return ("Signers", UIImage(systemName: "pencil.and.ellipsis.rectangle")!)
         case .watching:

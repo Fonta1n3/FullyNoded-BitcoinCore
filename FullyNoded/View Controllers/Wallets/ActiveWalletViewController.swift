@@ -58,7 +58,6 @@ class ActiveWalletViewController: UIViewController {
         NotificationCenter.default.addObserver(self, selector: #selector(broadcast(_:)), name: .broadcastTxn, object: nil)
         NotificationCenter.default.addObserver(self, selector: #selector(signPsbt(_:)), name: .signPsbt, object: nil)
         existingWallet = ud.object(forKey: "walletName") as? String ?? ""
-        setCurrency()
         setNotifications()
         sectionZeroLoaded = false
         addNavBarSpinner()
@@ -66,10 +65,13 @@ class ActiveWalletViewController: UIViewController {
     
     override func viewDidAppear(_ animated: Bool) {
         fiatCurrency = UserDefaults.standard.object(forKey: "currency") as? String ?? "USD"
+        setDenomination()
         if initialLoad {
             initialLoad = false
             loadTable()
             getFxRate()
+        } else {
+            reloadTable()
         }
     }
     
@@ -86,32 +88,20 @@ class ActiveWalletViewController: UIViewController {
         }
     }
     
-    private func setCurrency() {
-        if ud.object(forKey: "unit") != nil {
-            let unit = ud.object(forKey: "unit") as! String
-            var index = 0
-            switch unit {
-            case "btc":
-                index = 0
-                isBtc = true
-                isFiat = false
-                isSats = false
-            case "sats":
-                index = 1
-                isSats = true
-                isFiat = false
-                isBtc = false
-            case "fiat":
-                index = 2
-                isFiat = true
-                isBtc = false
-                isSats = false
-            default:
-                break
-            }
-        } else {
+    private func setDenomination() {
+        let denomination = UserDefaults.standard.object(forKey: "denomination") as? String ?? "BTC"
+        switch denomination {
+        case "BTC":
             isBtc = true
             isFiat = false
+            isSats = false
+        case "SATS":
+            isSats = true
+            isFiat = false
+            isBtc = false
+        default:
+            isFiat = true
+            isBtc = false
             isSats = false
         }
     }
@@ -366,7 +356,6 @@ class ActiveWalletViewController: UIViewController {
     }
     
     private func updateTransactionArray() {
-        print("updateTransactionArray")
        CoreDataService.retrieveEntity(entityName: .transactions) { [weak self] transactions in
             guard let self = self else { return }
             
@@ -423,23 +412,37 @@ class ActiveWalletViewController: UIViewController {
         }
     }
     
+    private let currencies:[[String:String]] = [
+        ["USD": "dollarsign"],
+        ["GBP": "sterlingsign"],
+        ["EUR": "eurosign"],
+        ["AUD":"dollarsign"],
+        ["BRL": "brazilianrealsign"],
+        ["CAD": "dollarsign"],
+        ["CHF": "francsign"],
+        ["CLP": "dollarsign"],
+        ["CNY": "yensign"],
+        ["DKK": "k"],
+        ["HKD": "dollarsign"],
+        ["INR": "indianrupeesign"],
+        ["ISK": "k"],
+        ["JPY": "yensign"],
+        ["KRW": "wonsign"],
+        ["NZD": "dollarsign"],
+        ["PLN": "z"],
+        ["RUB": "rublesign"],
+        ["SEK": "k"],
+        ["SGD": "dollarsign"],
+        ["THB": "bahtsign"],
+        ["TRY": "turkishlirasign"],
+        ["TWD": "dollarsign"]
+    ]
     
     private func onchainBalancesCell(_ indexPath: IndexPath) -> UITableViewCell {
         let cell = walletTable.dequeueReusableCell(withIdentifier: "OnBalancesCell", for: indexPath)
-//        cell.layer.borderColor = UIColor.lightGray.cgColor
-//        cell.layer.borderWidth = 0.5
-        //cell.backgroundColor = #colorLiteral(red: 0.05172085258, green: 0.05855310153, blue: 0.06978280196, alpha: 1)
-        
-//        let iconImageView = cell.viewWithTag(67) as! UIImageView
-//        iconImageView.image = .init(systemName: "link")
-        
-        if let offchainBalanceLabel = cell.viewWithTag(2) as? UILabel, let offchainBalanceView = cell.viewWithTag(66) {
-            offchainBalanceLabel.removeFromSuperview()
-            offchainBalanceView.removeFromSuperview()
-        }
         
         let onchainBalanceLabel = cell.viewWithTag(1) as! UILabel
-        
+        let currencySymbolImageView = cell.viewWithTag(2) as! UIImageView
         
         if onchainBalanceBtc == "" || onchainBalanceBtc == "0.0 BTC" {
             onchainBalanceBtc = "0.00000000 BTC"
@@ -447,14 +450,23 @@ class ActiveWalletViewController: UIViewController {
                 
         if isBtc {
             onchainBalanceLabel.text = onchainBalanceBtc
+            currencySymbolImageView.image = .init(systemName: "bitcoinsign")
         }
         
         if isSats {
             onchainBalanceLabel.text = onchainBalanceSats
+            currencySymbolImageView.image = .init(systemName: "s.circle")
         }
         
         if isFiat {
             onchainBalanceLabel.text = onchainBalanceFiat
+            for currency in currencies {
+                for (key, value) in currency {
+                    if key == fiatCurrency {
+                        currencySymbolImageView.image = .init(systemName: value)
+                    }
+                }
+            }
         }
                 
         return cell
@@ -463,9 +475,6 @@ class ActiveWalletViewController: UIViewController {
     private func transactionsCell(_ indexPath: IndexPath) -> UITableViewCell {
         let cell = walletTable.dequeueReusableCell(withIdentifier: "TransactionCell", for: indexPath)
         cell.selectionStyle = .none
-//        cell.layer.borderColor = UIColor.lightGray.cgColor
-//        cell.layer.borderWidth = 0.5
-        //cell.backgroundColor = #colorLiteral(red: 0.05172085258, green: 0.05855310153, blue: 0.06978280196, alpha: 1)
         
         let categoryImage = cell.viewWithTag(1) as! UIImageView
         let amountLabel = cell.viewWithTag(2) as! UILabel
@@ -476,6 +485,7 @@ class ActiveWalletViewController: UIViewController {
         let transactionLabel = cell.viewWithTag(11) as! UILabel
         let seeDetailButton = cell.viewWithTag(14) as! UIButton
         let editLabelButton = cell.viewWithTag(15) as! UIButton
+        let currencySymbolImageView = cell.viewWithTag(16) as! UIImageView
         
         amountLabel.alpha = 1
         confirmationsLabel.alpha = 1
@@ -506,42 +516,42 @@ class ActiveWalletViewController: UIViewController {
         let amountFiat = dict["amountFiat"] as! String
         editLabelButton.alpha = 1
         
-        var gainText = ""
+        //var gainText = ""
         
-        if let originRate = dict["originRate"] as? Double {
-            var btcAmount = 0.0
-            
-            btcAmount = amountBtc.doubleValue
-            
-            if btcAmount < 0.0 {
-                btcAmount = btcAmount * -1.0
-            }
-            
-            var originValueFiat = 0.0
-            
-            originValueFiat = btcAmount * originRate
-            
-            if originValueFiat < 0.0 {
-                originValueFiat = originValueFiat * -1.0
-            }
-            
-            if let exchangeRate = fxRate {
-                var gain = round((btcAmount * exchangeRate) - originValueFiat)
-                
-                if Int(gain) > 0 {
-                    gainText = " / gain of \(gain.fiatString) / \(Int((gain / originValueFiat) * 100.0))%"
-                } else if Int(gain) < 0 {
-                    gain = gain * -1.0
-                    gainText = " / loss of \(gain.fiatString) / \(Int((gain / originValueFiat) * 100.0))%"
-                }
-            }
-        }
+//        if let originRate = dict["originRate"] as? Double {
+//            var btcAmount = 0.0
+//
+//            btcAmount = amountBtc.doubleValue
+//
+//            if btcAmount < 0.0 {
+//                btcAmount = btcAmount * -1.0
+//            }
+//
+//            var originValueFiat = 0.0
+//
+//            originValueFiat = btcAmount * originRate
+//
+//            if originValueFiat < 0.0 {
+//                originValueFiat = originValueFiat * -1.0
+//            }
+//
+//            if let exchangeRate = fxRate {
+//                var gain = round((btcAmount * exchangeRate) - originValueFiat)
+//
+//                if Int(gain) > 0 {
+//                    gainText = " / gain of \(gain.fiatString) / \(Int((gain / originValueFiat) * 100.0))%"
+//                } else if Int(gain) < 0 {
+//                    gain = gain * -1.0
+//                    gainText = " / loss of \(gain.fiatString) / \(Int((gain / originValueFiat) * 100.0))%"
+//                }
+//            }
+//        }
         
-        if let _ = fxRate {
-            currentFiatValueLabel.text = amountFiat + gainText
-        } else {
-            currentFiatValueLabel.text = "current exchange rate missing"
-        }
+//        if let _ = fxRate {
+//            currentFiatValueLabel.text = amountFiat + gainText
+//        } else {
+//            currentFiatValueLabel.text = "current exchange rate missing"
+//        }
         
         memoLabel.text = dict["memo"] as? String ?? "no transaction memo"
         transactionLabel.text = dict["transactionLabel"] as? String ?? "no transaction label"
@@ -564,10 +574,21 @@ class ActiveWalletViewController: UIViewController {
             
             if isBtc {
                 amountText = amountBtc.btc
+                currencySymbolImageView.image = .init(systemName: "bitcoinsign")
+                
             } else if isSats {
                 amountText = amountSats.sats
+                currencySymbolImageView.image = .init(systemName: "s.circle")
+                
             } else if isFiat {
                 amountText = amountFiat
+                for currency in currencies {
+                    for (key, value) in currency {
+                        if key == fiatCurrency {
+                            currencySymbolImageView.image = .init(systemName: value)
+                        }
+                    }
+                }
             }
             
             amountText = amountText.replacingOccurrences(of: "-", with: "")
@@ -576,19 +597,27 @@ class ActiveWalletViewController: UIViewController {
         } else {
             categoryImage.image = UIImage(systemName: "arrow.down.left")
             categoryImage.tintColor = .systemGreen
-            //amountLabel.textColor = .white
-            
             var amountText = ""
             
             if isBtc {
-                amountText = "+" + amountBtc.btc
+                amountText = amountBtc.btc
+                currencySymbolImageView.image = .init(systemName: "bitcoinsign")
+                
             } else if isSats {
-                amountText = "+" + amountSats.sats
+                amountText = amountSats.sats
+                currencySymbolImageView.image = .init(systemName: "s.circle")
+                
             } else if isFiat {
-                amountText = "+" + amountFiat
+                amountText = amountFiat
+                for currency in currencies {
+                    for (key, value) in currency {
+                        if key == fiatCurrency {
+                            currencySymbolImageView.image = .init(systemName: value)
+                        }
+                    }
+                }
             }
             
-            amountText = amountText.replacingOccurrences(of: "+", with: "")
             amountLabel.text = amountText
         }
         
@@ -729,7 +758,7 @@ class ActiveWalletViewController: UIViewController {
                 guard let self = self else { return }
                 
                 self.fxRateLabel.text = rate.exchangeRate
-                self.onchainBalanceFiat = (self.onchainBalanceBtc.doubleValue * Double(rate)).fiatString
+                self.onchainBalanceFiat = "\((self.onchainBalanceBtc.doubleValue * Double(rate)))"
                 
                 if self.isFiat {
                     self.walletTable.reloadSections(.init(arrayLiteral: 0), with: .none)
@@ -765,7 +794,7 @@ class ActiveWalletViewController: UIViewController {
                     
                     if let exchangeRate = self.fxRate {
                         let onchainBalanceFiat = balance * exchangeRate
-                        self.onchainBalanceFiat = round(onchainBalanceFiat).fiatString
+                        self.onchainBalanceFiat = "\(round(onchainBalanceFiat))"
                     }
                     
                     self.sectionZeroLoaded = true
@@ -906,6 +935,7 @@ class ActiveWalletViewController: UIViewController {
             
             DispatchQueue.main.async {
                 self.transactionArray = response
+                self.transactionArray = self.transactionArray.sorted{ ($0["sortDate"] as? Date ?? Date()) > ($1["sortDate"] as? Date ?? Date()) }
                 self.updateTransactionArray()
                 self.isRecovering = false
             }
@@ -985,7 +1015,7 @@ class ActiveWalletViewController: UIViewController {
             alert.addAction(UIAlertAction(title: "Amount", style: .default, handler: { [weak self] action in
                 guard let self = self else { return }
                 
-                self.transactionArray = self.transactionArray.sorted{ ($0["amountBtc"] as! String).doubleValue > ($1["amountBtc"] as! String).doubleValue }
+                self.transactionArray = self.transactionArray.sorted{ abs(($0["amountBtc"] as! String).doubleValue) > abs(($1["amountBtc"] as! String).doubleValue) }
                 
                 self.reloadTable()
             }))
@@ -1130,13 +1160,7 @@ extension ActiveWalletViewController: UITableViewDelegate {
         textLabel.textColor = .secondaryLabel
         
         
-        let sortButton = UIButton()
-        let sortImage = UIImage(systemName: "arrow.up.arrow.down.circle", withConfiguration: UIImage.SymbolConfiguration.init(scale: .large))
-        sortButton.setImage(sortImage, for: .normal)
-        sortButton.frame = CGRect(x: textLabel.frame.minX - 60, y: 0, width: 25, height: 25)
-        sortButton.center.y = textLabel.center.y
-        sortButton.showsTouchWhenHighlighted = true
-        sortButton.addTarget(self, action: #selector(sortTxs(_:)), for: .touchUpInside)
+        
         
         switch section {
         case 0:
@@ -1152,6 +1176,13 @@ extension ActiveWalletViewController: UITableViewDelegate {
             textLabel.frame = CGRect(x: 0, y: 0, width: 400, height: 25)
             textLabel.text = "Transactions"
             if self.transactionArray.count > 0 {
+                let sortButton = UIButton()
+                let sortImage = UIImage(systemName: "arrow.up.arrow.down.circle", withConfiguration: UIImage.SymbolConfiguration.init(scale: .large))
+                sortButton.setImage(sortImage, for: .normal)
+                sortButton.frame = CGRect(x: header.frame.maxX - 60, y: 0, width: 25, height: 25)
+                sortButton.center.y = textLabel.center.y
+                sortButton.showsTouchWhenHighlighted = true
+                sortButton.addTarget(self, action: #selector(sortTxs(_:)), for: .touchUpInside)
                 header.addSubview(sortButton)
             }
             

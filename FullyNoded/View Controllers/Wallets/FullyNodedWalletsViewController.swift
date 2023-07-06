@@ -238,7 +238,7 @@ class FullyNodedWalletsViewController: UIViewController, UITableViewDelegate, UI
         let wallet = wallets[indexPath.row]
         let btcBalance = (wallet["balance"] as? Double ?? 0.0)
         let walletStruct = Wallet(dictionary: wallet)
-        label.text = walletStruct.label + "\n\(btcBalance.btc) / \((btcBalance * fxRate).balanceText)"
+        label.text = walletStruct.label + "\n\(btcBalance.btc) / \((btcBalance * fxRate).balanceTextWithSymbol)"
         button.restorationIdentifier = "\(indexPath.row)"
         button.addTarget(self, action: #selector(goToDetail(_:)), for: .touchUpInside)
         if self.existingActiveWalletName == walletStruct.name {

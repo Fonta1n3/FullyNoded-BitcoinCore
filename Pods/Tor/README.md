@@ -12,8 +12,8 @@ Currently, the framework compiles in the following versions of `tor`, `libevent`
 |:-------- | --------:|
 | tor      | 0.4.7.13 |
 | libevent | 2.1.12   |
-| OpenSSL  | 1.1.1t   |
-| liblzma  | 5.4.2    |
+| OpenSSL  | 1.1.1u   |
+| liblzma  | 5.4.3    |
 
 
 ## Example
@@ -81,7 +81,7 @@ pod lib lint --verbose --allow-warnings
 If the linting went well, create a git tag for the version, push to GitHub and then publish to CocoaPods:
 
 ```sh
-pod trunk push Tor.podspec --verbose --allow-warnings
+pod trunk push Tor.podspec --verbose --allow-warnings  --use-libraries
 ```
 
 (Unfortunately, you can not not lint on publish, so you might skip the first lint. However, `pod trunk push`

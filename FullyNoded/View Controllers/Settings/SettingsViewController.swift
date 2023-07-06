@@ -46,6 +46,12 @@ class SettingsViewController: UIViewController, UITableViewDelegate, UITableView
         ["GBP": "sterlingsign.circle"],
         ["EUR": "eurosign.circle"]
     ]
+    
+    private let denominations:[String] = [
+        "BTC",
+        "SATS",
+        UserDefaults.standard.object(forKey: "currency") as? String ?? "USD"
+    ]
         
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -73,26 +79,18 @@ class SettingsViewController: UIViewController, UITableViewDelegate, UITableView
         configureCell(settingsCell)
         
         let label = settingsCell.viewWithTag(1) as! UILabel
-        //label.textColor = .
         label.adjustsFontSizeToFitWidth = true
         
-//        let background = settingsCell.viewWithTag(2)!
-//        background.clipsToBounds = true
-//        background.layer.cornerRadius = 8
-        
         let icon = settingsCell.viewWithTag(3) as! UIImageView
-        //icon.tintColor = .white
         
         switch indexPath.section {
         case 0:
             label.text = "Node manager"
             icon.image = UIImage(systemName: "server.rack")
-            //background.backgroundColor = .systemBlue
             
         case 1:
             label.text = "Security Center"
             icon.image = UIImage(systemName: "lock.shield")
-            //background.backgroundColor = .systemOrange
             
         default:
             break
@@ -107,15 +105,9 @@ class SettingsViewController: UIViewController, UITableViewDelegate, UITableView
         configureCell(exchangeRateApiCell)
         
         let label = exchangeRateApiCell.viewWithTag(1) as! UILabel
-        //label.textColor = .lightGray
         label.adjustsFontSizeToFitWidth = true
         
-//        let background = exchangeRateApiCell.viewWithTag(2)!
-//        background.clipsToBounds = true
-//        background.layer.cornerRadius = 8
-        
         let icon = exchangeRateApiCell.viewWithTag(3) as! UIImageView
-        //icon.tintColor = .white
         
         let useBlockchainInfo = UserDefaults.standard.object(forKey: "useBlockchainInfo") as? Bool ?? true
         
@@ -157,23 +149,16 @@ class SettingsViewController: UIViewController, UITableViewDelegate, UITableView
         
         let label = currencyCell.viewWithTag(1) as! UILabel
         label.adjustsFontSizeToFitWidth = true
-        
-//        let background = currencyCell.viewWithTag(2)!
-//        background.clipsToBounds = true
-//        background.layer.cornerRadius = 8
                 
         let icon = currencyCell.viewWithTag(3) as! UIImageView
-        //icon.tintColor = .white
         
         let currencyToUse = UserDefaults.standard.object(forKey: "currency") as? String ?? "USD"
         
         for (key, value) in currency {
             if currencyToUse == key {
-                //background.backgroundColor = .systemGreen
                 currencyCell.accessoryType = .checkmark
                 currencyCell.isSelected = true
             } else {
-                //background.backgroundColor = .systemGray
                 currencyCell.accessoryType = .none
                 currencyCell.isSelected = false
             }
@@ -184,6 +169,45 @@ class SettingsViewController: UIViewController, UITableViewDelegate, UITableView
         return currencyCell
     }
     
+    private func denominationCell(_ indexPath: IndexPath, _ currency: [String:String]) -> UITableViewCell {
+        let denominationCell = settingsTable.dequeueReusableCell(withIdentifier: "checkmarkCell", for: indexPath)
+        configureCell(denominationCell)
+        
+        let label = denominationCell.viewWithTag(1) as! UILabel
+        label.adjustsFontSizeToFitWidth = true
+                
+        let icon = denominationCell.viewWithTag(3) as! UIImageView
+        
+        let denomination = UserDefaults.standard.object(forKey: "denomination") as? String ?? "BTC"
+        print("denomination: \(denomination)")
+        
+        if denomination == denominations[indexPath.row] {
+            denominationCell.accessoryType = .checkmark
+            denominationCell.isSelected = true
+        } else {
+            denominationCell.accessoryType = .none
+            denominationCell.isSelected = false
+        }
+        
+        switch indexPath.row {
+        case 0:
+            label.text = "BTC"
+            icon.image = UIImage(systemName: "bitcoinsign.circle")
+        case 1:
+            label.text = "SATS"
+            icon.image = UIImage(systemName: "s.circle")
+        case 2:
+            label.text = UserDefaults.standard.object(forKey: "currency") as? String ?? "USD"
+            for (_, value) in currency {
+                icon.image = UIImage(systemName: value)
+            }
+        default:
+            break
+        }
+        
+        return denominationCell
+    }
+    
     
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         switch indexPath.section {
@@ -191,9 +215,29 @@ class SettingsViewController: UIViewController, UITableViewDelegate, UITableView
             return settingsCell(indexPath)
             
         case 2:
-            return exchangeRateApiCell(indexPath)
+            let useBlockchainInfo = UserDefaults.standard.object(forKey: "useBlockchainInfo") as? Bool ?? true
+            
+            var currencies:[[String:String]] = blockchainInfoCurrencies
+            
+            if !useBlockchainInfo {
+                currencies = coindeskCurrencies
+            }
+            
+            var fiat:[String:String] = [:]
+            for currency in currencies {
+                for (key, _) in currency {
+                    if key == UserDefaults.standard.object(forKey: "currency") as? String ?? "USD" {
+                        fiat = currency
+                    }
+                }
+            }
+            
+            return denominationCell(indexPath, fiat)
             
         case 3:
+            return exchangeRateApiCell(indexPath)
+            
+        case 4:
             let useBlockchainInfo = UserDefaults.standard.object(forKey: "useBlockchainInfo") as? Bool ?? true
             
             var currencies:[[String:String]] = blockchainInfoCurrencies
@@ -208,7 +252,6 @@ class SettingsViewController: UIViewController, UITableViewDelegate, UITableView
             return UITableViewCell()
         }
     }
-    
     
     func tableView(_ tableView: UITableView, viewForHeaderInSection section: Int) -> UIView? {
         let header = UIView()
@@ -227,9 +270,12 @@ class SettingsViewController: UIViewController, UITableViewDelegate, UITableView
             textLabel.text = "Security"
             
         case 2:
-            textLabel.text = "Exchange Rate API"
+            textLabel.text = "Denomination"
             
         case 3:
+            textLabel.text = "Exchange Rate API"
+            
+        case 4:
             textLabel.text = "Fiat Currency"
             
         default:
@@ -240,23 +286,22 @@ class SettingsViewController: UIViewController, UITableViewDelegate, UITableView
         return header
     }
     
-    
     func numberOfSections(in tableView: UITableView) -> Int {
-        return 4
+        return 5
     }
     
-    
     func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-        if section == 2 {
-            return 2
-        } else if section == 3 {
+        switch section {
+        case 2: return 3
+        case 3: return 2
+        case 4:
             let useBlockchainInfo = UserDefaults.standard.object(forKey: "useBlockchainInfo") as? Bool ?? true
             if useBlockchainInfo {
                 return blockchainInfoCurrencies.count
             } else {
                 return coindeskCurrencies.count
             }
-        } else {
+        default:
             return 1
         }
     }
@@ -269,7 +314,6 @@ class SettingsViewController: UIViewController, UITableViewDelegate, UITableView
     func tableView(_ tableView: UITableView, heightForHeaderInSection section: Int) -> CGFloat {
         return 50
     }
-    
     
     func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         impact()
@@ -289,7 +333,18 @@ class SettingsViewController: UIViewController, UITableViewDelegate, UITableView
                 self.performSegue(withIdentifier: "goToSecurity", sender: self)
             }
             
+        
+            
         case 2:
+            UserDefaults.standard.setValue(denominations[indexPath.row], forKey: "denomination")
+            
+            DispatchQueue.main.async { [weak self] in
+                guard let self = self else { return }
+
+                self.settingsTable.reloadSections(.init(arrayLiteral: 2), with: .none)
+            }
+            
+        case 3:
             switch indexPath.row {
             case 0: UserDefaults.standard.setValue(true, forKey: "useBlockchainInfo")
             case 1: UserDefaults.standard.setValue(false, forKey: "useBlockchainInfo")
@@ -300,10 +355,10 @@ class SettingsViewController: UIViewController, UITableViewDelegate, UITableView
             DispatchQueue.main.async { [weak self] in
                 guard let self = self else { return }
 
-                self.settingsTable.reloadSections(.init(arrayLiteral: 2, 3), with: .none)
+                self.settingsTable.reloadSections(.init(arrayLiteral: 3, 4), with: .none)
             }
             
-        case 3:
+        case 4:
             let useBlockchainInfo = UserDefaults.standard.object(forKey: "useBlockchainInfo") as? Bool ?? true
             var currencies:[[String:String]] = []
             if useBlockchainInfo {
@@ -317,7 +372,7 @@ class SettingsViewController: UIViewController, UITableViewDelegate, UITableView
                 DispatchQueue.main.async { [weak self] in
                     guard let self = self else { return }
 
-                    self.settingsTable.reloadSections(.init(arrayLiteral: 3), with: .none)
+                    self.settingsTable.reloadSections(.init(arrayLiteral: 4, 2), with: .none)
                 }
             }
             
@@ -326,23 +381,6 @@ class SettingsViewController: UIViewController, UITableViewDelegate, UITableView
             
         }
     }
-    
-    
-//    @objc func toggleCurrency(_ sender: UISwitch) {
-//        let currency = sender.restorationIdentifier!
-//
-//        if sender.isOn {
-//            UserDefaults.standard.setValue(currency, forKey: "currency")
-//        } else {
-//            UserDefaults.standard.setValue("USD", forKey: "currency")
-//        }
-//
-//        DispatchQueue.main.async { [weak self] in
-//            guard let self = self else { return }
-//
-//            self.settingsTable.reloadSections(IndexSet(arrayLiteral: 3), with: .fade)
-//        }
-//    }
 
     
     private func saveFile(_ file: [String:Any]) {
@@ -367,39 +405,6 @@ class SettingsViewController: UIViewController, UITableViewDelegate, UITableView
             self.present(controller, animated: true)
         }
     }
-    
-    
-//    @objc func toggleBlockchainInfo(_ sender: UISwitch) {
-//        UserDefaults.standard.setValue(sender.isOn, forKey: "useBlockchainInfo")
-//
-//        DispatchQueue.main.async { [weak self] in
-//            guard let self = self else { return }
-//
-//            self.settingsTable.reloadSections(IndexSet(arrayLiteral: 2, 3), with: .fade)
-//        }
-//    }
-    
-    
-//    @objc func toggleCoindesk(_ sender: UISwitch) {
-//        UserDefaults.standard.setValue(!sender.isOn, forKey: "useBlockchainInfo")
-//
-//        let currency = UserDefaults.standard.object(forKey: "currency") as? String ?? "USD"
-//
-//        if sender.isOn {
-//            switch currency {
-//            case "USD", "GBP", "EUR":
-//                fallthrough
-//            default:
-//                UserDefaults.standard.setValue("USD", forKey: "currency")
-//            }
-//        }
-//
-//        DispatchQueue.main.async { [weak self] in
-//            guard let self = self else { return }
-//
-//            self.settingsTable.reloadSections(IndexSet(arrayLiteral: 2, 3), with: .fade)
-//        }
-//    }
         
 }
 

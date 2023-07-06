@@ -107,18 +107,18 @@ public extension String {
         sats = sats.replacingOccurrences(of: "-", with: "")
         
         guard let dbl = Double(sats) else {
-            return self + " sats"
+            return self
         }
         
         if dbl < 1.0 {
-            return dbl.avoidNotation + " sat"
+            return dbl.avoidNotation
         } else if dbl == 1.0 {
-            return "1 sat"
+            return "1"
         } else {
             if self.contains(".") || self.contains(",") {
-                return "\(sats) sats"
+                return "\(sats)"
             } else {
-                return "\(sats.withCommas) sats"
+                return "\(sats.withCommas)"
             }
         }
     }
@@ -321,11 +321,11 @@ public extension Double {
         let sats = self * 100000000.0
         
         if sats < 1.0 {
-            return sats.avoidNotation + " sats"
+            return sats.avoidNotation
         } else if sats == 1.0 {
-            return "1 sat"
+            return "1"
         } else {
-            return "\(Int(sats).withCommas) sats"
+            return "\(Int(sats).withCommas)"
         }
     }
     
@@ -337,11 +337,11 @@ public extension Double {
         }
     }
     
-    var balanceText: String {
+    var balanceTextWithSymbol: String {
         let currency = UserDefaults.standard.object(forKey: "currency") as? String ?? "USD"
-        
+
         var symbol = "$"
-        
+
         for curr in currencies {
             for (key, value) in curr {
                 if key == currency {
@@ -360,6 +360,20 @@ public extension Double {
             return "\(symbol)\(dbl.avoidNotation)"
         } else {
             return "\(symbol)\(dbl.rounded(toPlaces: 2).withCommas)"
+        }
+    }
+    
+    var balanceTextWithNoSymbol: String {
+        var dbl = self
+        
+        if dbl < 0 {
+            dbl = dbl * -1.0
+        }
+        
+        if dbl < 1.0 {
+            return dbl.avoidNotation
+        } else {
+            return "\(dbl.rounded(toPlaces: 2).withCommas)"
         }
     }
     

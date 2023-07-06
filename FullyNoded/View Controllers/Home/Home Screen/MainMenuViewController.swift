@@ -80,6 +80,20 @@ class MainMenuViewController: UIViewController {
         setFeeTarget()
         NotificationCenter.default.addObserver(self, selector: #selector(refreshNode), name: .refreshNode, object: nil)
         torProgressLabel.text = "Tor bootstrapping 0%"
+        addDemoNode()
+    }
+    
+    private func addDemoNode() {
+        CoreDataService.retrieveEntity(entityName: .nodes) { nodes in
+            guard let nodes = nodes else { return }
+            
+            if nodes.count == 0 {
+                let url = "http://bitcoinrpc:i4zIpD1fhjvMoKPakxZ5wwBwJh79djHnd5nR8WsV1tY=@s6srqiofa2h7xka5r5a5lfi2u64fq7wcrwtpirqz5oy2oswthu3uiwqd.onion:11221"
+                QuickConnect.addNode(url: url) { (success, errorMessage) in
+                    print("demo node added: \(success)")
+                }
+            }
+        }
     }
     
     private func setIcon() {
