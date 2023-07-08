@@ -15,32 +15,6 @@ class SettingsViewController: UIViewController, UITableViewDelegate, UITableView
     let spinner = ConnectingView()
     @IBOutlet var settingsTable: UITableView!
     
-    private let blockchainInfoCurrencies:[[String:String]] = [
-        ["USD": "dollarsign.circle"],
-        ["GBP": "sterlingsign.circle"],
-        ["EUR": "eurosign.circle"],
-        ["AUD":"dollarsign.circle"],
-        ["BRL": "brazilianrealsign.circle"],
-        ["CAD": "dollarsign.circle"],
-        ["CHF": "francsign.circle"],
-        ["CLP": "dollarsign.circle"],
-        ["CNY": "yensign.circle"],
-        ["DKK": "k.circle"],
-        ["HKD": "dollarsign.circle"],
-        ["INR": "indianrupeesign.circle"],
-        ["ISK": "k.circle"],
-        ["JPY": "yensign.circle"],
-        ["KRW": "wonsign.circle"],
-        ["NZD": "dollarsign.circle"],
-        ["PLN": "z.circle"],
-        ["RUB": "rublesign.circle"],
-        ["SEK": "k.circle"],
-        ["SGD": "dollarsign.circle"],
-        ["THB": "bahtsign.circle"],
-        ["TRY": "turkishlirasign.circle"],
-        ["TWD": "dollarsign.circle"]
-    ]
-    
     private let coindeskCurrencies:[[String:String]] = [
         ["USD": "dollarsign.circle"],
         ["GBP": "sterlingsign.circle"],
@@ -217,7 +191,7 @@ class SettingsViewController: UIViewController, UITableViewDelegate, UITableView
         case 2:
             let useBlockchainInfo = UserDefaults.standard.object(forKey: "useBlockchainInfo") as? Bool ?? true
             
-            var currencies:[[String:String]] = blockchainInfoCurrencies
+            var currencies:[[String:String]] = Currencies.currencies
             
             if !useBlockchainInfo {
                 currencies = coindeskCurrencies
@@ -240,7 +214,7 @@ class SettingsViewController: UIViewController, UITableViewDelegate, UITableView
         case 4:
             let useBlockchainInfo = UserDefaults.standard.object(forKey: "useBlockchainInfo") as? Bool ?? true
             
-            var currencies:[[String:String]] = blockchainInfoCurrencies
+            var currencies:[[String:String]] = Currencies.currencies
             
             if !useBlockchainInfo {
                 currencies = coindeskCurrencies
@@ -297,7 +271,7 @@ class SettingsViewController: UIViewController, UITableViewDelegate, UITableView
         case 4:
             let useBlockchainInfo = UserDefaults.standard.object(forKey: "useBlockchainInfo") as? Bool ?? true
             if useBlockchainInfo {
-                return blockchainInfoCurrencies.count
+                return Currencies.currencies.count
             } else {
                 return coindeskCurrencies.count
             }
@@ -362,7 +336,7 @@ class SettingsViewController: UIViewController, UITableViewDelegate, UITableView
             let useBlockchainInfo = UserDefaults.standard.object(forKey: "useBlockchainInfo") as? Bool ?? true
             var currencies:[[String:String]] = []
             if useBlockchainInfo {
-                currencies = blockchainInfoCurrencies
+                currencies = Currencies.currencies
             } else {
                 currencies = coindeskCurrencies
             }

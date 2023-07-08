@@ -220,7 +220,7 @@ class NodeLogic {
                 let dateString = dateFormatter.string(from: date)
                 
                 let amountSats = amountString.btcToSats
-                let amountBtc = amountString.doubleValue.avoidNotation
+                let amountBtc = amountString.doubleValue.btcBalanceWithSpaces
                 let fxRate = UserDefaults.standard.object(forKey: "fxRate") as? Double ?? 0.0
                 let amountFiat = (amountBtc.doubleValue * fxRate).balanceTextWithNoSymbol
                 

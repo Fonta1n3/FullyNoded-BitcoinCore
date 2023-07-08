@@ -445,7 +445,7 @@ class ActiveWalletViewController: UIViewController {
         let currencySymbolImageView = cell.viewWithTag(2) as! UIImageView
         
         if onchainBalanceBtc == "" || onchainBalanceBtc == "0.0 BTC" {
-            onchainBalanceBtc = "0.00000000 BTC"
+            onchainBalanceBtc = "0.00 000 000 BTC"
         }
                 
         if isBtc {
@@ -758,7 +758,7 @@ class ActiveWalletViewController: UIViewController {
                 guard let self = self else { return }
                 
                 self.fxRateLabel.text = rate.exchangeRate
-                self.onchainBalanceFiat = "\((self.onchainBalanceBtc.doubleValue * Double(rate)))"
+                self.onchainBalanceFiat = (self.onchainBalanceBtc.doubleValue * Double(rate)).balanceTextWithNoSymbol
                 
                 if self.isFiat {
                     self.walletTable.reloadSections(.init(arrayLiteral: 0), with: .none)
@@ -789,12 +789,12 @@ class ActiveWalletViewController: UIViewController {
                 }
                 
                 DispatchQueue.main.async {
-                    self.onchainBalanceBtc = String(balance).btc
+                    self.onchainBalanceBtc = balance.btcBalanceWithSpaces//.btc
                     self.onchainBalanceSats = balance.sats
                     
                     if let exchangeRate = self.fxRate {
                         let onchainBalanceFiat = balance * exchangeRate
-                        self.onchainBalanceFiat = "\(round(onchainBalanceFiat))"
+                        self.onchainBalanceFiat = onchainBalanceFiat.balanceTextWithNoSymbol
                     }
                     
                     self.sectionZeroLoaded = true
@@ -808,7 +808,6 @@ class ActiveWalletViewController: UIViewController {
     }
     
     private func getWalletInfo() {
-        print("getWalletInfo")
         OnchainUtils.getWalletInfo { [weak self] (walletInfo, message) in
             guard let self = self else { return }
             
@@ -1045,6 +1044,10 @@ class ActiveWalletViewController: UIViewController {
 
     override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
         switch segue.identifier {
+        case "spendFromWallet":
+            guard let vc = segue.destination as? CreateRawTxViewController else { fallthrough }
+            
+            vc.fxRate = fxRate
         
         case "segueToInvoice":
             guard let vc = segue.destination as? InvoiceViewController else { fallthrough }
@@ -1052,6 +1055,7 @@ class ActiveWalletViewController: UIViewController {
             vc.isBtc = isBtc
             vc.isSats = isSats
             vc.isFiat = isFiat
+            vc.fxRate = fxRate
         
         case "segueToSignPsbt":
             guard let vc = segue.destination as? VerifyTransactionViewController else { fallthrough }

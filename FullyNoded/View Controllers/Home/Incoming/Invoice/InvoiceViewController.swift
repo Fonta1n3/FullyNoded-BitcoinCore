@@ -27,6 +27,7 @@ class InvoiceViewController: UIViewController, UITextFieldDelegate {
     var refreshButton = UIBarButtonItem()
     var dataRefresher = UIBarButtonItem()
     let spinner = UIActivityIndicatorView(style: .medium)
+    var fxRate:Double? = nil
     
     @IBOutlet weak var invoiceHeader: UILabel!
     @IBOutlet var amountField: UITextField!
@@ -53,6 +54,23 @@ class InvoiceViewController: UIViewController, UITextFieldDelegate {
         invoiceText.text = ""
         qrView.image = generateQrCode(key: "bitcoin:")
         generateOnchainInvoice()
+        
+        let denomination = UserDefaults.standard.object(forKey: "denomination") as? String ?? "BTC"
+        amountField.placeholder = denomination + " amount"
+        switch denomination {
+        case "BTC":
+            isBtc = true
+            isFiat = false
+            isSats = false
+        case "SATS":
+            isSats = true
+            isFiat = false
+            isBtc = false
+        default:
+            isFiat = true
+            isBtc = false
+            isSats = false
+        }
     }
     
     private func addNavBarSpinner() {
@@ -81,22 +99,6 @@ class InvoiceViewController: UIViewController, UITextFieldDelegate {
     @objc func refreshData(_ sender: Any) {
         generateOnchainInvoice()
     }
-    
-    @IBAction func switchDenominationsAction(_ sender: UISegmentedControl) {
-        switch sender.selectedSegmentIndex {
-        case 0:
-            self.isBtc = true
-            self.isSats = false
-            self.isFiat = false
-        default:
-            self.isBtc = false
-            self.isSats = true
-            self.isFiat = false
-        }
-        
-        updateQRImage()
-    }
-    
     
     private func setDelegates() {
         messageField.delegate = self
@@ -303,6 +305,14 @@ class InvoiceViewController: UIViewController, UITextFieldDelegate {
             if amount != "" {
                 if let dbl = Double(amount) {
                     amount = (dbl / 100000000.0).avoidNotation
+                }
+            }
+        } else if isFiat {
+            if amount != "" {
+                if let dbl = Double(amount), let fxRate = fxRate {
+                    amount = rounded(number: (dbl / fxRate)).avoidNotation
+                } else {
+                    showAlert(vc: self, title: "", message: "No exchange rate. Reload the active wallet view and try again, or choose another denomination in settings.")
                 }
             }
         }

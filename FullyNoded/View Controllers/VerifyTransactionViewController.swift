@@ -95,8 +95,6 @@ class VerifyTransactionViewController: UIViewController, UINavigationControllerD
     private func reset() {
         self.unsignedPsbt = ""
         self.signedRawTx = ""
-        //self.isChannelFunding = false
-        //self.voutChannelFunding = nil
         self.rejectionMessage = ""
         self.txValid = nil
         self.memo = ""
@@ -1046,7 +1044,7 @@ class VerifyTransactionViewController: UIViewController, UINavigationControllerD
                         isChange = false
                     }
                                         
-                    var amountString = amount.avoidNotation
+                    var amountString = amount.btcBalanceWithSpaces
                     
                     if fxRate != nil {
                         amountString += " btc / \(fiatAmount(btc: amount))"
@@ -1114,7 +1112,7 @@ class VerifyTransactionViewController: UIViewController, UINavigationControllerD
                             
                             if let amount = output["value"] as? Double {
                                 inputTotal += amount
-                                var amountString = amount.avoidNotation
+                                var amountString = amount.btcBalanceWithSpaces
                                 
                                 if fxRate != nil {
                                     amountString += " btc / \(fiatAmount(btc: amount))"
@@ -1139,7 +1137,7 @@ class VerifyTransactionViewController: UIViewController, UINavigationControllerD
             txFee = inputTotal - outputTotal
             
             if inputTotal > 0.0 {
-                let txfeeString = txFee.avoidNotation
+                let txfeeString = txFee.btcBalanceWithSpaces
                 if fxRate != nil {
                     self.miningFee = "\(txfeeString) btc / \(fiatAmount(btc: self.txFee))"
                 } else {
@@ -1291,6 +1289,8 @@ class VerifyTransactionViewController: UIViewController, UINavigationControllerD
                         
                         if desc.contains("/1/") {
                             isChange = true
+                        } else {
+                            isChange = false
                         }
                         
                         if keypath == "no key path" {
@@ -1673,7 +1673,6 @@ class VerifyTransactionViewController: UIViewController, UINavigationControllerD
             let isDust = input["isDust"] as? Bool ?? false
             let signatureStatus = input["signatures"] as? String ?? "no signature data"
             let desc = input["desc"] as? String ?? "no descriptor"
-            let lifehash = input["lifehash"] as? UIImage ?? UIImage()
             let inputAddress = input["address"] as! String
             let hasSigned = input["isSigned"] as! Bool
             
@@ -1682,7 +1681,7 @@ class VerifyTransactionViewController: UIViewController, UINavigationControllerD
             sigsImageView.image = UIImage(systemName: "signature")
             
             inputIndexLabel.text = "Input #\(input["index"] as! Int)"
-            inputAmountLabel.text = "\((input["amount"] as! String))"
+            inputAmountLabel.text = "\(input["amount"] as! String)"
             inputAddressLabel.text = inputAddress
             
             copyAddressButton.restorationIdentifier = inputAddress
@@ -2071,7 +2070,10 @@ class VerifyTransactionViewController: UIViewController, UINavigationControllerD
                     
                     if desc.contains("/1/") {
                         isChange = true
+                    } else {
+                        isChange = false
                     }
+                    
                     updatedOutput["isOursBitcoind"] = solvable
                     updatedOutput["hdKeyPath"] = keypath
                     updatedOutput["isChange"] = isChange

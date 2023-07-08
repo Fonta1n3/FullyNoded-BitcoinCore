@@ -31,8 +31,6 @@ class CreateRawTxViewController: UIViewController, UITextFieldDelegate, UITableV
     
     @IBOutlet weak private var miningTargetLabel: UILabel!
     @IBOutlet weak private var satPerByteLabel: UILabel!
-    //@IBOutlet weak private var sweepButton: UIStackView!
-    @IBOutlet weak private var fxRateLabel: UILabel!
     @IBOutlet weak private var denominationImage: UIImageView!
     @IBOutlet weak private var slider: UISlider!
     @IBOutlet weak private var addOutputOutlet: UIBarButtonItem!
@@ -60,21 +58,6 @@ class CreateRawTxViewController: UIViewController, UITextFieldDelegate, UITableV
         slider.isContinuous = false
         addTapGesture()
         
-//        sliderViewBackground.layer.cornerRadius = 8
-//        sliderViewBackground.layer.borderColor = UIColor.darkGray.cgColor
-//        sliderViewBackground.layer.borderWidth = 0.5
-        //sliderViewBackground.backgroundColor = #colorLiteral(red: 0.05172085258, green: 0.05855310153, blue: 0.06978280196, alpha: 1)
-        
-//        amountBackground.layer.cornerRadius = 8
-//        amountBackground.layer.borderColor = UIColor.darkGray.cgColor
-//        amountBackground.layer.borderWidth = 0.5
-        //amountBackground.backgroundColor = #colorLiteral(red: 0.05172085258, green: 0.05855310153, blue: 0.06978280196, alpha: 1)
-        
-//        recipientBackground.layer.cornerRadius = 8
-//        recipientBackground.layer.borderColor = UIColor.darkGray.cgColor
-//        recipientBackground.layer.borderWidth = 0.5
-        //recipientBackground.backgroundColor = #colorLiteral(red: 0.05172085258, green: 0.05855310153, blue: 0.06978280196, alpha: 1)
-        
         slider.addTarget(self, action: #selector(setFee), for: .allEvents)
         slider.maximumValue = 2 * -1
         slider.minimumValue = 432 * -1
@@ -89,36 +72,23 @@ class CreateRawTxViewController: UIViewController, UITextFieldDelegate, UITableV
             ud.set(432, forKey: "feeTarget")
         }
         
-        if ud.object(forKey: "unit") != nil {
-            let unit = ud.object(forKey: "unit") as! String
-            var index = 0
-            switch unit {
-            case "btc":
-                index = 0
-                isBtc = true
-                isFiat = false
-                isSats = false
-                btcEnabled()
-            case "sats":
-                index = 1
-                isSats = true
-                isFiat = false
-                isBtc = false
-                satsSelected()
-            case "fiat":
-                index = 2
-                isFiat = true
-                isBtc = false
-                isSats = false
-                fiatEnabled()
-            default:
-                break
-            }
-        } else {
+        let denomination = UserDefaults.standard.object(forKey: "denomination") as? String ?? "BTC"
+        switch denomination {
+        case "BTC":
             isBtc = true
             isFiat = false
             isSats = false
             btcEnabled()
+        case "SATS":
+            isSats = true
+            isFiat = false
+            isBtc = false
+            satsSelected()
+        default:
+            isFiat = true
+            isBtc = false
+            isSats = false
+            fiatEnabled()
         }
         
         showFeeSetting()
@@ -392,32 +362,7 @@ class CreateRawTxViewController: UIViewController, UITextFieldDelegate, UITableV
         outputs.removeAll()
         inputs.removeAll()
     }
-                    
-    @IBAction func denominationChanged(_ sender: UISegmentedControl) {
-        switch sender.selectedSegmentIndex {
-        case 0:
-            isFiat = false
-            isBtc = true
-            isSats = false
-            ud.set("btc", forKey: "unit")
-            btcEnabled()
-        case 1:
-            isFiat = false
-            isBtc = false
-            isSats = true
-            ud.set("sats", forKey: "unit")
-            satsSelected()
-        case 2:
-            isFiat = true
-            isBtc = false
-            isSats = false
-            ud.set("fiat", forKey: "unit")
-            fiatEnabled()
-        default:
-            break
-        }
-    }
-    
+                        
     private func satsSelected() {
         DispatchQueue.main.async { [unowned vc = self] in
             vc.denominationImage.image = UIImage(systemName: "s.circle")
@@ -449,16 +394,15 @@ class CreateRawTxViewController: UIViewController, UITextFieldDelegate, UITableV
                 guard let self = self else { return }
                 
                 self.fxRate = fxrate
-                self.fxRateLabel.text = fxrate.exchangeRate
-                switch self.fiatCurrency {
-                case "USD":
-                    self.denominationImage.image = UIImage(systemName: "dollarsign.circle")
-                case "GBP":
-                    self.denominationImage.image = UIImage(systemName: "sterlingsign.circle")
-                case "EUR":
-                    self.denominationImage.image = UIImage(systemName: "eurosign.circle")
-                default:
-                    break
+                
+                for currency in Currencies.currencies {
+                    for (key, value) in currency {
+                        if key == self.fiatCurrency {
+                            DispatchQueue.main.async { [weak self] in
+                                self?.denominationImage.image = UIImage(systemName: value)
+                            }
+                        }
+                    }
                 }
                                 
                 if UserDefaults.standard.object(forKey: "fiatAlert") == nil {
@@ -1021,6 +965,7 @@ class CreateRawTxViewController: UIViewController, UITextFieldDelegate, UITableV
             guard let vc = segue.destination as? VerifyTransactionViewController else { fallthrough }
             
             vc.hasSigned = true
+            vc.fxRate = fxRate
             
             if rawTxSigned != "" {
                 vc.signedRawTx = rawTxSigned
