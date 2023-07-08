@@ -57,11 +57,11 @@
                                                         <stackView opaque="NO" contentMode="scaleToFill" spacing="3" translatesAutoresizingMaskIntoConstraints="NO" id="4ej-ZQ-mFW">
                                                             <rect key="frame" x="67.666666666666686" y="16" width="202" height="29"/>
                                                             <subviews>
-                                                                <imageView clipsSubviews="YES" userInteractionEnabled="NO" tag="2" contentMode="center" horizontalHuggingPriority="251" verticalHuggingPriority="251" ambiguous="YES" image="bitcoinsign" catalog="system" translatesAutoresizingMaskIntoConstraints="NO" id="mGv-to-6bK">
+                                                                <imageView clipsSubviews="YES" userInteractionEnabled="NO" tag="2" contentMode="center" horizontalHuggingPriority="251" verticalHuggingPriority="251" image="bitcoinsign" catalog="system" translatesAutoresizingMaskIntoConstraints="NO" id="mGv-to-6bK">
                                                                     <rect key="frame" x="0.0" y="-3.5527136788005009e-15" width="14" height="29.666666666666671"/>
                                                                     <color key="tintColor" systemColor="labelColor"/>
                                                                 </imageView>
-                                                                <label opaque="NO" userInteractionEnabled="NO" tag="1" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" ambiguous="YES" text="0.00000000" textAlignment="center" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="Mpg-F1-sQ5">
+                                                                <label opaque="NO" userInteractionEnabled="NO" tag="1" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="0.00000000" textAlignment="center" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="Mpg-F1-sQ5">
                                                                     <rect key="frame" x="17" y="0.0" width="185" height="29"/>
                                                                     <constraints>
                                                                         <constraint firstAttribute="height" constant="29" id="02B-jU-zja"/>
@@ -3809,7 +3809,7 @@ Fully Noded does its best to support as many hardware and software wallet option
                         <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                         <subviews>
                             <stackView opaque="NO" contentMode="scaleToFill" axis="vertical" spacing="20" translatesAutoresizingMaskIntoConstraints="NO" id="Cov-OP-mGy">
-                                <rect key="frame" x="16" y="254" width="361" height="149"/>
+                                <rect key="frame" x="16" y="151" width="361" height="149"/>
                                 <subviews>
                                     <textField opaque="NO" contentMode="scaleToFill" horizontalHuggingPriority="248" contentHorizontalAlignment="left" contentVerticalAlignment="center" borderStyle="roundedRect" placeholder="password" textAlignment="center" minimumFontSize="17" translatesAutoresizingMaskIntoConstraints="NO" id="b1X-12-geh">
                                         <rect key="frame" x="0.0" y="0.0" width="361" height="34"/>
@@ -3853,7 +3853,7 @@ Fully Noded does its best to support as many hardware and software wallet option
                                 </subviews>
                             </stackView>
                             <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="system" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="pw0-Kv-3Kb">
-                                <rect key="frame" x="163" y="651.66666666666663" width="67.333333333333314" height="34.333333333333371"/>
+                                <rect key="frame" x="163" y="734.66666666666663" width="67.333333333333314" height="34.333333333333371"/>
                                 <color key="tintColor" systemColor="systemRedColor"/>
                                 <state key="normal" title="Button"/>
                                 <buttonConfiguration key="configuration" style="filled" title="Reset"/>
@@ -3861,12 +3861,15 @@ Fully Noded does its best to support as many hardware and software wallet option
                                     <action selector="resetAction:" destination="bKH-sI-MiM" eventType="touchUpInside" id="hGR-mQ-agB"/>
                                 </connections>
                             </button>
-                            <imageView clipsSubviews="YES" userInteractionEnabled="NO" contentMode="scaleAspectFit" horizontalHuggingPriority="251" verticalHuggingPriority="251" image="1024_fully noded logo.png" translatesAutoresizingMaskIntoConstraints="NO" id="SPw-uh-2Wk">
-                                <rect key="frame" x="156.66666666666666" y="128" width="80" height="80"/>
+                            <imageView clipsSubviews="YES" userInteractionEnabled="NO" contentMode="scaleAspectFit" horizontalHuggingPriority="251" verticalHuggingPriority="251" image="1024.png" translatesAutoresizingMaskIntoConstraints="NO" id="SPw-uh-2Wk">
+                                <rect key="frame" x="156.66666666666666" y="25" width="80" height="80"/>
                                 <constraints>
                                     <constraint firstAttribute="height" constant="80" id="0uN-eO-PQq"/>
                                     <constraint firstAttribute="width" constant="80" id="mzw-Um-Mzy"/>
                                 </constraints>
+                                <userDefinedRuntimeAttributes>
+                                    <userDefinedRuntimeAttribute type="string" keyPath="cornerRadius" value="18"/>
+                                </userDefinedRuntimeAttributes>
                             </imageView>
                         </subviews>
                         <viewLayoutGuide key="safeArea" id="EbK-Bw-j4E"/>
@@ -4060,20 +4063,20 @@ Fully Noded does its best to support as many hardware and software wallet option
     </scenes>
     <inferredMetricsTieBreakers>
         <segue reference="ejH-sy-hlm"/>
-        <segue reference="qed-hl-jG5"/>
+        <segue reference="UBf-qr-XYG"/>
         <segue reference="aQN-4W-cSW"/>
-        <segue reference="DLx-HT-rGm"/>
-        <segue reference="Wy7-ur-TeS"/>
+        <segue reference="4g3-DC-Q5z"/>
+        <segue reference="nTv-zU-127"/>
         <segue reference="w2g-bl-j8v"/>
         <segue reference="IAz-j1-Gq6"/>
         <segue reference="6KH-E3-p33"/>
-        <segue reference="07E-4w-Zh7"/>
+        <segue reference="CQp-9r-70w"/>
         <segue reference="8MS-xS-DMP"/>
         <segue reference="yAt-Ra-aPH"/>
-        <segue reference="gzO-Lb-E0s"/>
+        <segue reference="7PS-EL-3d2"/>
     </inferredMetricsTieBreakers>
     <resources>
-        <image name="1024_fully noded logo.png" width="1024" height="1024"/>
+        <image name="1024.png" width="1024" height="1024"/>
         <image name="Home" width="30" height="30"/>
         <image name="Settings" width="30" height="30"/>
         <image name="arrow.clockwise" catalog="system" width="113" height="128"/>

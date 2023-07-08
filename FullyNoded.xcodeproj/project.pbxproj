@@ -31,24 +31,27 @@
 		0A337D012700316E00AD087F /* WalletDir.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A337D002700316E00AD087F /* WalletDir.swift */; };
 		0A590357269875CD00510626 /* Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A590356269875CB00510626 /* Extensions.swift */; };
 		0A651ACF2A45D4D000540D23 /* 1024_fully noded logo.png in Resources */ = {isa = PBXBuildFile; fileRef = 0A651ACE2A45D4D000540D23 /* 1024_fully noded logo.png */; };
+		0A65326E2A58349E000F911A /* Launch Screen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 0A65326D2A58349E000F911A /* Launch Screen.storyboard */; };
+		0A6532702A5995AA000F911A /* Currencies.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A65326F2A5995AA000F911A /* Currencies.swift */; };
 		0A6B365B27B1AA0C00CD4F3A /* AddressInfo.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A6B365A27B1AA0B00CD4F3A /* AddressInfo.swift */; };
 		0A77138426AD9C5E005CC23D /* BlindPsbt.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A77138326AD9C5E005CC23D /* BlindPsbt.swift */; };
 		0A77138626AE5E85005CC23D /* WalletInfo.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A77138526AE5E85005CC23D /* WalletInfo.swift */; };
 		0A8850FF2A4201C10078A603 /* LibWally.xcframework in Frameworks */ = {isa = PBXBuildFile; fileRef = 0AD438842A41F7F90004F923 /* LibWally.xcframework */; };
 		0A8851002A4201C10078A603 /* LibWally.xcframework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 0AD438842A41F7F90004F923 /* LibWally.xcframework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		0A94C2372A57F72B006653D7 /* 1024.png in Resources */ = {isa = PBXBuildFile; fileRef = 0A94C2362A57F72B006653D7 /* 1024.png */; };
+		0A94C2392A57FAA0006653D7 /* 1024_clear.png in Resources */ = {isa = PBXBuildFile; fileRef = 0A94C2382A57FAA0006653D7 /* 1024_clear.png */; };
 		0A9FDC9126A84CE30050C4AE /* WalletTypes.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A9FDC9026A84CE30050C4AE /* WalletTypes.swift */; };
 		0AB0B694290C374F00A1C201 /* URKit in Frameworks */ = {isa = PBXBuildFile; productRef = 0AB0B693290C374F00A1C201 /* URKit */; };
 		0AD9490A273C051B00AF83F5 /* ExternalFNWalletsViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0AD94909273C051B00AF83F5 /* ExternalFNWalletsViewController.swift */; };
 		0AE19ED725F4AC0D000F0AD4 /* WalletRecoveryViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0AE19ED625F4AC0D000F0AD4 /* WalletRecoveryViewController.swift */; };
 		0AF73250291DDFC4009F6296 /* BTC_Params.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0AF7324F291DDFC4009F6296 /* BTC_Params.swift */; };
-		30C82377A296E416071D6759 /* Pods_FullyNoded.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 96B4D588AA5CF4D2DB553423 /* Pods_FullyNoded.framework */; };
+		41E688C91FAFBAAEA80E7EA5 /* Pods_FullyNoded.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 99C03A1D137309B9595338F9 /* Pods_FullyNoded.framework */; };
 		844D2A4B2512D4F60046372E /* UTXOCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = 844D2A492512D4F60046372E /* UTXOCell.swift */; };
 		844D2A4C2512D4F60046372E /* UTXOCell.xib in Resources */ = {isa = PBXBuildFile; fileRef = 844D2A4A2512D4F60046372E /* UTXOCell.xib */; };
 		D00B27BC255A27F300269B51 /* WalletURL.swift in Sources */ = {isa = PBXBuildFile; fileRef = D00B27BB255A27F300269B51 /* WalletURL.swift */; };
 		D00B9A282111427200E8B95A /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = D00B9A272111427200E8B95A /* AppDelegate.swift */; };
 		D00B9A2D2111427200E8B95A /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = D00B9A2B2111427200E8B95A /* Main.storyboard */; };
 		D00B9A322111427200E8B95A /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = D00B9A312111427200E8B95A /* Assets.xcassets */; };
-		D00B9A352111427200E8B95A /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = D00B9A332111427200E8B95A /* LaunchScreen.storyboard */; };
 		D00BD9CB2365664600222A37 /* BitSenseTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D00BD9CA2365664600222A37 /* BitSenseTests.swift */; };
 		D00F851B24949691008D7CD3 /* AppPasswordViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D00F851A24949691008D7CD3 /* AppPasswordViewController.swift */; };
 		D00F851D2494A616008D7CD3 /* TorAuthViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D00F851C2494A616008D7CD3 /* TorAuthViewController.swift */; };
@@ -181,9 +184,13 @@
 		0A337D002700316E00AD087F /* WalletDir.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WalletDir.swift; sourceTree = "<group>"; };
 		0A590356269875CB00510626 /* Extensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Extensions.swift; sourceTree = "<group>"; };
 		0A651ACE2A45D4D000540D23 /* 1024_fully noded logo.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = "1024_fully noded logo.png"; path = "FullyNoded/Assets.xcassets/AppIcon-6.appiconset/1024_fully noded logo.png"; sourceTree = SOURCE_ROOT; };
+		0A65326D2A58349E000F911A /* Launch Screen.storyboard */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; path = "Launch Screen.storyboard"; sourceTree = "<group>"; };
+		0A65326F2A5995AA000F911A /* Currencies.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Currencies.swift; sourceTree = "<group>"; };
 		0A6B365A27B1AA0B00CD4F3A /* AddressInfo.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddressInfo.swift; sourceTree = "<group>"; };
 		0A77138326AD9C5E005CC23D /* BlindPsbt.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BlindPsbt.swift; sourceTree = "<group>"; };
 		0A77138526AE5E85005CC23D /* WalletInfo.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WalletInfo.swift; sourceTree = "<group>"; };
+		0A94C2362A57F72B006653D7 /* 1024.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = 1024.png; sourceTree = "<group>"; };
+		0A94C2382A57FAA0006653D7 /* 1024_clear.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = 1024_clear.png; sourceTree = "<group>"; };
 		0A9834C526BC2E6700BAB74E /* CloudKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CloudKit.framework; path = System/Library/Frameworks/CloudKit.framework; sourceTree = SDKROOT; };
 		0A9FDC9026A84CE30050C4AE /* WalletTypes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WalletTypes.swift; sourceTree = "<group>"; };
 		0AD438842A41F7F90004F923 /* LibWally.xcframework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcframework; path = LibWally.xcframework; sourceTree = "<group>"; };
@@ -192,15 +199,14 @@
 		0AF7324F291DDFC4009F6296 /* BTC_Params.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BTC_Params.swift; sourceTree = "<group>"; };
 		844D2A492512D4F60046372E /* UTXOCell.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UTXOCell.swift; sourceTree = "<group>"; };
 		844D2A4A2512D4F60046372E /* UTXOCell.xib */ = {isa = PBXFileReference; lastKnownFileType = file.xib; path = UTXOCell.xib; sourceTree = "<group>"; };
-		96B4D588AA5CF4D2DB553423 /* Pods_FullyNoded.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_FullyNoded.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		8594AABAD27621360D547769 /* Pods-FullyNoded.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-FullyNoded.release.xcconfig"; path = "Target Support Files/Pods-FullyNoded/Pods-FullyNoded.release.xcconfig"; sourceTree = "<group>"; };
+		99C03A1D137309B9595338F9 /* Pods_FullyNoded.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_FullyNoded.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		A084FD782359F7B700DA63CF /* .gitignore */ = {isa = PBXFileReference; lastKnownFileType = text; path = .gitignore; sourceTree = "<group>"; };
-		A8DDD37CDB9721690D596419 /* Pods-FullyNoded.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-FullyNoded.debug.xcconfig"; path = "Target Support Files/Pods-FullyNoded/Pods-FullyNoded.debug.xcconfig"; sourceTree = "<group>"; };
 		D00B27BB255A27F300269B51 /* WalletURL.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WalletURL.swift; sourceTree = "<group>"; };
 		D00B9A242111427200E8B95A /* FullyNoded.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = FullyNoded.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		D00B9A272111427200E8B95A /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		D00B9A2C2111427200E8B95A /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/Main.storyboard; sourceTree = "<group>"; };
 		D00B9A312111427200E8B95A /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
-		D00B9A342111427200E8B95A /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/LaunchScreen.storyboard; sourceTree = "<group>"; };
 		D00B9A362111427200E8B95A /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		D00BD9C82365664600222A37 /* FullyNodedTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = FullyNodedTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		D00BD9CA2365664600222A37 /* BitSenseTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BitSenseTests.swift; sourceTree = "<group>"; };
@@ -290,7 +296,7 @@
 		D0F3919124BFEBBB00EA8A2A /* QRDisplayerViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QRDisplayerViewController.swift; sourceTree = "<group>"; };
 		D0F3919324C0147400EA8A2A /* QRScannerViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QRScannerViewController.swift; sourceTree = "<group>"; };
 		D0F3919524C0379200EA8A2A /* ImportWallet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImportWallet.swift; sourceTree = "<group>"; };
-		E71A7697A59AC9C5599F544D /* Pods-FullyNoded.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-FullyNoded.release.xcconfig"; path = "Target Support Files/Pods-FullyNoded/Pods-FullyNoded.release.xcconfig"; sourceTree = "<group>"; };
+		F910007A79BF54B993DDCE8E /* Pods-FullyNoded.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-FullyNoded.debug.xcconfig"; path = "Target Support Files/Pods-FullyNoded/Pods-FullyNoded.debug.xcconfig"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -300,7 +306,7 @@
 			files = (
 				0AB0B694290C374F00A1C201 /* URKit in Frameworks */,
 				0A8850FF2A4201C10078A603 /* LibWally.xcframework in Frameworks */,
-				30C82377A296E416071D6759 /* Pods_FullyNoded.framework in Frameworks */,
+				41E688C91FAFBAAEA80E7EA5 /* Pods_FullyNoded.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -417,8 +423,8 @@
 		B72FFE847BD98E322627D81C /* Pods */ = {
 			isa = PBXGroup;
 			children = (
-				A8DDD37CDB9721690D596419 /* Pods-FullyNoded.debug.xcconfig */,
-				E71A7697A59AC9C5599F544D /* Pods-FullyNoded.release.xcconfig */,
+				F910007A79BF54B993DDCE8E /* Pods-FullyNoded.debug.xcconfig */,
+				8594AABAD27621360D547769 /* Pods-FullyNoded.release.xcconfig */,
 			);
 			path = Pods;
 			sourceTree = "<group>";
@@ -518,10 +524,10 @@
 				D0410615224ED188004AC0D0 /* FullyNoded-Bridging-Header.h */,
 				D00B9A2B2111427200E8B95A /* Main.storyboard */,
 				D00B9A312111427200E8B95A /* Assets.xcassets */,
-				D00B9A332111427200E8B95A /* LaunchScreen.storyboard */,
 				D00B9A362111427200E8B95A /* Info.plist */,
 				D0AD9B6723E7ECC20032C607 /* SceneDelegate.swift */,
 				0A590356269875CB00510626 /* Extensions.swift */,
+				0A65326D2A58349E000F911A /* Launch Screen.storyboard */,
 			);
 			path = FullyNoded;
 			sourceTree = "<group>";
@@ -588,6 +594,7 @@
 				D00B27BB255A27F300269B51 /* WalletURL.swift */,
 				0A212D8A26C66A9600BF6FD4 /* OnchainUtils.swift */,
 				0A00D6A3271BE51600ECAB22 /* TextFileImport.swift */,
+				0A65326F2A5995AA000F911A /* Currencies.swift */,
 			);
 			path = Helpers;
 			sourceTree = "<group>";
@@ -718,7 +725,7 @@
 				0AD438842A41F7F90004F923 /* LibWally.xcframework */,
 				0A9834C526BC2E6700BAB74E /* CloudKit.framework */,
 				D026E5C7253A79DB001F1054 /* AuthenticationServices.framework */,
-				96B4D588AA5CF4D2DB553423 /* Pods_FullyNoded.framework */,
+				99C03A1D137309B9595338F9 /* Pods_FullyNoded.framework */,
 			);
 			name = Frameworks;
 			sourceTree = "<group>";
@@ -766,6 +773,8 @@
 		D0FA417A213C7CB70028E4F8 /* Images */ = {
 			isa = PBXGroup;
 			children = (
+				0A94C2382A57FAA0006653D7 /* 1024_clear.png */,
+				0A94C2362A57F72B006653D7 /* 1024.png */,
 				0A651ACE2A45D4D000540D23 /* 1024_fully noded logo.png */,
 				D0EA04EE25592B910032C63F /* logo_grey.png */,
 				D06FD7D1250640F800481185 /* logo_grey_.png */,
@@ -781,13 +790,13 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = D00B9A392111427200E8B95A /* Build configuration list for PBXNativeTarget "FullyNoded" */;
 			buildPhases = (
-				D21D392965D570A5C4137736 /* [CP] Check Pods Manifest.lock */,
+				BFA9E37C4E781185DE7B6BB4 /* [CP] Check Pods Manifest.lock */,
 				D00B9A202111427200E8B95A /* Sources */,
 				D00B9A212111427200E8B95A /* Frameworks */,
 				D00B9A222111427200E8B95A /* Resources */,
 				D08C1FBE2111480100B7CA79 /* ShellScript */,
 				D016AE4A25AFFCA400A59E93 /* Embed Frameworks */,
-				F8560E7B3A0A5380CF964328 /* [CP] Embed Pods Frameworks */,
+				F765FFCE1E9A2780F5220095 /* [CP] Embed Pods Frameworks */,
 			);
 			buildRules = (
 			);
@@ -886,13 +895,15 @@
 			files = (
 				D084960622EC0A94003FE8EB /* LICENSE.md in Resources */,
 				D0DE292B22BCFE9900D9EBCF /* Readme.md in Resources */,
-				D00B9A352111427200E8B95A /* LaunchScreen.storyboard in Resources */,
 				D00B9A322111427200E8B95A /* Assets.xcassets in Resources */,
 				D049CB3924C7EFDF0039711B /* iTunesArtwork@2x.png in Resources */,
 				0A651ACF2A45D4D000540D23 /* 1024_fully noded logo.png in Resources */,
 				D06FD7D2250640F800481185 /* logo_grey_.png in Resources */,
+				0A65326E2A58349E000F911A /* Launch Screen.storyboard in Resources */,
 				844D2A4C2512D4F60046372E /* UTXOCell.xib in Resources */,
 				D0EA04EF25592B910032C63F /* logo_grey.png in Resources */,
+				0A94C2372A57F72B006653D7 /* 1024.png in Resources */,
+				0A94C2392A57FAA0006653D7 /* 1024_clear.png in Resources */,
 				D00B9A2D2111427200E8B95A /* Main.storyboard in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -907,21 +918,7 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXShellScriptBuildPhase section */
-		D08C1FBE2111480100B7CA79 /* ShellScript */ = {
-			isa = PBXShellScriptBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			inputPaths = (
-			);
-			outputPaths = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = /bin/sh;
-			shellScript = "
-";
-		};
-		D21D392965D570A5C4137736 /* [CP] Check Pods Manifest.lock */ = {
+		BFA9E37C4E781185DE7B6BB4 /* [CP] Check Pods Manifest.lock */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -943,7 +940,21 @@
 			shellScript = "diff \"${PODS_PODFILE_DIR_PATH}/Podfile.lock\" \"${PODS_ROOT}/Manifest.lock\" > /dev/null\nif [ $? != 0 ] ; then\n    # print error to STDERR\n    echo \"error: The sandbox is not in sync with the Podfile.lock. Run 'pod install' or update your CocoaPods installation.\" >&2\n    exit 1\nfi\n# This output is used by Xcode 'outputs' to avoid re-running this script phase.\necho \"SUCCESS\" > \"${SCRIPT_OUTPUT_FILE_0}\"\n";
 			showEnvVarsInLog = 0;
 		};
-		F8560E7B3A0A5380CF964328 /* [CP] Embed Pods Frameworks */ = {
+		D08C1FBE2111480100B7CA79 /* ShellScript */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "
+";
+		};
+		F765FFCE1E9A2780F5220095 /* [CP] Embed Pods Frameworks */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -1032,6 +1043,7 @@
 				0A00D6A4271BE51600ECAB22 /* TextFileImport.swift in Sources */,
 				D0384E2F246AC4B1002FEE94 /* XpubConverter.swift in Sources */,
 				D08A92B5233C979600409D6E /* FiatConverter.swift in Sources */,
+				0A6532702A5995AA000F911A /* Currencies.swift in Sources */,
 				D0F3919624C0379200EA8A2A /* ImportWallet.swift in Sources */,
 				D0855FC622B08EE000DBBFC2 /* TorClient.swift in Sources */,
 				D0E51E5B226592C9005D1909 /* NodeDetailViewController.swift in Sources */,
@@ -1104,14 +1116,6 @@
 				D00B9A2C2111427200E8B95A /* Base */,
 			);
 			name = Main.storyboard;
-			sourceTree = "<group>";
-		};
-		D00B9A332111427200E8B95A /* LaunchScreen.storyboard */ = {
-			isa = PBXVariantGroup;
-			children = (
-				D00B9A342111427200E8B95A /* Base */,
-			);
-			name = LaunchScreen.storyboard;
 			sourceTree = "<group>";
 		};
 /* End PBXVariantGroup section */
@@ -1235,7 +1239,7 @@
 		};
 		D00B9A3A2111427200E8B95A /* Debug */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = A8DDD37CDB9721690D596419 /* Pods-FullyNoded.debug.xcconfig */;
+			baseConfigurationReference = F910007A79BF54B993DDCE8E /* Pods-FullyNoded.debug.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;
@@ -1279,7 +1283,7 @@
 		};
 		D00B9A3B2111427200E8B95A /* Release */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = E71A7697A59AC9C5599F544D /* Pods-FullyNoded.release.xcconfig */;
+			baseConfigurationReference = 8594AABAD27621360D547769 /* Pods-FullyNoded.release.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;
