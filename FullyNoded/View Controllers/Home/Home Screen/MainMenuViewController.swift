@@ -28,6 +28,14 @@ class MainMenuViewController: UIViewController {
     var detailImage = UIImage()
     var detailImageTint = UIColor()
     let refreshControl = UIRefreshControl()
+    var showBlockchainInfoSpinner = false
+    var showNetworkInfoSpinner = false
+    var showFeeInfoSpinner = false
+    var showMempoolInfoSpinner = false
+    var showMiningInfoSpinner = false
+    var showPeerInfoSpinner = false
+    var showUpTimeSpinner = false
+    let sectionSpinner = UIActivityIndicatorView(style: .medium)
     
     var detailHeaderText = ""
     var detailSubheaderText = ""
@@ -80,25 +88,13 @@ class MainMenuViewController: UIViewController {
         setFeeTarget()
         NotificationCenter.default.addObserver(self, selector: #selector(refreshNode), name: .refreshNode, object: nil)
         torProgressLabel.text = "Tor bootstrapping 0%"
-        addDemoNode()
     }
-    
-    private func addDemoNode() {
-        CoreDataService.retrieveEntity(entityName: .nodes) { nodes in
-            guard let nodes = nodes else { return }
-            
-            if nodes.count == 0 {
-                let url = "http://bitcoinrpc:i4zIpD1fhjvMoKPakxZ5wwBwJh79djHnd5nR8WsV1tY=@s6srqiofa2h7xka5r5a5lfi2u64fq7wcrwtpirqz5oy2oswthu3uiwqd.onion:11221"
-                QuickConnect.addNode(url: url) { (success, errorMessage) in
-                    print("demo node added: \(success)")
-                }
-            }
-        }
-    }
-    
+        
     private func setIcon() {
         let appIcon = UIButton(type: .custom)
-        appIcon.setImage(UIImage(named: "1024_fully noded logo.png"), for: .normal)
+        appIcon.setImage(UIImage(named: "1024.png"), for: .normal)
+        appIcon.imageView?.layer.cornerRadius = 18
+        appIcon.imageView?.clipsToBounds = true
         appIcon.frame = CGRect(x: 0, y: 0, width: 35, height: 35)
         appIcon.imageView?.contentMode = .scaleAspectFit
         appIcon.translatesAutoresizingMaskIntoConstraints = false
@@ -207,22 +203,9 @@ class MainMenuViewController: UIViewController {
     }
     
     @objc func refreshNode() {
-        if let node = activeNode {
-            DispatchQueue.main.async { [weak self] in
-                guard let self = self else { return }
-                
-                refreshTable()
-                existingNodeID = nil
-                addNavBarSpinner()
-                refreshControl.endRefreshing()
-                loadNode(node: node)
-            }
-        } else {
-            DispatchQueue.main.async { [weak self] in
-                guard let self = self else { return }
-                refreshControl.endRefreshing()
-            }
-        }
+        refreshTable()
+        refreshDataNow()
+        refreshControl.endRefreshing()
     }
     
     private func loadNode(node: NodeStruct) {
@@ -360,16 +343,8 @@ class MainMenuViewController: UIViewController {
     private func homeCell(_ indexPath: IndexPath) -> UITableViewCell {
         let cell = mainMenu.dequeueReusableCell(withIdentifier: "homeCell", for: indexPath)
         cell.selectionStyle = .none
-//        cell.layer.borderColor = UIColor.lightGray.cgColor
-//        cell.layer.borderWidth = 0.5
-        //cell.backgroundColor = #colorLiteral(red: 0.05172085258, green: 0.05855310153, blue: 0.06978280196, alpha: 1)
-        //let background = cell.viewWithTag(3)!
         let icon = cell.viewWithTag(1) as! UIImageView
         let label = cell.viewWithTag(2) as! UILabel
-        //let chevron = cell.viewWithTag(4) as! UIImageView
-//        background.clipsToBounds = true
-//        background.layer.cornerRadius = 8
-        //background.tintColor = .clear
         icon.tintColor = .none
         
         switch Section(rawValue: indexPath.section) {
@@ -379,15 +354,12 @@ class MainMenuViewController: UIViewController {
                 switch indexPath.row {
                 case 0:
                     if blockchainInfo.progressString == "Fully verified" {
-                        //background.backgroundColor = .systemGreen
                         icon.image = UIImage(systemName: "checkmark.seal")
                     } else {
-                        //background.backgroundColor = .systemRed
                         icon.image = UIImage(systemName: "exclamationmark.triangle")
                         icon.tintColor = .systemRed
                     }
                     label.text = blockchainInfo.progressString
-                    //chevron.alpha = 1
                     
                 case 1:
                     label.text = blockchainInfo.network.capitalized + " blockchain"
@@ -505,10 +477,26 @@ class MainMenuViewController: UIViewController {
     
     
     func loadTableData() {
+        showBlockchainInfoSpinner = true
+        
+        DispatchQueue.main.async { [weak self] in
+            guard let self = self else { return }
+            
+            mainMenu.reloadSections(IndexSet(arrayLiteral: Section.blockchainInfo.rawValue), with: .none)
+        }
+        
         OnchainUtils.getBlockchainInfo { [weak self] (blockchainInfo, message) in
             guard let self = self else { return }
             
             guard let blockchainInfo = blockchainInfo else {
+                
+                showBlockchainInfoSpinner = false
+                
+                DispatchQueue.main.async { [weak self] in
+                    guard let self = self else { return }
+                    
+                    mainMenu.reloadSections(IndexSet(arrayLiteral: Section.blockchainInfo.rawValue), with: .none)
+                }
                 
                 guard let message = message else {
                     showAlert(vc: self, title: "", message: "unknown error")
@@ -544,6 +532,7 @@ class MainMenuViewController: UIViewController {
                 initialLoad = false
                 headerLabel.textColor = .none
                 self.blockchainInfo = blockchainInfo
+                showBlockchainInfoSpinner = false
                 mainMenu.reloadSections(IndexSet(arrayLiteral: Section.blockchainInfo.rawValue), with: .fade)
                 getNetworkInfo()
             }
@@ -551,6 +540,14 @@ class MainMenuViewController: UIViewController {
     }
     
     private func getPeerInfo() {
+        showPeerInfoSpinner = true
+        
+        DispatchQueue.main.async { [weak self] in
+            guard let self = self else { return }
+            
+            mainMenu.reloadSections(IndexSet(arrayLiteral: Section.peerInfo.rawValue), with: .none)
+        }
+        
         NodeLogic.getPeerInfo { [weak self] (response, errorMessage) in
             guard let self = self else { return }
             
@@ -563,8 +560,8 @@ class MainMenuViewController: UIViewController {
             DispatchQueue.main.async { [weak self] in
                 guard let self = self else { return }
                 
-                impact()
                 peerInfo = PeerInfo(dictionary: response)
+                showPeerInfoSpinner = false
                 mainMenu.reloadSections(IndexSet(arrayLiteral: Section.peerInfo.rawValue), with: .fade)
                 getMiningInfo()
             }
@@ -572,6 +569,14 @@ class MainMenuViewController: UIViewController {
     }
     
     private func getNetworkInfo() {
+        showNetworkInfoSpinner = true
+        
+        DispatchQueue.main.async { [weak self] in
+            guard let self = self else { return }
+            
+            mainMenu.reloadSections(IndexSet(arrayLiteral: Section.networkInfo.rawValue), with: .fade)
+        }
+        
         NodeLogic.getNetworkInfo { [weak self] (response, errorMessage) in
             guard let self = self else { return }
             
@@ -584,8 +589,8 @@ class MainMenuViewController: UIViewController {
             DispatchQueue.main.async { [weak self] in
                 guard let self = self else { return }
                 
-                impact()
                 networkInfo = NetworkInfo(dictionary: response)
+                showNetworkInfoSpinner = false
                 mainMenu.reloadSections(IndexSet(arrayLiteral: Section.networkInfo.rawValue), with: .fade)
                 getPeerInfo()
             }
@@ -593,6 +598,14 @@ class MainMenuViewController: UIViewController {
     }
     
     private func getMiningInfo() {
+        showMiningInfoSpinner = true
+        
+        DispatchQueue.main.async { [weak self] in
+            guard let self = self else { return }
+            
+            self.mainMenu.reloadSections(IndexSet(arrayLiteral: Section.miningInfo.rawValue), with: .none)
+        }
+        
         NodeLogic.getMiningInfo { [weak self] (response, errorMessage) in
             guard let self = self else { return }
             
@@ -605,8 +618,8 @@ class MainMenuViewController: UIViewController {
             DispatchQueue.main.async { [weak self] in
                 guard let self = self else { return }
                 
-                impact()
                 self.miningInfo = MiningInfo(dictionary: response)
+                showMiningInfoSpinner = false
                 self.mainMenu.reloadSections(IndexSet(arrayLiteral: Section.miningInfo.rawValue), with: .fade)
                 self.getUptime()
             }
@@ -614,6 +627,14 @@ class MainMenuViewController: UIViewController {
     }
     
     private func getUptime() {
+        showUpTimeSpinner = true
+        
+        DispatchQueue.main.async { [weak self] in
+            guard let self = self else { return }
+            
+            self.mainMenu.reloadSections(IndexSet(arrayLiteral: Section.upTime.rawValue), with: .fade)
+        }
+        
         NodeLogic.getUptime { [weak self] (response, errorMessage) in
             guard let self = self else { return }
             
@@ -626,8 +647,8 @@ class MainMenuViewController: UIViewController {
             DispatchQueue.main.async { [weak self] in
                 guard let self = self else { return }
                 
-                impact()
                 self.uptimeInfo = Uptime(dictionary: response)
+                showUpTimeSpinner = false
                 self.mainMenu.reloadSections(IndexSet(arrayLiteral: Section.upTime.rawValue), with: .fade)
                 self.getMempoolInfo()
             }
@@ -635,6 +656,14 @@ class MainMenuViewController: UIViewController {
     }
     
     private func getMempoolInfo() {
+        showMempoolInfoSpinner = true
+        
+        DispatchQueue.main.async { [weak self] in
+            guard let self = self else { return }
+            
+            self.mainMenu.reloadSections(IndexSet(arrayLiteral: Section.mempoolInfo.rawValue), with: .none)
+        }
+        
         NodeLogic.getMempoolInfo { [weak self] (response, errorMessage) in
             guard let self = self else { return }
             
@@ -647,8 +676,8 @@ class MainMenuViewController: UIViewController {
             DispatchQueue.main.async { [weak self] in
                 guard let self = self else { return }
                 
-                impact()
                 self.mempoolInfo = MempoolInfo(dictionary: response)
+                showMempoolInfoSpinner = false
                 self.mainMenu.reloadSections(IndexSet(arrayLiteral: Section.mempoolInfo.rawValue), with: .fade)
                 self.getFeeInfo()
             }
@@ -656,6 +685,14 @@ class MainMenuViewController: UIViewController {
     }
     
     private func getFeeInfo() {
+        showFeeInfoSpinner = true
+        
+        DispatchQueue.main.async { [weak self] in
+            guard let self = self else { return }
+            
+            self.mainMenu.reloadSections(IndexSet(arrayLiteral: Section.feeInfo.rawValue), with: .none)
+        }
+        
         NodeLogic.estimateSmartFee { [weak self] (response, errorMessage) in
             guard let self = self else { return }
             
@@ -668,8 +705,8 @@ class MainMenuViewController: UIViewController {
             DispatchQueue.main.async { [weak self] in
                 guard let self = self else { return }
                 
-                impact()
                 self.feeInfo = FeeInfo(dictionary: response)
+                showFeeInfoSpinner = false
                 self.mainMenu.reloadSections(IndexSet(arrayLiteral: Section.feeInfo.rawValue), with: .fade)
                 self.removeLoader()
             }
@@ -686,7 +723,7 @@ class MainMenuViewController: UIViewController {
             self.backView.backgroundColor = .none
             let imageView = UIImageView()
             imageView.frame = CGRect(x: self.view.center.x - 75, y: self.view.center.y - 75, width: 150, height: 150)
-            imageView.image = UIImage(named: "logo_grey.png")
+            imageView.image = UIImage(named: "1024.png")
             self.backView.addSubview(imageView)
             self.view.addSubview(self.backView)
         }
@@ -699,7 +736,6 @@ class MainMenuViewController: UIViewController {
             self.spinner.stopAnimating()
             self.spinner.alpha = 0
             self.refreshButton = UIBarButtonItem(barButtonSystemItem: .refresh, target: self, action: #selector(self.refreshData(_:)))
-            //self.refreshButton.tintColor = UIColor.lightGray.withAlphaComponent(1)
             self.navigationItem.setRightBarButton(self.refreshButton, animated: true)
         }
     }
@@ -900,7 +936,7 @@ extension MainMenuViewController: UITableViewDelegate {
         let textLabel = UILabel()
         textLabel.textAlignment = .left
         textLabel.font = UIFont.systemFont(ofSize: 17, weight: .regular)
-        textLabel.textColor = .secondaryLabel
+        textLabel.textColor = .quaternaryLabel
         
         switch section {
         case 0:
@@ -911,9 +947,97 @@ extension MainMenuViewController: UITableViewDelegate {
         
         if let section = Section(rawValue: section) {
             textLabel.text = headerName(for: section)
+            
+            switch section {
+            case .blockchainInfo:
+                if blockchainInfo != nil {
+                    textLabel.textColor = .secondaryLabel
+                }
+                if showBlockchainInfoSpinner {
+                    spinner.stopAnimating()
+                    textLabel.textColor = .tertiaryLabel
+                    sectionSpinner.frame = CGRect(x: mainMenu.frame.maxX - 48, y: 0, width: 44, height: 44)
+                    sectionSpinner.startAnimating()
+                } else {
+                    sectionSpinner.stopAnimating()
+                }
+            case .networkInfo:
+                if networkInfo != nil {
+                    textLabel.textColor = .secondaryLabel
+                }
+                if showNetworkInfoSpinner {
+                    spinner.stopAnimating()
+                    textLabel.textColor = .tertiaryLabel
+                    sectionSpinner.frame = CGRect(x: mainMenu.frame.maxX - 48, y: -14, width: 44, height: 44)
+                    sectionSpinner.startAnimating()
+                } else {
+                    sectionSpinner.stopAnimating()
+                }
+            case .feeInfo:
+                if feeInfo != nil {
+                    textLabel.textColor = .secondaryLabel
+                }
+                if showFeeInfoSpinner {
+                    spinner.stopAnimating()
+                    textLabel.textColor = .tertiaryLabel
+                    sectionSpinner.frame = CGRect(x: mainMenu.frame.maxX - 48, y: -14, width: 44, height: 44)
+                    sectionSpinner.startAnimating()
+                } else {
+                    sectionSpinner.stopAnimating()
+                }
+            case .mempoolInfo:
+                if mempoolInfo != nil {
+                    textLabel.textColor = .secondaryLabel
+                }
+                if showMempoolInfoSpinner {
+                    spinner.stopAnimating()
+                    textLabel.textColor = .tertiaryLabel
+                    sectionSpinner.frame = CGRect(x: mainMenu.frame.maxX - 48, y: -14, width: 44, height: 44)
+                    sectionSpinner.startAnimating()
+                } else {
+                    sectionSpinner.stopAnimating()
+                }
+            case .miningInfo:
+                if miningInfo != nil {
+                    textLabel.textColor = .secondaryLabel
+                }
+                if showMiningInfoSpinner {
+                    spinner.stopAnimating()
+                    textLabel.textColor = .tertiaryLabel
+                    sectionSpinner.frame = CGRect(x: mainMenu.frame.maxX - 48, y: -14, width: 44, height: 44)
+                    sectionSpinner.startAnimating()
+                } else {
+                    sectionSpinner.stopAnimating()
+                }
+            case .peerInfo:
+                if peerInfo != nil {
+                    textLabel.textColor = .secondaryLabel
+                }
+                if showPeerInfoSpinner {
+                    spinner.stopAnimating()
+                    textLabel.textColor = .tertiaryLabel
+                    sectionSpinner.frame = CGRect(x: mainMenu.frame.maxX - 48, y: -14, width: 44, height: 44)
+                    sectionSpinner.startAnimating()
+                } else {
+                    sectionSpinner.stopAnimating()
+                }
+            case .upTime:
+                if uptimeInfo != nil {
+                    textLabel.textColor = .secondaryLabel
+                }
+                if showUpTimeSpinner {
+                    spinner.stopAnimating()
+                    textLabel.textColor = .tertiaryLabel
+                    sectionSpinner.frame = CGRect(x: mainMenu.frame.maxX - 48, y: -14, width: 44, height: 44)
+                    sectionSpinner.startAnimating()
+                } else {
+                    sectionSpinner.stopAnimating()
+                }
+            }
         }
         
         header.addSubview(textLabel)
+        header.addSubview(sectionSpinner)
         return header
     }
     
