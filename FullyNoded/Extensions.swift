@@ -421,7 +421,7 @@ public extension Double {
         var btcBalance = self.rounded(toPlaces: 8).avoidNotation
         
         if self == 0 {
-            btcBalance = "0.00 000 000 BTC"
+            btcBalance = "0.00 000 000"
         } else {
             var decimalLocation = 0
             var btcBalanceArray:[String] = []

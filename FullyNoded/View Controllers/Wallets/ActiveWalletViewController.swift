@@ -445,7 +445,7 @@ class ActiveWalletViewController: UIViewController {
         let currencySymbolImageView = cell.viewWithTag(2) as! UIImageView
         
         if onchainBalanceBtc == "" || onchainBalanceBtc == "0.0 BTC" {
-            onchainBalanceBtc = "0.00 000 000 BTC"
+            onchainBalanceBtc = "0.00 000 000"
         }
                 
         if isBtc {
