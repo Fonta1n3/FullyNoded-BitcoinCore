@@ -9,12 +9,10 @@
 import UIKit
 
 class CreateRawTxViewController: UIViewController, UITextFieldDelegate, UITableViewDelegate, UITableViewDataSource {
-    var jmWallet:Wallet?
     var isFiat = false
     var isBtc = true
     var isSats = false
     var fxRate:Double?
-    var spendable = Double()
     var rawTxUnsigned = String()
     var rawTxSigned = String()
     var address = String()
@@ -28,7 +26,9 @@ class CreateRawTxViewController: UIViewController, UITextFieldDelegate, UITableV
     var invoice:[String:Any]?
     var invoiceString = ""
     let fiatCurrency = UserDefaults.standard.object(forKey: "currency") as? String ?? "USD"
+    var balance = ""
     
+    @IBOutlet weak private var availableBalance: UILabel!
     @IBOutlet weak private var miningTargetLabel: UILabel!
     @IBOutlet weak private var satPerByteLabel: UILabel!
     @IBOutlet weak private var denominationImage: UIImageView!
@@ -44,7 +44,6 @@ class CreateRawTxViewController: UIViewController, UITextFieldDelegate, UITableV
     @IBOutlet weak var coinSelectionControl: UISegmentedControl!
     
     var spinner = ConnectingView()
-    var spendableBalance = Double()
     
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -90,6 +89,8 @@ class CreateRawTxViewController: UIViewController, UITextFieldDelegate, UITableV
             isSats = false
             fiatEnabled()
         }
+        
+        availableBalance.text = balance
         
         showFeeSetting()
         slider.addTarget(self, action: #selector(didFinishSliding(_:)), for: .valueChanged)
@@ -182,7 +183,11 @@ class CreateRawTxViewController: UIViewController, UITextFieldDelegate, UITableV
             OnchainUtils.getAddressInfo(address: address) { (addressInfo, message) in
                 guard let addressInfo = addressInfo else { return }
                 
-                showAlert(vc: self, title: "Address added ✓", message: "Derived from \(wallet.label): \(addressInfo.desc), solvable: \(addressInfo.solvable)")
+                if addressInfo.solvable {
+                    showAlert(vc: self, title: "Address verified ✓", message: "This address is verified to be owned by \(wallet.label).")
+                } else {
+                    showAlert(vc: self, title: "Address unverified!", message: "\(wallet.label) is not the verified owner of this address, proceed with caution!")
+                }
             }
         }
     }
@@ -366,6 +371,7 @@ class CreateRawTxViewController: UIViewController, UITextFieldDelegate, UITableV
     private func satsSelected() {
         DispatchQueue.main.async { [unowned vc = self] in
             vc.denominationImage.image = UIImage(systemName: "s.circle")
+            vc.amountInput.placeholder = "amount in SATS"
             vc.spinner.removeConnectingView()
         }
     }
@@ -373,6 +379,7 @@ class CreateRawTxViewController: UIViewController, UITextFieldDelegate, UITableV
     private func btcEnabled() {
         DispatchQueue.main.async { [unowned vc = self] in
             vc.denominationImage.image = UIImage(systemName: "bitcoinsign.circle")
+            vc.amountInput.placeholder = "amount in BTC"
             vc.spinner.removeConnectingView()
         }
     }
@@ -394,15 +401,11 @@ class CreateRawTxViewController: UIViewController, UITextFieldDelegate, UITableV
                 guard let self = self else { return }
                 
                 self.fxRate = fxrate
+                self.amountInput.placeholder = "amount in \(fiatCurrency)"
                 
-                for currency in Currencies.currencies {
-                    for (key, value) in currency {
-                        if key == self.fiatCurrency {
-                            DispatchQueue.main.async { [weak self] in
-                                self?.denominationImage.image = UIImage(systemName: value)
-                            }
-                        }
-                    }
+                DispatchQueue.main.async { [weak self] in
+                    let symbol = self?.fiatCurrency.currencySymbolWithCircle
+                    self?.denominationImage.image = symbol
                 }
                                 
                 if UserDefaults.standard.object(forKey: "fiatAlert") == nil {
