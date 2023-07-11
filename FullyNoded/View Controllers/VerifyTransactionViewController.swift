@@ -1044,10 +1044,10 @@ class VerifyTransactionViewController: UIViewController, UINavigationControllerD
                         isChange = false
                     }
                                         
-                    var amountString = amount.btcBalanceWithSpaces
+                    var amountString = "􁑞" + amount.btcBalanceWithSpaces
                     
                     if fxRate != nil {
-                        amountString += " btc / \(fiatAmount(btc: amount))"
+                        amountString += " / \(fiatAmount(btc: amount))"
                     }
                                         
 //                    if let clightningFundingSPK = UserDefaults.standard.object(forKey: "scriptPubKey") as? String {
@@ -1112,10 +1112,10 @@ class VerifyTransactionViewController: UIViewController, UINavigationControllerD
                             
                             if let amount = output["value"] as? Double {
                                 inputTotal += amount
-                                var amountString = amount.btcBalanceWithSpaces
+                                var amountString = "􁑞" + amount.btcBalanceWithSpaces
                                 
                                 if fxRate != nil {
-                                    amountString += " btc / \(fiatAmount(btc: amount))"
+                                    amountString += " / \(fiatAmount(btc: amount))"
                                 }
                                 
                                 self.inputTableArray[index]["amount"] = amountString
@@ -1139,9 +1139,9 @@ class VerifyTransactionViewController: UIViewController, UINavigationControllerD
             if inputTotal > 0.0 {
                 let txfeeString = txFee.btcBalanceWithSpaces
                 if fxRate != nil {
-                    self.miningFee = "\(txfeeString) btc / \(fiatAmount(btc: self.txFee))"
+                    self.miningFee = "􁑞 \(txfeeString) / \(fiatAmount(btc: self.txFee))"
                 } else {
-                    self.miningFee = "\(txfeeString) btc / error fetching fx rate"
+                    self.miningFee = "􁑞 \(txfeeString) / error fetching fx rate"
                 }
             } else {
                 self.miningFee = "No fee data. Your node may be pruned."
@@ -1549,7 +1549,7 @@ class VerifyTransactionViewController: UIViewController, UINavigationControllerD
         let imageView = confsCell.viewWithTag(2) as! UIImageView
         let background = confsCell.viewWithTag(3)!
         background.layer.cornerRadius = 5
-        imageView.tintColor = .white
+        //imageView.tintColor = .white
         label.text = "\(confs) confirmations"
         
         if confs > 0 {
@@ -1568,18 +1568,18 @@ class VerifyTransactionViewController: UIViewController, UINavigationControllerD
         
         let label = mempoolAcceptCell.viewWithTag(1) as! UILabel
         let imageView = mempoolAcceptCell.viewWithTag(2) as! UIImageView
-        let background = mempoolAcceptCell.viewWithTag(3)!
-        background.layer.cornerRadius = 5
-        imageView.tintColor = .white
+        //let background = mempoolAcceptCell.viewWithTag(3)!
+        //background.layer.cornerRadius = 5
+        //imageView.tintColor = .white
         
         if txValid != nil {
             if txValid! {
                 label.text = "Mempool acception verified ✓"
-                background.backgroundColor = .systemGreen
+                imageView.tintColor = .systemGreen
                 imageView.image = UIImage(systemName: "checkmark.seal")
             } else {
                 label.text = "Transaction invalid! Reason: \(rejectionMessage)"
-                background.backgroundColor = .systemRed
+                imageView.tintColor = .systemRed
                 imageView.image = UIImage(systemName: "exclamationmark.triangle")
             }
         } else {
@@ -1599,7 +1599,7 @@ class VerifyTransactionViewController: UIViewController, UINavigationControllerD
                 }
             }
             
-            background.backgroundColor = .darkGray
+            imageView.tintColor = .darkGray
             imageView.image = UIImage(systemName: "exclamationmark.triangle")
         }
         
@@ -1615,10 +1615,10 @@ class VerifyTransactionViewController: UIViewController, UINavigationControllerD
         
         let txidLabel = txidCell.viewWithTag(1) as! UILabel
         let imageView = txidCell.viewWithTag(2) as! UIImageView
-        let background = txidCell.viewWithTag(3)!
-        background.layer.cornerRadius = 5
-        background.backgroundColor = .systemBlue
-        imageView.tintColor = .white
+        //let background = txidCell.viewWithTag(3)!
+        //background.layer.cornerRadius = 5
+        imageView.tintColor = .systemBlue
+        //imageView.tintColor = .white
         imageView.image = UIImage(systemName: "rectangle.and.paperclip")
         txidLabel.text = txid
         txidCell.selectionStyle = .none
@@ -1640,25 +1640,25 @@ class VerifyTransactionViewController: UIViewController, UINavigationControllerD
         let utxoLabel = inputCell.viewWithTag(7) as! UILabel
         let isChangeImageView = inputCell.viewWithTag(8) as! UIImageView
         let isDustImageView = inputCell.viewWithTag(10) as! UIImageView
-        let backgroundView1 = inputCell.viewWithTag(11)!
-        let backgroundView2 = inputCell.viewWithTag(12)!
-        let backgroundView3 = inputCell.viewWithTag(13)!
+//        let backgroundView1 = inputCell.viewWithTag(11)!
+//        let backgroundView2 = inputCell.viewWithTag(12)!
+//        let backgroundView3 = inputCell.viewWithTag(13)!
         let signaturesLabel = inputCell.viewWithTag(14) as! UILabel
         let descTextView = inputCell.viewWithTag(15) as! UITextView
-        let sigsBackgroundView = inputCell.viewWithTag(16)!
+        //let sigsBackgroundView = inputCell.viewWithTag(16)!
         let sigsImageView = inputCell.viewWithTag(17) as! UIImageView
         let copyAddressButton = inputCell.viewWithTag(18) as! UIButton
         let copyDescButton = inputCell.viewWithTag(19) as! UIButton
         let addressQrButton = inputCell.viewWithTag(20) as! UIButton
                 
-        backgroundView1.layer.cornerRadius = 5
-        backgroundView2.layer.cornerRadius = 5
-        backgroundView3.layer.cornerRadius = 5
-        sigsBackgroundView.layer.cornerRadius = 5
-        isDustImageView.tintColor = .white
-        isChangeImageView.tintColor = .white
-        inputIsOursImage.tintColor = .white
-        sigsImageView.tintColor = .white
+//        backgroundView1.layer.cornerRadius = 5
+//        backgroundView2.layer.cornerRadius = 5
+//        backgroundView3.layer.cornerRadius = 5
+//        sigsBackgroundView.layer.cornerRadius = 5
+//        isDustImageView.tintColor = .white
+//        isChangeImageView.tintColor = .white
+//        inputIsOursImage.tintColor = .white
+//        sigsImageView.tintColor = .white
         descTextView.clipsToBounds = true
         descTextView.layer.cornerRadius = 8
         descTextView.layer.borderWidth = 0.5
@@ -1695,36 +1695,44 @@ class VerifyTransactionViewController: UIViewController, UINavigationControllerD
             signaturesLabel.text = signatureStatus
             
             if signatureStatus == "Signatures complete" || hasSigned {
-                sigsBackgroundView.backgroundColor = .systemGreen
+                //sigsBackgroundView.backgroundColor = .systemGreen
                 signaturesLabel.text = "Signatures complete"
+                sigsImageView.tintColor = .systemGreen
             } else if self.signatures.count > 0 {
-                sigsBackgroundView.backgroundColor = .systemOrange
+                //sigsBackgroundView.backgroundColor = .systemOrange
                 signaturesLabel.text = "Signed"
+                sigsImageView.tintColor = .systemOrange
             } else {
-                sigsBackgroundView.backgroundColor = .systemRed
+                //sigsBackgroundView.backgroundColor = .systemRed
+                sigsImageView.tintColor = .systemRed
             }
             
             if isDust {
                 isDustImageView.image = UIImage(systemName: "exclamationmark.triangle")
-                backgroundView3.backgroundColor = .systemRed
+                //backgroundView3.backgroundColor = .systemRed
+                isDustImageView.tintColor = .systemRed
             } else {
-                isDustImageView.image = UIImage(systemName: "checkmark.circle.fill")
-                backgroundView3.backgroundColor = .systemGreen
+                isDustImageView.image = UIImage(systemName: "checkmark.circle")
+                isDustImageView.tintColor = .systemGreen
+                //backgroundView3.backgroundColor = .systemGreen
             }
             
             if isChange {
                 isChangeImageView.image = UIImage(systemName: "arrow.triangle.2.circlepath")
-                backgroundView2.backgroundColor = .systemPurple
+                isChangeImageView.tintColor = .systemPurple
+                //backgroundView2.backgroundColor = .systemPurple
                 inputTypeLabel.text = "Change input"
             } else {
                 isChangeImageView.image = UIImage(systemName: "arrow.down.left")
-                backgroundView2.backgroundColor = .systemBlue
+                isChangeImageView.tintColor = .systemBlue
+                //backgroundView2.backgroundColor = .systemBlue
                 inputTypeLabel.text = "Receive input"
             }
             
             if isOurs {
-                backgroundView1.backgroundColor = .systemGreen
-                inputIsOursImage.image = UIImage(systemName: "checkmark.circle.fill")
+                //backgroundView1.backgroundColor = .systemGreen
+                inputIsOursImage.image = UIImage(systemName: "checkmark.circle")
+                inputIsOursImage.tintColor = .systemGreen
                 
                 if let walletLabel = wallet?.label {
                     inputIsOursLabel.text = "Owned by \(walletLabel)"
@@ -1734,10 +1742,12 @@ class VerifyTransactionViewController: UIViewController, UINavigationControllerD
                 
             } else {
                 inputTypeLabel.text = "Unknown type"
-                backgroundView2.backgroundColor = .systemGray
-                backgroundView1.backgroundColor = .systemGray
-                inputIsOursImage.image = UIImage(systemName: "questionmark.diamond.fill")
-                isChangeImageView.image = UIImage(systemName: "questionmark.diamond.fill")
+                //backgroundView2.backgroundColor = .systemGray
+                //backgroundView1.backgroundColor = .systemGray
+                inputIsOursImage.image = UIImage(systemName: "questionmark.diamond")
+                isChangeImageView.image = UIImage(systemName: "questionmark.diamond")
+                inputIsOursImage.tintColor = .systemGray
+                isChangeImageView.tintColor = .systemGray
                 
                 if let walletLabel = wallet?.label {
                     inputIsOursLabel.text = "Not owned by \(walletLabel)"
@@ -1763,12 +1773,12 @@ class VerifyTransactionViewController: UIViewController, UINavigationControllerD
         let isChangeImageView = outputCell.viewWithTag(8) as! UIImageView
         let verifiedByFnLabel = outputCell.viewWithTag(9) as! UILabel
         let isDustImageView = outputCell.viewWithTag(10) as! UIImageView
-        let backgroundView1 = outputCell.viewWithTag(11)!
-        let backgroundView2 = outputCell.viewWithTag(12)!
-        let backgroundView3 = outputCell.viewWithTag(13)!
-        let verifiedByFnBackgroundView = outputCell.viewWithTag(14)!
+//        let backgroundView1 = outputCell.viewWithTag(11)!
+//        let backgroundView2 = outputCell.viewWithTag(12)!
+//        let backgroundView3 = outputCell.viewWithTag(13)!
+//        let verifiedByFnBackgroundView = outputCell.viewWithTag(14)!
         let descTextView = outputCell.viewWithTag(15) as! UITextView
-        let signableBackgroundView = outputCell.viewWithTag(16)!
+        //let signableBackgroundView = outputCell.viewWithTag(16)!
         let signableImageView = outputCell.viewWithTag(17) as! UIImageView
         let signerLabel = outputCell.viewWithTag(18) as! UILabel
         let verifiedByNodeLabel = outputCell.viewWithTag(19) as! UILabel
@@ -1778,20 +1788,20 @@ class VerifyTransactionViewController: UIViewController, UINavigationControllerD
         let verifyOwnerButton = outputCell.viewWithTag(23) as! UIButton
         let addressQrButton = outputCell.viewWithTag(24) as! UIButton
                 
-        signableBackgroundView.layer.cornerRadius = 5
-        verifiedByFnBackgroundView.layer.cornerRadius = 5
-        backgroundView1.layer.cornerRadius = 5
-        backgroundView2.layer.cornerRadius = 5
-        backgroundView3.layer.cornerRadius = 5
+//        signableBackgroundView.layer.cornerRadius = 5
+//        verifiedByFnBackgroundView.layer.cornerRadius = 5
+//        backgroundView1.layer.cornerRadius = 5
+//        backgroundView2.layer.cornerRadius = 5
+//        backgroundView3.layer.cornerRadius = 5
         descTextView.layer.cornerRadius = 8
         descTextView.layer.borderWidth = 0.5
         descTextView.layer.borderColor = UIColor.darkGray.cgColor
         
-        signableImageView.tintColor = .white
-        isDustImageView.tintColor = .white
-        isChangeImageView.tintColor = .white
-        outputIsOursImage.tintColor = .white
-        verifiedByFnImageView.tintColor = .white
+//        signableImageView.tintColor = .white
+//        isDustImageView.tintColor = .white
+//        isChangeImageView.tintColor = .white
+//        outputIsOursImage.tintColor = .white
+//        verifiedByFnImageView.tintColor = .white
                         
         if indexPath.row < outputArray.count {
             let output = outputArray[indexPath.row]
@@ -1806,7 +1816,6 @@ class VerifyTransactionViewController: UIViewController, UINavigationControllerD
             let label = output["label"] as? String ?? "no label"
             let isDust = output["isDust"] as? Bool ?? false
             let desc = output["desc"] as? String ?? "no descriptor"
-            let lifehash = output["lifehash"] as? UIImage ?? UIImage()
             
             labelLabel.text = label
             descTextView.text = desc
@@ -1827,40 +1836,48 @@ class VerifyTransactionViewController: UIViewController, UINavigationControllerD
             
             if isOursFullyNoded {
                 verifiedByFnLabel.text = "Owned by \(walletLabel)"
-                verifiedByFnImageView.image = UIImage(systemName: "checkmark.seal.fill")
-                verifiedByFnBackgroundView.backgroundColor = .systemGreen
+                verifiedByFnImageView.image = UIImage(systemName: "checkmark.seal")
+                verifiedByFnImageView.tintColor = .systemGreen
+                //verifiedByFnBackgroundView.backgroundColor = .systemGreen
             } else {
                 verifyOwnerButton.alpha = 1
                 verifiedByFnLabel.text = "Not verified by Fully Noded"
-                verifiedByFnImageView.image = UIImage(systemName: "questionmark.diamond.fill")
-                verifiedByFnBackgroundView.backgroundColor = .systemGray
+                verifiedByFnImageView.image = UIImage(systemName: "questionmark.diamond")
+                verifiedByFnImageView.tintColor = .systemGray
+                //verifiedByFnBackgroundView.backgroundColor = .systemGray
             }
             
             if signable {
-                signableImageView.image = UIImage(systemName: "checkmark.square.fill")
-                signableBackgroundView.backgroundColor = .systemGreen
+                signableImageView.image = UIImage(systemName: "checkmark.square")
+                //signableBackgroundView.backgroundColor = .systemGreen
+                signableImageView.tintColor = .systemGreen
                 signerLabel.text = "Signable by \(signer)"
             } else {
-                signableImageView.image = UIImage(systemName: "questionmark.diamond.fill")
-                signableBackgroundView.backgroundColor = .systemRed
+                signableImageView.image = UIImage(systemName: "questionmark.diamond")
+                signableImageView.tintColor = .systemRed
+                //signableBackgroundView.backgroundColor = .systemRed
                 signerLabel.text = "Unable to determine"
             }
             
             if isDust {
                 isDustImageView.image = UIImage(systemName: "exclamationmark.triangle")
-                backgroundView3.backgroundColor = .systemRed
+                isDustImageView.tintColor = .systemRed
+                //backgroundView3.backgroundColor = .systemRed
             } else {
-                isDustImageView.image = UIImage(systemName: "checkmark.circle.fill")
-                backgroundView3.backgroundColor = .systemGreen
+                isDustImageView.image = UIImage(systemName: "checkmark.circle")
+                isDustImageView.tintColor = .systemGreen
+                //backgroundView3.backgroundColor = .systemGreen
             }
             
             if isChange {
                 isChangeImageView.image = UIImage(systemName: "arrow.triangle.2.circlepath")
-                backgroundView2.backgroundColor = .systemPurple
+                //backgroundView2.backgroundColor = .systemPurple
+                isChangeImageView.tintColor = .systemPurple
                 addressTypeLabel.text = "Change address"
             } else {
                 isChangeImageView.image = UIImage(systemName: "arrow.up.right")
-                backgroundView2.backgroundColor = .systemBlue
+                //backgroundView2.backgroundColor = .systemBlue
+                isChangeImageView.tintColor = .systemBlue
                 addressTypeLabel.text = "Receive address"
             }
             
@@ -1873,14 +1890,16 @@ class VerifyTransactionViewController: UIViewController, UINavigationControllerD
             if isOursBitcoind {
                 verifyOwnerButton.alpha = 0
                 verifiedByNodeLabel.text = "Owned by Bitcoin Core"
-                backgroundView1.backgroundColor = .systemGreen
-                outputIsOursImage.image = UIImage(systemName: "checkmark.circle.fill")
+                //backgroundView1.backgroundColor = .systemGreen
+                outputIsOursImage.tintColor = .systemGreen
+                outputIsOursImage.image = UIImage(systemName: "checkmark.circle")
                 
                 if self.wallet != nil {
                     let ds = Descriptor(self.wallet!.receiveDescriptor)
                     if ds.isHot {
-                        signableImageView.image = UIImage(systemName: "checkmark.square.fill")
-                        signableBackgroundView.backgroundColor = .systemGreen
+                        signableImageView.image = UIImage(systemName: "checkmark.square")
+                        //signableBackgroundView.backgroundColor = .systemGreen
+                        signableImageView.tintColor = .systemGreen
                         signerLabel.text = "Bitcoin Core hot wallet"
                     }
                 }
@@ -1888,11 +1907,13 @@ class VerifyTransactionViewController: UIViewController, UINavigationControllerD
             } else {
                 verifyOwnerButton.alpha = 1
                 verifiedByNodeLabel.text = "Not owned by \(activeWalletLabel)"
-                backgroundView1.backgroundColor = .systemGray
-                outputIsOursImage.image = UIImage(systemName: "questionmark.diamond.fill")
+                //backgroundView1.backgroundColor = .systemGray
+                outputIsOursImage.tintColor = .systemGray
+                outputIsOursImage.image = UIImage(systemName: "questionmark.diamond")
                 
-                isChangeImageView.image = UIImage(systemName: "questionmark.diamond.fill")
-                backgroundView2.backgroundColor = .systemGray
+                isChangeImageView.image = UIImage(systemName: "questionmark.diamond")
+                //backgroundView2.backgroundColor = .systemGray
+                isChangeImageView.tintColor = .systemGray
                 addressTypeLabel.text = "Address type unknown"
             }
         }
@@ -1909,27 +1930,27 @@ class VerifyTransactionViewController: UIViewController, UINavigationControllerD
         //miningLabel.textColor = .lightGray
         
         let imageView = miningFeeCell.viewWithTag(2) as! UIImageView
-        imageView.tintColor = .white
+        //imageView.tintColor = .white
         
-        let background = miningFeeCell.viewWithTag(3)!
-        background.layer.cornerRadius = 5
+//        let background = miningFeeCell.viewWithTag(3)!
+//        background.layer.cornerRadius = 5
         
         if inputTotal > 0.0 {
             if txFee < 0.0 {
-                background.backgroundColor = .systemGray
+                imageView.tintColor = .systemGray
                 imageView.image = UIImage(systemName: "questionmark.circle")
                 miningLabel.text = "Can not determine fee for inputs which don't belong to us."
             } else if txFee < 0.00050000 {
-                background.backgroundColor = .systemGreen
+                imageView.tintColor = .systemGreen
                 imageView.image = UIImage(systemName: "checkmark.circle")
                 miningLabel.text = miningFee + " / \(satsPerByte()) sats per byte"
             } else {
-                background.backgroundColor = .systemRed
+                imageView.tintColor = .systemRed
                 imageView.image = UIImage(systemName: "exclamationmark.triangle")
                 miningLabel.text = miningFee + " / \(satsPerByte()) sats per byte"
             }
         } else {
-            background.backgroundColor = .systemOrange
+            imageView.tintColor = .systemOrange
             imageView.image = UIImage(systemName: "questionmark.circle")
             miningLabel.text = miningFee
         }
@@ -1946,10 +1967,10 @@ class VerifyTransactionViewController: UIViewController, UINavigationControllerD
         //etaLabel.textColor = .lightGray
         
         let imageView = etaCell.viewWithTag(2) as! UIImageView
-        imageView.tintColor = .white
+        //imageView.tintColor = .white
         
-        let background = etaCell.viewWithTag(3)!
-        background.layer.cornerRadius = 5
+//        let background = etaCell.viewWithTag(3)!
+//        background.layer.cornerRadius = 5
         var feeWarning = ""
         
         if txFee > 0.0 {
@@ -1965,23 +1986,23 @@ class VerifyTransactionViewController: UIViewController, UINavigationControllerD
             }
             
             if percentage >= 90 && percentage <= 110 {
-                background.backgroundColor = .systemGreen
+                imageView.tintColor = .systemGreen
                 imageView.image = UIImage(systemName: "checkmark.circle")
                 etaLabel.text = "Fee is on target for a confirmation in approximately \(eta()) or \(feeTarget()) blocks"
             } else {
                 if percentage <= 90 {
-                    background.backgroundColor = .systemRed
+                    imageView.tintColor = .systemRed
                     imageView.image = UIImage(systemName: "tortoise")
                     etaLabel.text = feeWarning
                 } else {
-                    background.backgroundColor = .systemRed
+                    imageView.tintColor = .systemRed
                     imageView.image = UIImage(systemName: "hare")
                     etaLabel.text = feeWarning
                 }
             }
         } else {
             imageView.image = UIImage(systemName: "questionmark.circle")
-            background.backgroundColor = .systemOrange
+            imageView.tintColor = .systemOrange
             etaLabel.text = "No fee data."
         }
         
