@@ -15,6 +15,7 @@ class ActiveWalletViewController: UIViewController {
     private var onchainBalanceBtc = ""
     private var onchainBalanceSats = ""
     private var onchainBalanceFiat = ""
+    private var onchainBalanceFiatWithSymbol = ""
     private var sectionZeroLoaded = Bool()
     private var wallets = NSArray()
     private var transactionArray = [[String:Any]]()
@@ -61,6 +62,11 @@ class ActiveWalletViewController: UIViewController {
         setNotifications()
         sectionZeroLoaded = false
         addNavBarSpinner()
+        
+        if let rate = UserDefaults.standard.object(forKey: "fxRate") as? Double {
+            fxRate = rate
+            fxRateLabel.text = rate.exchangeRate
+        }
     }
     
     override func viewDidAppear(_ animated: Bool) {
@@ -376,7 +382,7 @@ class ActiveWalletViewController: UIViewController {
                         self.transactionArray[t]["transactionLabel"] = localTransactionStruct.label
                         if let originRate = localTransactionStruct.fxRate, originRate > 0 {
                             if localTransactionStruct.fiatCurrency == currency {
-                                self.transactionArray[t]["originRate"] = originRate
+                                self.transactionArray[t]["originFxRate"] = originRate
                             }
                         }
                     }
@@ -412,32 +418,6 @@ class ActiveWalletViewController: UIViewController {
         }
     }
     
-    private let currencies:[[String:String]] = [
-        ["USD": "dollarsign"],
-        ["GBP": "sterlingsign"],
-        ["EUR": "eurosign"],
-        ["AUD":"dollarsign"],
-        ["BRL": "brazilianrealsign"],
-        ["CAD": "dollarsign"],
-        ["CHF": "francsign"],
-        ["CLP": "dollarsign"],
-        ["CNY": "yensign"],
-        ["DKK": "k"],
-        ["HKD": "dollarsign"],
-        ["INR": "indianrupeesign"],
-        ["ISK": "k"],
-        ["JPY": "yensign"],
-        ["KRW": "wonsign"],
-        ["NZD": "dollarsign"],
-        ["PLN": "z"],
-        ["RUB": "rublesign"],
-        ["SEK": "k"],
-        ["SGD": "dollarsign"],
-        ["THB": "bahtsign"],
-        ["TRY": "turkishlirasign"],
-        ["TWD": "dollarsign"]
-    ]
-    
     private func onchainBalancesCell(_ indexPath: IndexPath) -> UITableViewCell {
         let cell = walletTable.dequeueReusableCell(withIdentifier: "OnBalancesCell", for: indexPath)
         
@@ -460,13 +440,14 @@ class ActiveWalletViewController: UIViewController {
         
         if isFiat {
             onchainBalanceLabel.text = onchainBalanceFiat
-            for currency in currencies {
-                for (key, value) in currency {
-                    if key == fiatCurrency {
-                        currencySymbolImageView.image = .init(systemName: value)
-                    }
-                }
-            }
+//            for currency in Currencies.currenciesWithoutCircle {
+//                for (key, value) in currency {
+//                    if key == fiatCurrency {
+//                        currencySymbolImageView.image = .init(systemName: value)
+//                    }
+//                }
+//            }
+            currencySymbolImageView.image = fiatCurrency.currencySymbolNoCircle
         }
                 
         return cell
@@ -516,52 +497,55 @@ class ActiveWalletViewController: UIViewController {
         let amountFiat = dict["amountFiat"] as! String
         editLabelButton.alpha = 1
         
-        //var gainText = ""
+        var gainText = ""
         
-//        if let originRate = dict["originRate"] as? Double {
-//            var btcAmount = 0.0
-//
-//            btcAmount = amountBtc.doubleValue
-//
-//            if btcAmount < 0.0 {
-//                btcAmount = btcAmount * -1.0
-//            }
-//
-//            var originValueFiat = 0.0
-//
-//            originValueFiat = btcAmount * originRate
-//
-//            if originValueFiat < 0.0 {
-//                originValueFiat = originValueFiat * -1.0
-//            }
-//
-//            if let exchangeRate = fxRate {
-//                var gain = round((btcAmount * exchangeRate) - originValueFiat)
-//
-//                if Int(gain) > 0 {
-//                    gainText = " / gain of \(gain.fiatString) / \(Int((gain / originValueFiat) * 100.0))%"
-//                } else if Int(gain) < 0 {
-//                    gain = gain * -1.0
-//                    gainText = " / loss of \(gain.fiatString) / \(Int((gain / originValueFiat) * 100.0))%"
-//                }
-//            }
-//        }
+        if let originRate = dict["originFxRate"] as? Double {
+            print("originRate: \(originRate)")
+            var btcAmount = 0.0
+
+            btcAmount = amountBtc.doubleValue
+
+            if btcAmount < 0.0 {
+                btcAmount = btcAmount * -1.0
+            }
+
+            var originValueFiat = 0.0
+
+            originValueFiat = btcAmount * originRate
+
+            if originValueFiat < 0.0 {
+                originValueFiat = originValueFiat * -1.0
+            }
+
+            if let exchangeRate = fxRate {
+                var gain = round((btcAmount * exchangeRate) - originValueFiat)
+
+                if Int(gain) > 0 {
+                    gainText = " / gain of \(gain.fiatString) / \(Int((gain / originValueFiat) * 100.0))%"
+                } else if Int(gain) < 0 {
+                    gain = gain * -1.0
+                    gainText = " / loss of \(gain.fiatString) / \(Int((gain / originValueFiat) * 100.0))%"
+                } else {
+                    print("no diff")
+                }
+            }
+        }
         
-//        if let _ = fxRate {
-//            currentFiatValueLabel.text = amountFiat + gainText
-//        } else {
-//            currentFiatValueLabel.text = "current exchange rate missing"
-//        }
+        if let _ = fxRate {
+            currentFiatValueLabel.text = "\(fiatCurrency.fiatSymbol)" + (amountFiat + gainText)
+        } else {
+            currentFiatValueLabel.text = "exchange rate missing"
+        }
         
-        memoLabel.text = dict["memo"] as? String ?? "no transaction memo"
-        transactionLabel.text = dict["transactionLabel"] as? String ?? "no transaction label"
+        memoLabel.text = dict["memo"] as? String ?? "no memo"
+        transactionLabel.text = dict["transactionLabel"] as? String ?? "no label"
         
         if memoLabel.text == "" {
-            memoLabel.text = "no transaction memo"
+            memoLabel.text = "no memo"
         }
         
         if transactionLabel.text == "" {
-            transactionLabel.text = "no transaction label"
+            transactionLabel.text = "no label"
         }
         
         if amountBtc.hasPrefix("-") || amountSats.hasPrefix("-") {
@@ -582,13 +566,7 @@ class ActiveWalletViewController: UIViewController {
                 
             } else if isFiat {
                 amountText = amountFiat
-                for currency in currencies {
-                    for (key, value) in currency {
-                        if key == fiatCurrency {
-                            currencySymbolImageView.image = .init(systemName: value)
-                        }
-                    }
-                }
+                currencySymbolImageView.image = fiatCurrency.currencySymbolNoCircle
             }
             
             amountText = amountText.replacingOccurrences(of: "-", with: "")
@@ -609,13 +587,7 @@ class ActiveWalletViewController: UIViewController {
                 
             } else if isFiat {
                 amountText = amountFiat
-                for currency in currencies {
-                    for (key, value) in currency {
-                        if key == fiatCurrency {
-                            currencySymbolImageView.image = .init(systemName: value)
-                        }
-                    }
-                }
+                currencySymbolImageView.image = fiatCurrency.currencySymbolNoCircle
             }
             
             amountLabel.text = amountText
@@ -753,16 +725,23 @@ class ActiveWalletViewController: UIViewController {
             
             self.fxRate = rate
             UserDefaults.standard.setValue(rate, forKey: "fxRate")
+            updateFiatValues(rate: rate)
             
-            DispatchQueue.main.async { [weak self] in
-                guard let self = self else { return }
-                
-                self.fxRateLabel.text = rate.exchangeRate
-                self.onchainBalanceFiat = (self.onchainBalanceBtc.doubleValue * Double(rate)).balanceTextWithNoSymbol
-                
-                if self.isFiat {
-                    self.walletTable.reloadSections(.init(arrayLiteral: 0), with: .none)
-                }
+        }
+    }
+    
+    private func updateFiatValues(rate: Double) {
+        DispatchQueue.main.async { [weak self] in
+            guard let self = self else { return }
+            
+            self.fxRateLabel.text = rate.exchangeRate
+            let noSpaces = self.onchainBalanceBtc.replacingOccurrences(of: " ", with: "")
+            let fiatBalanceDoub = (noSpaces.doubleValue * Double(rate))
+            self.onchainBalanceFiat = fiatBalanceDoub.balanceTextWithNoSymbol
+            self.onchainBalanceFiatWithSymbol = fiatBalanceDoub.balanceTextWithSymbol
+            
+            if self.isFiat {
+                self.walletTable.reloadSections(.init(arrayLiteral: 0), with: .none)
             }
         }
     }
@@ -789,12 +768,14 @@ class ActiveWalletViewController: UIViewController {
                 }
                 
                 DispatchQueue.main.async {
-                    self.onchainBalanceBtc = balance.btcBalanceWithSpaces//.btc
+                    self.onchainBalanceBtc = balance.btcBalanceWithSpaces
                     self.onchainBalanceSats = balance.sats
                     
                     if let exchangeRate = self.fxRate {
-                        let onchainBalanceFiat = balance * exchangeRate
-                        self.onchainBalanceFiat = onchainBalanceFiat.balanceTextWithNoSymbol
+                        let onchainBalanceFiatDouble = balance * exchangeRate
+                        self.onchainBalanceFiat = onchainBalanceFiatDouble.balanceTextWithNoSymbol
+                        print("onchainBalanceFiatDouble: \(onchainBalanceFiatDouble)")
+                        self.onchainBalanceFiatWithSymbol = onchainBalanceFiatDouble.balanceTextWithSymbol
                     }
                     
                     self.sectionZeroLoaded = true
@@ -1044,10 +1025,17 @@ class ActiveWalletViewController: UIViewController {
 
     override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
         switch segue.identifier {
+            
         case "spendFromWallet":
             guard let vc = segue.destination as? CreateRawTxViewController else { fallthrough }
             
             vc.fxRate = fxRate
+                        
+            if isBtc || isFiat {
+                vc.balance = "Balance: " + self.onchainBalanceBtc + " btc" + " \\ \(self.onchainBalanceFiatWithSymbol)"
+            } else if isSats {
+                vc.balance = "Balance: " + self.onchainBalanceSats + " sats" + " \\ \(self.onchainBalanceFiatWithSymbol)"
+            }
         
         case "segueToInvoice":
             guard let vc = segue.destination as? InvoiceViewController else { fallthrough }

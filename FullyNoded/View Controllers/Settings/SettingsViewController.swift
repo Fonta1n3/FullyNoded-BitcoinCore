@@ -153,7 +153,6 @@ class SettingsViewController: UIViewController, UITableViewDelegate, UITableView
         let icon = denominationCell.viewWithTag(3) as! UIImageView
         
         let denomination = UserDefaults.standard.object(forKey: "denomination") as? String ?? "BTC"
-        print("denomination: \(denomination)")
         
         if denomination == denominations[indexPath.row] {
             denominationCell.accessoryType = .checkmark
@@ -175,6 +174,9 @@ class SettingsViewController: UIViewController, UITableViewDelegate, UITableView
             for (_, value) in currency {
                 icon.image = UIImage(systemName: value)
             }
+            DispatchQueue.main.async {
+                NotificationCenter.default.post(name: .refreshWallet, object: nil)
+            }
         default:
             break
         }
@@ -191,7 +193,7 @@ class SettingsViewController: UIViewController, UITableViewDelegate, UITableView
         case 2:
             let useBlockchainInfo = UserDefaults.standard.object(forKey: "useBlockchainInfo") as? Bool ?? true
             
-            var currencies:[[String:String]] = Currencies.currencies
+            var currencies:[[String:String]] = Currencies.currenciesWithCircle
             
             if !useBlockchainInfo {
                 currencies = coindeskCurrencies
@@ -214,7 +216,7 @@ class SettingsViewController: UIViewController, UITableViewDelegate, UITableView
         case 4:
             let useBlockchainInfo = UserDefaults.standard.object(forKey: "useBlockchainInfo") as? Bool ?? true
             
-            var currencies:[[String:String]] = Currencies.currencies
+            var currencies:[[String:String]] = Currencies.currenciesWithCircle
             
             if !useBlockchainInfo {
                 currencies = coindeskCurrencies
@@ -271,7 +273,7 @@ class SettingsViewController: UIViewController, UITableViewDelegate, UITableView
         case 4:
             let useBlockchainInfo = UserDefaults.standard.object(forKey: "useBlockchainInfo") as? Bool ?? true
             if useBlockchainInfo {
-                return Currencies.currencies.count
+                return Currencies.currenciesWithCircle.count
             } else {
                 return coindeskCurrencies.count
             }
@@ -335,8 +337,9 @@ class SettingsViewController: UIViewController, UITableViewDelegate, UITableView
         case 4:
             let useBlockchainInfo = UserDefaults.standard.object(forKey: "useBlockchainInfo") as? Bool ?? true
             var currencies:[[String:String]] = []
+            UserDefaults.standard.removeObject(forKey: "fxRate")
             if useBlockchainInfo {
-                currencies = Currencies.currencies
+                currencies = Currencies.currenciesWithCircle
             } else {
                 currencies = coindeskCurrencies
             }

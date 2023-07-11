@@ -98,6 +98,18 @@ extension Array where Element == UInt8 {
 }
 
 public extension String {
+    var fiatSymbol: String {
+        var symbol = ""
+        for currency in currencies {
+            for (key, value) in currency {
+                if key == self {
+                    symbol = value
+                }
+            }
+        }
+        return symbol
+    }
+    
     var btc: String {
         return self
     }
@@ -182,6 +194,30 @@ public extension String {
     
     var btcToSats: String {
         return (Int(self.doubleValue * 100000000.0)).avoidNotation
+    }
+    
+    var currencySymbolNoCircle: UIImage? {
+        var symbol:UIImage?
+        for currency in Currencies.currenciesWithoutCircle {
+            for (key, value) in currency {
+                if key == self {
+                    symbol = .init(systemName: value)
+                }
+            }
+        }
+        return symbol
+    }
+    
+    var currencySymbolWithCircle: UIImage? {
+        var symbol:UIImage?
+        for currency in Currencies.currenciesWithCircle {
+            for (key, value) in currency {
+                if key == self {
+                    symbol = .init(systemName: value)
+                }
+            }
+        }
+        return symbol
     }
 }
 
@@ -418,7 +454,7 @@ public extension Double {
     }
     
     var btcBalanceWithSpaces: String {
-        var btcBalance = self.rounded(toPlaces: 8).avoidNotation
+        var btcBalance = abs(self.rounded(toPlaces: 8)).avoidNotation
         
         if self == 0 {
             btcBalance = "0.00 000 000"
@@ -426,7 +462,7 @@ public extension Double {
             var decimalLocation = 0
             var btcBalanceArray:[String] = []
             var digitsPastDecimal = 0
-            
+                        
             for (i, c) in btcBalance.enumerated() {
                 btcBalanceArray.append("\(c)")
                 if c == "." {
@@ -437,7 +473,7 @@ public extension Double {
                 }
             }
             
-            if digitsPastDecimal < 7 {
+            if digitsPastDecimal <= 7 {
                 let numberOfTrailingZerosNeeded = 7 - digitsPastDecimal
 
                 for _ in 0...numberOfTrailingZerosNeeded {

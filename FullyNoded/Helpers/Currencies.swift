@@ -9,7 +9,7 @@
 import Foundation
 
 class Currencies {
-    static let currencies:[[String:String]] = [
+    static let currenciesWithCircle:[[String:String]] = [
         ["USD": "dollarsign.circle"],
         ["GBP": "sterlingsign.circle"],
         ["EUR": "eurosign.circle"],
@@ -33,5 +33,31 @@ class Currencies {
         ["THB": "bahtsign.circle"],
         ["TRY": "turkishlirasign.circle"],
         ["TWD": "dollarsign.circle"]
+    ]
+    
+    static let currenciesWithoutCircle:[[String:String]] = [
+        ["USD": "dollarsign"],
+        ["GBP": "sterlingsign"],
+        ["EUR": "eurosign"],
+        ["AUD":"dollarsign"],
+        ["BRL": "brazilianrealsign"],
+        ["CAD": "dollarsign"],
+        ["CHF": "francsign"],
+        ["CLP": "dollarsign"],
+        ["CNY": "yensign"],
+        ["DKK": "k"],
+        ["HKD": "dollarsign"],
+        ["INR": "indianrupeesign"],
+        ["ISK": "k"],
+        ["JPY": "yensign"],
+        ["KRW": "wonsign"],
+        ["NZD": "dollarsign"],
+        ["PLN": "z"],
+        ["RUB": "rublesign"],
+        ["SEK": "k"],
+        ["SGD": "dollarsign"],
+        ["THB": "bahtsign"],
+        ["TRY": "turkishlirasign"],
+        ["TWD": "dollarsign"]
     ]
 }

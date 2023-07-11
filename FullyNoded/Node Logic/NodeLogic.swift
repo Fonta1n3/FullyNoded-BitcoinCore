@@ -222,7 +222,8 @@ class NodeLogic {
                 let amountSats = amountString.btcToSats
                 let amountBtc = amountString.doubleValue.btcBalanceWithSpaces
                 let fxRate = UserDefaults.standard.object(forKey: "fxRate") as? Double ?? 0.0
-                let amountFiat = (amountBtc.doubleValue * fxRate).balanceTextWithNoSymbol
+                let noSpaces = amountBtc.replacingOccurrences(of: " ", with: "")
+                let amountFiat = (noSpaces.doubleValue * fxRate).balanceTextWithNoSymbol
                 
                 let tx = [
                     "address": address,

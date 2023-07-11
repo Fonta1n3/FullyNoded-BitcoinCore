@@ -165,7 +165,7 @@ public let currencies:[[String:String]] = [
     ["AUD":"$"],
     ["BRL": "R$"],
     ["CAD": "$"],
-    ["CHF": "CHF "],
+    ["CHF": "􁑃"],
     ["CLP": "$"],
     ["CNY": "¥"],
     ["DKK": "kr"],
