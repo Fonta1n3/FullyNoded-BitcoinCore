@@ -31,10 +31,6 @@ class SettingsViewController: UIViewController, UITableViewDelegate, UITableView
         super.viewDidLoad()
         settingsTable.delegate = self
         
-        if UserDefaults.standard.object(forKey: "useEsplora") == nil && UserDefaults.standard.object(forKey: "useEsploraWarning") == nil {            
-            UserDefaults.standard.setValue(true, forKey: "useEsploraWarning")
-        }
-        
         if UserDefaults.standard.object(forKey: "useBlockchainInfo") == nil {
             UserDefaults.standard.set(true, forKey: "useBlockchainInfo")
         }
@@ -102,11 +98,9 @@ class SettingsViewController: UIViewController, UITableViewDelegate, UITableView
         case 1:
             label.text = "Coindesk"
             if !useBlockchainInfo {
-                //background.backgroundColor = .systemBlue
                 exchangeRateApiCell.isSelected = true
                 exchangeRateApiCell.accessoryType = .checkmark
             } else {
-                //background.backgroundColor = .systemGray
                 exchangeRateApiCell.isSelected = false
                 exchangeRateApiCell.accessoryType = .none
             }
@@ -173,9 +167,6 @@ class SettingsViewController: UIViewController, UITableViewDelegate, UITableView
             label.text = UserDefaults.standard.object(forKey: "currency") as? String ?? "USD"
             for (_, value) in currency {
                 icon.image = UIImage(systemName: value)
-            }
-            DispatchQueue.main.async {
-                NotificationCenter.default.post(name: .refreshWallet, object: nil)
             }
         default:
             break
@@ -350,6 +341,7 @@ class SettingsViewController: UIViewController, UITableViewDelegate, UITableView
                     guard let self = self else { return }
 
                     self.settingsTable.reloadSections(.init(arrayLiteral: 4, 2), with: .none)
+                    NotificationCenter.default.post(name: .refreshWallet, object: nil)
                 }
             }
             
