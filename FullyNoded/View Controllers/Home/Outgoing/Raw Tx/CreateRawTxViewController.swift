@@ -26,8 +26,11 @@ class CreateRawTxViewController: UIViewController, UITextFieldDelegate, UITableV
     var invoice:[String:Any]?
     var invoiceString = ""
     let fiatCurrency = UserDefaults.standard.object(forKey: "currency") as? String ?? "USD"
-    var balance = ""
+    var balanceDisplay = ""
+    var availableBtcBalance = 0.0
+    var wallet:Wallet? = nil
     
+    @IBOutlet weak var balanceSymbol: UIImageView!
     @IBOutlet weak private var availableBalance: UILabel!
     @IBOutlet weak private var miningTargetLabel: UILabel!
     @IBOutlet weak private var satPerByteLabel: UILabel!
@@ -71,26 +74,28 @@ class CreateRawTxViewController: UIViewController, UITextFieldDelegate, UITableV
             ud.set(432, forKey: "feeTarget")
         }
         
-        let denomination = UserDefaults.standard.object(forKey: "denomination") as? String ?? "BTC"
         switch denomination {
         case "BTC":
             isBtc = true
             isFiat = false
             isSats = false
+            balanceSymbol.image = .init(systemName: "bitcoinsign")
             btcEnabled()
         case "SATS":
             isSats = true
             isFiat = false
             isBtc = false
+            balanceSymbol.image = .init(systemName: "s.circle")
             satsSelected()
         default:
             isFiat = true
             isBtc = false
             isSats = false
+            balanceSymbol.image = .init(systemName: "bitcoinsign")
             fiatEnabled()
         }
         
-        availableBalance.text = balance
+        availableBalance.text = balanceDisplay
         
         showFeeSetting()
         slider.addTarget(self, action: #selector(didFinishSliding(_:)), for: .valueChanged)
@@ -100,6 +105,107 @@ class CreateRawTxViewController: UIViewController, UITextFieldDelegate, UITableV
             addAddress(address)
         }
     }
+    
+    var denomination: String {
+        return UserDefaults.standard.object(forKey: "denomination") as? String ?? "BTC"
+    }
+    
+    @IBAction func donateAction(_ sender: Any) {
+        let donationAddress = Keys.donationAddress()
+        addressInput.text = donationAddress
+        let title = "Thank you!"
+        
+        print("availableBtcBalance: \(availableBtcBalance)")
+        if availableBtcBalance > 0.001 {
+            DispatchQueue.main.async { [weak self] in
+                guard let self = self else { return }
+                
+                let alert = UIAlertController(title: title, message: "A donation address has been automatically added. Fully Noded takes a lot of work to build, your support is hugely appreciated. Please select an amount to donate or input a custom amount.", preferredStyle: .alert)
+                
+                switch denomination {
+                case "BTC":
+                    if availableBtcBalance > 0.1 {
+                        alert.addAction(UIAlertAction(title: "0.10 000 000 btc", style: .default, handler: { action in
+                            DispatchQueue.main.async { [weak self] in
+                                self?.amountInput.text = "0.1"
+                            }
+                            
+                        }))
+                    }
+                    if availableBtcBalance > 0.01 {
+                        alert.addAction(UIAlertAction(title: "0.01 000 000 btc", style: .default, handler: { action in
+                            DispatchQueue.main.async { [weak self] in
+                                self?.amountInput.text = "0.01"
+                            }
+                        }))
+                    }
+                    if availableBtcBalance > 0.001 {
+                        alert.addAction(UIAlertAction(title: "0.00 100 000 btc", style: .default, handler: { action in
+                            DispatchQueue.main.async { [weak self] in
+                                self?.amountInput.text = "0.001"
+                            }
+                        }))
+                    }
+                    
+                case "SATS":
+                    if availableBtcBalance > 0.1 {
+                        alert.addAction(UIAlertAction(title: "10,000,000 sats", style: .default, handler: { action in
+                            DispatchQueue.main.async { [weak self] in
+                                self?.amountInput.text = "10,000,000"
+                            }
+                            
+                        }))
+                    }
+                    if availableBtcBalance > 0.01 {
+                        alert.addAction(UIAlertAction(title: "1,000,000 sats", style: .default, handler: { action in
+                            DispatchQueue.main.async { [weak self] in
+                                self?.amountInput.text = "1,000,0000"
+                            }
+                        }))
+                    }
+                    if availableBtcBalance > 0.001 {
+                        alert.addAction(UIAlertAction(title: "100,000 sats", style: .default, handler: { action in
+                            DispatchQueue.main.async { [weak self] in
+                                self?.amountInput.text = "100,000"
+                            }
+                        }))
+                    }
+                    
+                default:
+                    guard let fxRate = fxRate else { return }
+                    if availableBtcBalance > 0.1 {
+                        alert.addAction(UIAlertAction(title: (0.1 * fxRate).fiatString, style: .default, handler: { action in
+                            DispatchQueue.main.async { [weak self] in
+                                self?.amountInput.text = "\(0.1 * fxRate)"
+                            }
+                            
+                        }))
+                    }
+                    if availableBtcBalance > 0.01 {
+                        alert.addAction(UIAlertAction(title: (0.01 * fxRate).fiatString, style: .default, handler: { action in
+                            DispatchQueue.main.async { [weak self] in
+                                self?.amountInput.text = "\(0.01 * fxRate)"
+                            }
+                        }))
+                    }
+                    if availableBtcBalance > 0.001 {
+                        alert.addAction(UIAlertAction(title: (0.001 * fxRate).fiatString, style: .default, handler: { action in
+                            DispatchQueue.main.async { [weak self] in
+                                self?.amountInput.text = "\(0.001 * fxRate)"
+                            }
+                        }))
+                    }
+                }
+                
+                alert.addAction(UIAlertAction(title: "Cancel", style: .cancel, handler: { action in }))
+                alert.popoverPresentationController?.sourceView = self.view
+                self.present(alert, animated: true, completion: nil)
+            }
+        } else {
+            showAlert(vc: self, title: title, message: "A donation address has been automatically added. Fully Noded takes a lot of work to build, your support is hugely appreciated.")
+        }
+    }
+    
     
     @IBAction func sendToWalletAction(_ sender: Any) {
         CoreDataService.retrieveEntity(entityName: .wallets) { [weak self] wallets in
@@ -969,6 +1075,7 @@ class CreateRawTxViewController: UIViewController, UITextFieldDelegate, UITableV
             
             vc.hasSigned = true
             vc.fxRate = fxRate
+            vc.wallet = wallet
             
             if rawTxSigned != "" {
                 vc.signedRawTx = rawTxSigned

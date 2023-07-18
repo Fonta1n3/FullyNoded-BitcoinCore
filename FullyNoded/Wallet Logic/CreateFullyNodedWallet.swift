@@ -392,11 +392,13 @@ enum Keys {
                     let providedDescStr = Descriptor(descriptor)
                     
                     if let type = addressType(descStr) {
-                        print("we are getting here")
                         if !providedDescStr.isMulti && path != "no key path" {
-                            guard let fullPath = try? BIP32Path(string: path) else { completion((isOurs, walletLabel, signable, signer)); return }
+                            guard let fullPath = try? BIP32Path(string: path) else {
+                                completion((isOurs, walletLabel, signable, signer))
+                                return
+                            }
                             
-                            addressSignable(address, fullPath) { (isSignable, signerLabel) in
+                           addressSignable(address, fullPath) { (isSignable, signerLabel) in
                                 if isSignable {
                                     signable = true
                                 }

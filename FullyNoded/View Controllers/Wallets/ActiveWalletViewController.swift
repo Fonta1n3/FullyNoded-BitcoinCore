@@ -423,32 +423,32 @@ class ActiveWalletViewController: UIViewController {
         
         let onchainBalanceLabel = cell.viewWithTag(1) as! UILabel
         let currencySymbolImageView = cell.viewWithTag(2) as! UIImageView
+        let fiatBalanceLabel = cell.viewWithTag(3) as! UILabel
         
         if onchainBalanceBtc == "" || onchainBalanceBtc == "0.0 BTC" {
             onchainBalanceBtc = "0.00 000 000"
+            fiatBalanceLabel.text = 0.0.balanceTextWithSymbol
         }
                 
         if isBtc {
             onchainBalanceLabel.text = onchainBalanceBtc
             currencySymbolImageView.image = .init(systemName: "bitcoinsign")
+            fiatBalanceLabel.text = onchainBalanceFiatWithSymbol
         }
         
         if isSats {
             onchainBalanceLabel.text = onchainBalanceSats
             currencySymbolImageView.image = .init(systemName: "s.circle")
+            fiatBalanceLabel.text = onchainBalanceFiatWithSymbol
         }
         
         if isFiat {
             onchainBalanceLabel.text = onchainBalanceFiat
-//            for currency in Currencies.currenciesWithoutCircle {
-//                for (key, value) in currency {
-//                    if key == fiatCurrency {
-//                        currencySymbolImageView.image = .init(systemName: value)
-//                    }
-//                }
-//            }
             currencySymbolImageView.image = fiatCurrency.currencySymbolNoCircle
+            fiatBalanceLabel.text = onchainBalanceBtc
         }
+        
+        
                 
         return cell
     }
@@ -500,7 +500,6 @@ class ActiveWalletViewController: UIViewController {
         var gainText = ""
         
         if let originRate = dict["originFxRate"] as? Double {
-            print("originRate: \(originRate)")
             var btcAmount = 0.0
 
             btcAmount = amountBtc.doubleValue
@@ -719,6 +718,7 @@ class ActiveWalletViewController: UIViewController {
                     guard let self = self else { return }
                     
                     self.fxRateLabel.text = "no fx rate data"
+                    finishedLoading()
                 }
                 return
             }
@@ -774,7 +774,6 @@ class ActiveWalletViewController: UIViewController {
                     if let exchangeRate = self.fxRate {
                         let onchainBalanceFiatDouble = balance * exchangeRate
                         self.onchainBalanceFiat = onchainBalanceFiatDouble.balanceTextWithNoSymbol
-                        print("onchainBalanceFiatDouble: \(onchainBalanceFiatDouble)")
                         self.onchainBalanceFiatWithSymbol = onchainBalanceFiatDouble.balanceTextWithSymbol
                     }
                     
@@ -1030,12 +1029,15 @@ class ActiveWalletViewController: UIViewController {
             guard let vc = segue.destination as? CreateRawTxViewController else { fallthrough }
             
             vc.fxRate = fxRate
+            vc.wallet = wallet
                         
             if isBtc || isFiat {
-                vc.balance = "Balance: " + self.onchainBalanceBtc + " btc" + " \\ \(self.onchainBalanceFiatWithSymbol)"
+                vc.balanceDisplay = onchainBalanceBtc + " \\ \(onchainBalanceFiatWithSymbol)"
             } else if isSats {
-                vc.balance = "Balance: " + self.onchainBalanceSats + " sats" + " \\ \(self.onchainBalanceFiatWithSymbol)"
+                vc.balanceDisplay = onchainBalanceSats + " \\ \(onchainBalanceFiatWithSymbol)"
             }
+            
+            vc.availableBtcBalance = onchainBalanceBtc.replacingOccurrences(of: " ", with: "").doubleValue
         
         case "segueToInvoice":
             guard let vc = segue.destination as? InvoiceViewController else { fallthrough }

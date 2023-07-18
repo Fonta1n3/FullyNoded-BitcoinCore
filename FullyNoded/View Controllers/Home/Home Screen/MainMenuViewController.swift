@@ -81,6 +81,8 @@ class MainMenuViewController: UIViewController {
         mainMenu.delegate = self
         mainMenu.alpha = 0
         mainMenu.tableFooterView = UIView(frame: .zero)
+        mainMenu.layer.cornerRadius = 8
+        mainMenu.clipsToBounds = true
         initialLoad = true
         addNavBarSpinner()
         addlaunchScreen()
@@ -482,6 +484,7 @@ class MainMenuViewController: UIViewController {
         DispatchQueue.main.async { [weak self] in
             guard let self = self else { return }
             
+            headerLabel.textColor = .secondaryLabel
             mainMenu.reloadSections(IndexSet(arrayLiteral: Section.blockchainInfo.rawValue), with: .none)
         }
         
@@ -724,6 +727,8 @@ class MainMenuViewController: UIViewController {
             let imageView = UIImageView()
             imageView.frame = CGRect(x: self.view.center.x - 75, y: self.view.center.y - 75, width: 150, height: 150)
             imageView.image = UIImage(named: "1024.png")
+            imageView.clipsToBounds = true
+            imageView.layer.cornerRadius = 18
             self.backView.addSubview(imageView)
             self.view.addSubview(self.backView)
         }
@@ -956,7 +961,7 @@ extension MainMenuViewController: UITableViewDelegate {
                 if showBlockchainInfoSpinner {
                     spinner.stopAnimating()
                     textLabel.textColor = .tertiaryLabel
-                    sectionSpinner.frame = CGRect(x: mainMenu.frame.maxX - 48, y: 0, width: 44, height: 44)
+                    sectionSpinner.frame = CGRect(x: mainMenu.frame.maxX - 50, y: 0, width: 44, height: 44)
                     sectionSpinner.startAnimating()
                 } else {
                     sectionSpinner.stopAnimating()
@@ -968,7 +973,7 @@ extension MainMenuViewController: UITableViewDelegate {
                 if showNetworkInfoSpinner {
                     spinner.stopAnimating()
                     textLabel.textColor = .tertiaryLabel
-                    sectionSpinner.frame = CGRect(x: mainMenu.frame.maxX - 48, y: -14, width: 44, height: 44)
+                    sectionSpinner.frame = CGRect(x: mainMenu.frame.maxX - 50, y: -14, width: 44, height: 44)
                     sectionSpinner.startAnimating()
                 } else {
                     sectionSpinner.stopAnimating()
@@ -980,7 +985,7 @@ extension MainMenuViewController: UITableViewDelegate {
                 if showFeeInfoSpinner {
                     spinner.stopAnimating()
                     textLabel.textColor = .tertiaryLabel
-                    sectionSpinner.frame = CGRect(x: mainMenu.frame.maxX - 48, y: -14, width: 44, height: 44)
+                    sectionSpinner.frame = CGRect(x: mainMenu.frame.maxX - 50, y: -14, width: 44, height: 44)
                     sectionSpinner.startAnimating()
                 } else {
                     sectionSpinner.stopAnimating()
@@ -992,7 +997,7 @@ extension MainMenuViewController: UITableViewDelegate {
                 if showMempoolInfoSpinner {
                     spinner.stopAnimating()
                     textLabel.textColor = .tertiaryLabel
-                    sectionSpinner.frame = CGRect(x: mainMenu.frame.maxX - 48, y: -14, width: 44, height: 44)
+                    sectionSpinner.frame = CGRect(x: mainMenu.frame.maxX - 50, y: -14, width: 44, height: 44)
                     sectionSpinner.startAnimating()
                 } else {
                     sectionSpinner.stopAnimating()
@@ -1004,7 +1009,7 @@ extension MainMenuViewController: UITableViewDelegate {
                 if showMiningInfoSpinner {
                     spinner.stopAnimating()
                     textLabel.textColor = .tertiaryLabel
-                    sectionSpinner.frame = CGRect(x: mainMenu.frame.maxX - 48, y: -14, width: 44, height: 44)
+                    sectionSpinner.frame = CGRect(x: mainMenu.frame.maxX - 50, y: -14, width: 44, height: 44)
                     sectionSpinner.startAnimating()
                 } else {
                     sectionSpinner.stopAnimating()
@@ -1016,7 +1021,7 @@ extension MainMenuViewController: UITableViewDelegate {
                 if showPeerInfoSpinner {
                     spinner.stopAnimating()
                     textLabel.textColor = .tertiaryLabel
-                    sectionSpinner.frame = CGRect(x: mainMenu.frame.maxX - 48, y: -14, width: 44, height: 44)
+                    sectionSpinner.frame = CGRect(x: mainMenu.frame.maxX - 50, y: -14, width: 44, height: 44)
                     sectionSpinner.startAnimating()
                 } else {
                     sectionSpinner.stopAnimating()
@@ -1028,7 +1033,7 @@ extension MainMenuViewController: UITableViewDelegate {
                 if showUpTimeSpinner {
                     spinner.stopAnimating()
                     textLabel.textColor = .tertiaryLabel
-                    sectionSpinner.frame = CGRect(x: mainMenu.frame.maxX - 48, y: -14, width: 44, height: 44)
+                    sectionSpinner.frame = CGRect(x: mainMenu.frame.maxX - 50, y: -14, width: 44, height: 44)
                     sectionSpinner.startAnimating()
                 } else {
                     sectionSpinner.stopAnimating()
