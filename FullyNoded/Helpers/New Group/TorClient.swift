@@ -49,11 +49,11 @@ class TorClient: NSObject, URLSessionDelegate {
         weak var weakDelegate = delegate
         state = .started
         
-        var proxyPort = 19050
-        var dnsPort = 12345
+        var proxyPort = 19056
+        var dnsPort = 12347
         #if targetEnvironment(simulator)
-        proxyPort = 19052
-        dnsPort = 12347
+        proxyPort = 19058
+        dnsPort = 12349
         #endif
         
         sessionConfiguration.connectionProxyDictionary = [kCFProxyTypeKey: kCFProxyTypeSOCKS,

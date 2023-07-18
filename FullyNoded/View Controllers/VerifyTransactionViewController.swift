@@ -1567,6 +1567,8 @@ class VerifyTransactionViewController: UIViewController, UINavigationControllerD
             background.backgroundColor = .systemRed
             imageView.image = UIImage(systemName: "exclamationmark.triangle")
         }
+        confsCell.translatesAutoresizingMaskIntoConstraints = true
+        confsCell.sizeToFit()
         return confsCell
     }
     
@@ -1613,6 +1615,8 @@ class VerifyTransactionViewController: UIViewController, UINavigationControllerD
         
         mempoolAcceptCell.selectionStyle = .none
         label.adjustsFontSizeToFitWidth = true
+        mempoolAcceptCell.translatesAutoresizingMaskIntoConstraints = true
+        mempoolAcceptCell.sizeToFit()
         return mempoolAcceptCell
     }
     
@@ -1627,6 +1631,8 @@ class VerifyTransactionViewController: UIViewController, UINavigationControllerD
         txidLabel.text = txid
         txidCell.selectionStyle = .none
         txidLabel.adjustsFontSizeToFitWidth = true
+        txidCell.translatesAutoresizingMaskIntoConstraints = true
+        txidCell.sizeToFit()
         return txidCell
     }
     
@@ -1644,17 +1650,13 @@ class VerifyTransactionViewController: UIViewController, UINavigationControllerD
         let isChangeImageView = inputCell.viewWithTag(8) as! UIImageView
         let isDustImageView = inputCell.viewWithTag(10) as! UIImageView
         let signaturesLabel = inputCell.viewWithTag(14) as! UILabel
-        let descTextView = inputCell.viewWithTag(15) as! UITextView
+        let descTextView = inputCell.viewWithTag(15) as! UILabel
         let sigsImageView = inputCell.viewWithTag(17) as! UIImageView
         let copyAddressButton = inputCell.viewWithTag(18) as! UIButton
         let copyDescButton = inputCell.viewWithTag(19) as! UIButton
         let addressQrButton = inputCell.viewWithTag(20) as! UIButton
         let inputAmountSymbol = inputCell.viewWithTag(21) as! UIImageView
 
-        descTextView.clipsToBounds = true
-        descTextView.layer.cornerRadius = 8
-        descTextView.layer.borderWidth = 0.5
-        descTextView.layer.borderColor = UIColor.darkGray.cgColor
         inputAmountSymbol.tintColor = .label
         
         if indexPath.row < inputTableArray.count {
@@ -1671,6 +1673,8 @@ class VerifyTransactionViewController: UIViewController, UINavigationControllerD
             
             utxoLabel.text = label
             descTextView.text = desc
+            descTextView.translatesAutoresizingMaskIntoConstraints = true
+            descTextView.sizeToFit()
             sigsImageView.image = UIImage(systemName: "signature")
             
             inputIndexLabel.text = "Input #\(input["index"] as! Int)"
@@ -1745,6 +1749,9 @@ class VerifyTransactionViewController: UIViewController, UINavigationControllerD
             }
         }
         
+        inputCell.translatesAutoresizingMaskIntoConstraints = true
+        inputCell.sizeToFit()
+        
         return inputCell
     }
     
@@ -1765,7 +1772,7 @@ class VerifyTransactionViewController: UIViewController, UINavigationControllerD
         let isChangeImageView = outputCell.viewWithTag(8) as! UIImageView
         let verifiedByFnLabel = outputCell.viewWithTag(9) as! UILabel
         let isDustImageView = outputCell.viewWithTag(10) as! UIImageView
-        let descTextView = outputCell.viewWithTag(15) as! UITextView
+        let descTextView = outputCell.viewWithTag(15) as! UILabel
         let signableImageView = outputCell.viewWithTag(17) as! UIImageView
         let signerLabel = outputCell.viewWithTag(18) as! UILabel
         let verifiedByNodeLabel = outputCell.viewWithTag(19) as! UILabel
@@ -1779,11 +1786,7 @@ class VerifyTransactionViewController: UIViewController, UINavigationControllerD
         let imageViewWidthConstraint = NSLayoutConstraint(item: symbolImageView, attribute: .width, relatedBy: .equal, toItem: nil, attribute: .notAnAttribute, multiplier: 1, constant: 15)
         let imageViewHeightConstraint = NSLayoutConstraint(item: symbolImageView, attribute: .height, relatedBy: .equal, toItem: nil, attribute: .notAnAttribute, multiplier: 1, constant: 15)
         symbolImageView.addConstraints([imageViewWidthConstraint, imageViewHeightConstraint])
-        
         symbolImageView.tintColor = .white
-        descTextView.layer.cornerRadius = 8
-        descTextView.layer.borderWidth = 0.5
-        descTextView.layer.borderColor = UIColor.darkGray.cgColor
                         
         if indexPath.row < outputArray.count {
             let output = outputArray[indexPath.row]
@@ -1800,6 +1803,8 @@ class VerifyTransactionViewController: UIViewController, UINavigationControllerD
             
             labelLabel.text = label
             descTextView.text = desc
+            descTextView.translatesAutoresizingMaskIntoConstraints = true
+            descTextView.sizeToFit()
             
             outputIndexLabel.text = "Output #\(output["index"] as! Int)"
             if denomination == "SATS" {
@@ -1832,13 +1837,13 @@ class VerifyTransactionViewController: UIViewController, UINavigationControllerD
             }
             
             if signable {
-                signableImageView.image = UIImage(systemName: "checkmark.square")
+                signableImageView.image = UIImage(systemName: "signature")
                 signableImageView.tintColor = .systemGreen
                 signerLabel.text = "Signable by \(signer)"
             } else {
-                signableImageView.image = UIImage(systemName: "questionmark.diamond")
-                signableImageView.tintColor = .systemRed
-                signerLabel.text = "Unable to determine"
+                signableImageView.image = UIImage(systemName: "signature")
+                signableImageView.tintColor = .systemOrange
+                signerLabel.text = "No signer present"
             }
             
             if isDust {
@@ -1892,6 +1897,9 @@ class VerifyTransactionViewController: UIViewController, UINavigationControllerD
             }
         }
         
+        outputCell.translatesAutoresizingMaskIntoConstraints = true
+        outputCell.sizeToFit()
+        
         return outputCell
     }
     
@@ -1931,6 +1939,9 @@ class VerifyTransactionViewController: UIViewController, UINavigationControllerD
             imageView.image = UIImage(systemName: "questionmark.circle")
             miningLabel.text = miningFee
         }
+        
+        miningFeeCell.translatesAutoresizingMaskIntoConstraints = true
+        miningFeeCell.sizeToFit()
         
         return miningFeeCell
     }
@@ -1983,6 +1994,9 @@ class VerifyTransactionViewController: UIViewController, UINavigationControllerD
             etaLabel.text = "No fee data."
         }
         
+        etaCell.translatesAutoresizingMaskIntoConstraints = true
+        etaCell.sizeToFit()
+        
         return etaCell
     }
     
@@ -1994,6 +2008,8 @@ class VerifyTransactionViewController: UIViewController, UINavigationControllerD
         button.addTarget(self, action: #selector(updateLabelMemoAction), for: .touchUpInside)
         button.showsTouchWhenHighlighted = true
         label.text = labelText
+        labelCell.translatesAutoresizingMaskIntoConstraints = true
+        labelCell.sizeToFit()
         return labelCell
     }
     
@@ -2005,6 +2021,8 @@ class VerifyTransactionViewController: UIViewController, UINavigationControllerD
         button.addTarget(self, action: #selector(updateLabelMemoAction), for: .touchUpInside)
         button.showsTouchWhenHighlighted = true
         label.text = memoText
+        labelCell.translatesAutoresizingMaskIntoConstraints = true
+        labelCell.sizeToFit()
         return labelCell
     }
     
@@ -2719,26 +2737,7 @@ extension VerifyTransactionViewController: UITableViewDelegate {
     }
     
     func tableView(_ tableView: UITableView, heightForRowAt indexPath: IndexPath) -> CGFloat {
-        switch indexPath.section {
-        case 4:
-            return 342
-            
-        case 5:
-            return 398
-        
-        case 1:
-            return 150
-            
-        case 0, 2:
-            return 50
-            
-        case 3, 6, 7:
-            return 80
-            
-        default:
-            return 0
-            
-        }
+        return UITableView.automaticDimension
     }
     
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
@@ -2791,7 +2790,7 @@ extension VerifyTransactionViewController: UITableViewDelegate {
         
         let textLabel = UILabel()
         textLabel.textAlignment = .left
-        textLabel.font = UIFont.systemFont(ofSize: 20, weight: .regular)
+        textLabel.font = UIFont.systemFont(ofSize: 17, weight: .regular)
         textLabel.textColor = .secondaryLabel
         textLabel.frame = CGRect(x: 0, y: 0, width: 300, height: 50)
         
