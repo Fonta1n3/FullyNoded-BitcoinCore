@@ -1025,6 +1025,11 @@ class ActiveWalletViewController: UIViewController {
     override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
         switch segue.identifier {
             
+        case "segueToWallets":
+            guard let vc = segue.destination as? FullyNodedWalletsViewController else { fallthrough }
+            
+            vc.fxRate = fxRate
+            
         case "spendFromWallet":
             guard let vc = segue.destination as? CreateRawTxViewController else { fallthrough }
             
