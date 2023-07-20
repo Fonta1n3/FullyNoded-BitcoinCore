@@ -444,19 +444,23 @@ class CreateMultisigViewController: UIViewController, UITextViewDelegate, UIText
             parseDescriptor(Descriptor(item))
             
         } else if item.lowercased().hasPrefix("ur:crypto-hdkey") || item.lowercased().hasPrefix("ur:crypto-account") || item.lowercased().hasPrefix("ur:crypto-seed") {
-            let (descriptors, error) = URHelper.parseUr(urString: item.lowercased())
-            guard error == nil, let descriptors = descriptors, descriptors.count > 0 else {
-                showAlert(vc: self, title: "Error", message: error ?? "Unknown error decoding the QR code.")
-                return
-            }
-            
-            for descriptor in descriptors {
-                let str = Descriptor(descriptor)
-                if str.isCosigner && str.derivation == self.derivationField.text?.replacingOccurrences(of: "h", with: "'") {
-                    parseDescriptor(str)
-                    break
-                } else {
-                    showAlert(vc: self, title: "There was an issue...", message: "It does not look like any of the supplied cosigners match the \(self.derivationField.text ?? "?") derivation path. For now the multisig creator only supports one derivation path per cosigner.")
+            //let (descriptors, error) = URHelper.parseUr(urString: item.lowercased())
+            URHelper.parseUr(urString: item.lowercased()) { [weak self] (descriptors, error) in
+                guard let self = self else { return }
+                
+                guard error == nil, let descriptors = descriptors, descriptors.count > 0 else {
+                    showAlert(vc: self, title: "Error", message: error ?? "Unknown error decoding the QR code.")
+                    return
+                }
+                
+                for descriptor in descriptors {
+                    let str = Descriptor(descriptor)
+                    if str.isCosigner && str.derivation == self.derivationField.text?.replacingOccurrences(of: "h", with: "'") {
+                        parseDescriptor(str)
+                        break
+                    } else {
+                        showAlert(vc: self, title: "There was an issue...", message: "It does not look like any of the supplied cosigners match the \(self.derivationField.text ?? "?") derivation path. For now the multisig creator only supports one derivation path per cosigner.")
+                    }
                 }
             }
             
