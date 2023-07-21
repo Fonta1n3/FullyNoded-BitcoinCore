@@ -16,10 +16,12 @@ class UTXOViewController: UIViewController, UITextFieldDelegate, UINavigationCon
     private var unlockedUtxos = [Utxo]()
     private var inputArray:[[String:Any]] = []
     private var selectedUTXOs = [Utxo]()
-    private var spinner = ConnectingView()
+    private let spinner = UIActivityIndicatorView(style: .medium)
     private var wallet:Wallet?
     private var psbt:String?
     private var depositAddress:String?
+    var dataRefresher = UIBarButtonItem()
+    var refreshButton = UIBarButtonItem()
     var fxRate:Double?
     var isBtc = false
     var isSats = false
@@ -54,7 +56,10 @@ class UTXOViewController: UIViewController, UITextFieldDelegate, UINavigationCon
         unlockedUtxos.removeAll()
         selectedUTXOs.removeAll()
         inputArray.removeAll()
-        guard let wallet = self.wallet else { return }
+        guard let _ = self.wallet else {
+            showAlert(vc: self, title: "", message: "No active wallet.")
+            return
+        }
         loadUnlockedUtxos()
     }
     
@@ -76,7 +81,11 @@ class UTXOViewController: UIViewController, UITextFieldDelegate, UINavigationCon
         }
     }
     
-    @IBAction private func createRaw(_ sender: Any) {
+//    @IBAction private func createRaw(_ sender: Any) {
+//
+//    }
+    
+    @objc func createRaw() {
         guard let version = UserDefaults.standard.object(forKey: "version") as? Int, version >= 210000 else {
             showAlert(vc: self, title: "Bitcoin Core needs to be updated",
                       message: "Manual utxo selection requires Bitcoin Core 0.21, please update and try again. If you already have 0.21 go to the home screen, refresh and load it completely then try again.")
@@ -97,7 +106,8 @@ class UTXOViewController: UIViewController, UITextFieldDelegate, UINavigationCon
     }
     
     private func lock(_ utxo: Utxo) {
-        spinner.addConnectingView(vc: self, description: "locking...")
+        //spinner.addConnectingView(vc: self, description: "locking...")
+        addNavBarSpinner()
         
         let param = Lock_Unspent(["unlock": false, "transactions": [["txid": utxo.txid,"vout": utxo.vout] as [String:Any]]])
         
@@ -145,7 +155,6 @@ class UTXOViewController: UIViewController, UITextFieldDelegate, UINavigationCon
     }
     
     private func finishedLoading() {
-        print("finishedLoading")
         DispatchQueue.main.async { [weak self] in
             guard let self = self else { return }
             
@@ -157,29 +166,71 @@ class UTXOViewController: UIViewController, UITextFieldDelegate, UINavigationCon
         }
     }
     
+    func addNavBarSpinner() {
+        DispatchQueue.main.async { [weak self] in
+            guard let self = self else { return }
+            self.spinner.frame = CGRect(x: 0, y: 0, width: 20, height: 20)
+            self.dataRefresher = UIBarButtonItem(customView: self.spinner)
+            self.navigationItem.setRightBarButton(self.dataRefresher, animated: true)
+            self.spinner.startAnimating()
+            self.spinner.alpha = 1
+        }
+    }
+    
     @objc private func loadUnlockedUtxos() {
         unlockedUtxos.removeAll()
         
         DispatchQueue.main.async { [weak self] in
             guard let self = self else { return }
             
-            self.tableView.isUserInteractionEnabled = false
-            self.addSpinner()
+            tableView.isUserInteractionEnabled = false
+            addNavBarSpinner()
         }
         
         getUtxosFromBtcRpc()
     }
         
     private func getUtxosFromBtcRpc() {
+        guard let wallet = wallet else { return }
+        
+        CoreDataService.retrieveEntity(entityName: .utxos) { [weak self] cachedUtxos in
+            guard let self = self else { return }
+            
+            guard let cachedUtxos = cachedUtxos, cachedUtxos.count > 0 else { return }
+                        
+            for (i, cachedUtxo) in cachedUtxos.enumerated() {
+                let cachedUtxoStr = UtxoResponse(cachedUtxo)
+                if cachedUtxoStr.walletId == wallet.id {
+                    let utxoStr = Utxo(cachedUtxoStr.dict)
+                    updateUtxoArray(utxo: utxoStr)
+                }
+                if i + 1 == cachedUtxos.count {
+                    self.unlockedUtxos = self.unlockedUtxos.sorted {
+                        $0.confs ?? 0 < $1.confs ?? 1
+                    }
+                    DispatchQueue.main.async { [weak self] in
+                        guard let self = self else { return }
+                        
+                        self.updateSelectedUtxos()
+                        self.tableView.isUserInteractionEnabled = true
+                        self.tableView.reloadData()
+                        self.tableView.setContentOffset(.zero, animated: true)
+                    }
+                }
+            }
+        }
+        
         let param:List_Unspent = .init(["minconf":0])
         OnchainUtils.listUnspent(param: param) { [weak self] (utxos, message) in
             guard let self = self else { return }
-            
+                        
             guard let utxos = utxos else {
                 self.finishedLoading()
                 showAlert(vc: self, title: "Error", message: message ?? "unknown error fecthing your utxos")
                 return
             }
+            
+            unlockedUtxos.removeAll()
             
             guard utxos.count > 0 else {
                 self.finishedLoading()
@@ -188,16 +239,7 @@ class UTXOViewController: UIViewController, UITextFieldDelegate, UINavigationCon
             }
                         
             for (i, utxo) in utxos.enumerated() {
-                var utxoDict = utxo.dict
-                
-                let amountBtc = utxo.amount!
-                utxoDict["amountSats"] = amountBtc.sats
-                print("self.fxRate: \(self.fxRate)")
-                if let fxrate = self.fxRate {
-                    utxoDict["amountFiat"] = (fxrate * amountBtc).fiatString
-                }
-                
-                self.unlockedUtxos.append(Utxo(utxoDict))
+                updateUtxoArray(utxo: utxo)
                 
                 if i + 1 == utxos.count {
                     self.unlockedUtxos = self.unlockedUtxos.sorted {
@@ -209,57 +251,27 @@ class UTXOViewController: UIViewController, UITextFieldDelegate, UINavigationCon
         }
     }
     
+    private func updateUtxoArray(utxo: Utxo) {
+        var utxoDict = utxo.dict
+        
+        let amountBtc = utxo.amount!
+        utxoDict["amountSats"] = amountBtc.sats
+        if let fxrate = fxRate {
+            utxoDict["amountFiat"] = (fxrate * amountBtc).fiatString
+        }
+        
+        unlockedUtxos.append(Utxo(utxoDict))
+    }
+    
     private func removeSpinner() {
-        DispatchQueue.main.async {
-            self.refresher.endRefreshing()
-            self.spinner.removeConnectingView()
-        }
-    }
-    
-    private func addSpinner() {
-        DispatchQueue.main.async {
-            self.spinner.addConnectingView(vc: self, description: "Getting UTXOs")
-        }
-    }
-    
-    private func fetchOriginRate(_ utxo: Utxo) {
-        guard let date = utxo.date, let id = utxo.txUUID else {
-            showAlert(vc: self, title: "", message: "Date or saved tx UUID missing.")
-            return
-        }
-        
-        let dateFormatter = DateFormatter()
-        dateFormatter.dateFormat = "yyyy-MM-dd"
-        let dateString = dateFormatter.string(from: date)
-        
-        let today = dateFormatter.string(from: Date())
-        
-        if dateString == today {
-            showAlert(vc: self, title: "", message: "You need to wait for the transaction to be at least one day old before fetching the historic rate.")
-        } else {
-            self.spinner.addConnectingView(vc: self, description: "")
+        DispatchQueue.main.async { [weak self] in
+            guard let self = self else { return }
             
-            FiatConverter.sharedInstance.getOriginRate(date: dateString) { [weak self] originRate in
-                guard let self = self else { return }
-                
-                guard let originRate = originRate else {
-                    self.spinner.removeConnectingView()
-                    showAlert(vc: self, title: "", message: "There was an issue fetching the historic exchange rate, please let us know about it.")
-                    return
-                }
-                
-                CoreDataService.update(id: id, keyToUpdate: "originFxRate", newValue: originRate, entity: .transactions) { [weak self] success in
-                    guard let self = self else { return }
-                    
-                    guard success else {
-                        self.spinner.removeConnectingView()
-                        showAlert(vc: self, title: "", message: "There was an issue saving the historic exchange rate, please let us know about it.")
-                        return
-                    }
-                    
-                    self.loadUnlockedUtxos()
-                }
-            }
+            self.refresher.endRefreshing()
+            self.spinner.stopAnimating()
+            self.spinner.alpha = 0
+            self.refreshButton = UIBarButtonItem(barButtonSystemItem: .refresh, target: self, action: #selector(self.loadUnlockedUtxos))
+            self.navigationItem.setRightBarButton(self.refreshButton, animated: true)
         }
     }
         

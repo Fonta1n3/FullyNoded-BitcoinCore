@@ -85,20 +85,6 @@ class OnchainUtils {
         }
     }
     
-//    static func importMulti(_ param: String, completion: @escaping ((imported: Bool, message: String?)) -> Void) {
-//        Reducer.sharedInstance.makeCommand(command: .importmulti, param: param) { (response, errorDescription) in
-//            guard let result = response as? NSArray, result.count > 0,
-//                  let dict = result[0] as? NSDictionary,
-//                  let success = dict["success"] as? Bool,
-//                  success else {
-//                completion((false, errorDescription ?? "unknown error importing your keys"))
-//                return
-//            }
-//            
-//            completion((success, nil))
-//        }
-//    }
-    
     static func rescan(completion: @escaping ((started: Bool, message: String?)) -> Void) {
         OnchainUtils.getBlockchainInfo { (blockchainInfo, message) in
             guard let blockchainInfo = blockchainInfo else {
@@ -133,14 +119,9 @@ class OnchainUtils {
     
     static func rescanNow(from: Int, completion: @escaping ((started: Bool, message: String?)) -> Void) {
         let param: Rescan_Blockchain = .init(["start_height": from])
-        // current behavior of bitcoin core is to wait until the rescan completes before responding, which is terrible ux.
+        // current behavior of bitcoin core is to wait until the rescan completes before responding, which is terrible.
         // this command may fail, as a work around users need to refresh the home screen to see if it was successful.
-        Reducer.sharedInstance.makeCommand(command: .rescanblockchain(param)) { (_, _) in
-//            guard let errorMess = errorMess else {
-//                completion((false, "unknown issue starting rescan."))
-//                return
-//            }
-        }
+        Reducer.sharedInstance.makeCommand(command: .rescanblockchain(param)) { (_, _) in }
         completion((true, nil))
         
     }
@@ -159,24 +140,80 @@ class OnchainUtils {
     }
     
     static func listUnspent(param: List_Unspent, completion: @escaping ((utxos: [Utxo]?, message: String?)) -> Void) {
-        Reducer.sharedInstance.makeCommand(command: .listunspent(param)) { (response, errorMessage) in
-            guard let response = response as? [[String:Any]] else {
-                completion((nil, errorMessage))
-                return
+        activeWallet { wallet in
+            guard let wallet = wallet else { completion((nil, "No active wallet.")); return }
+            Reducer.sharedInstance.makeCommand(command: .listunspent(param)) { (response, errorMessage) in
+                guard let response = response as? [[String:Any]] else {
+                    // Load from cache.
+//                    CoreDataService.retrieveEntity(entityName: .utxos) { utxos in
+//                        guard let utxos = utxos, utxos.count > 0 else {
+//                            completion((nil, errorMessage))
+//                            return
+//                        }
+//
+//                        var utxosToReturn:[Utxo] = []
+//
+//                        for (i, utxo) in utxos.enumerated() {
+//                            let utxoStr = Utxo(utxo)
+//
+//                            if utxoStr.walletId == wallet.id {
+//                                utxosToReturn.append(utxoStr)
+//                            }
+//
+//                            if i + 1 == utxos.count {
+//                                completion((utxosToReturn, nil))
+//                            }
+//                        }
+//                    }
+                    completion((nil, errorMessage ?? "Unable to fetch utxos from your node."))
+                    return
+                }
+                
+                updateUtxoCache(wallet: wallet, utxos: response)
+                
+                guard response.count > 0 else {
+                    completion(([], nil))
+                    return
+                }
+                
+                var utxosToReturn:[Utxo] = []
+                
+                for (i, dict) in response.enumerated() {
+                    let utxoObject = Utxo(dict)
+                    utxosToReturn.append(utxoObject)
+                    if i + 1 == response.count {
+                        completion((utxosToReturn, nil))
+                    }
+                }
+            }
+        }
+    }
+    
+    static func updateUtxoCache(wallet: Wallet, utxos: [[String:Any]]) {
+        CoreDataService.retrieveEntity(entityName: .utxos) { cachedUtxos in
+            guard let cachedUtxos = cachedUtxos else { return }
+            
+            // Delete all cached utxos for that wallet.
+            if cachedUtxos.count > 0 {
+                for cachedUtxo in cachedUtxos {
+                    let cachedUtxoStr = Utxo(cachedUtxo)
+                    if cachedUtxoStr.walletId == wallet.id {
+                        CoreDataService.deleteEntity(id: cachedUtxoStr.id!, entityName: .utxos) { deleted in
+                            print("utxo deleted from cache")
+                        }
+                    }
+                }
             }
             
-            guard response.count > 0 else {
-                completion(([], nil))
-                return
-            }
-            
-            var utxosToReturn:[Utxo] = []
-            
-            for (i, dict) in response.enumerated() {
-                let utxoObject = Utxo(dict)
-                utxosToReturn.append(utxoObject)
-                if i + 1 == response.count {
-                    completion((utxosToReturn, nil))
+            if utxos.count > 0 {
+                for fetchedUtxo in utxos {
+                    var fetchedUtxoDict = fetchedUtxo
+                    fetchedUtxoDict["walletId"] = wallet.id
+                    fetchedUtxoDict["id"] = UUID()
+                    let fetchedUtxoDictToSave = UtxoResponse(fetchedUtxoDict).dict
+                    CoreDataService.saveEntity(dict: fetchedUtxoDictToSave, entityName: .utxos) { utxoSaved in
+                        print("utxo saved to cache: \(utxoSaved)")
+                    }
                 }
             }
         }
