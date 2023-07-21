@@ -752,6 +752,12 @@ class ActiveWalletViewController: UIViewController {
     }
     
     private func getWalletBalance() {
+        guard let wallet = wallet else { return }
+        
+        if let cachedBalance = wallet.balance {
+            setBalanceValues(balance: cachedBalance)
+        }
+        
         if let _ = UserDefaults.standard.object(forKey: "walletName") as? String {
             OnchainUtils.getBalance { [weak self] (balance, message) in
                 guard let self = self else { return }
@@ -767,23 +773,33 @@ class ActiveWalletViewController: UIViewController {
                     return
                 }
                 
-                DispatchQueue.main.async {
-                    self.onchainBalanceBtc = balance.btcBalanceWithSpaces
-                    self.onchainBalanceSats = balance.sats
-                    
-                    if let exchangeRate = self.fxRate {
-                        let onchainBalanceFiatDouble = balance * exchangeRate
-                        self.onchainBalanceFiat = onchainBalanceFiatDouble.balanceTextWithNoSymbol
-                        self.onchainBalanceFiatWithSymbol = onchainBalanceFiatDouble.balanceTextWithSymbol
-                    }
-                    
-                    self.sectionZeroLoaded = true
-                    self.walletTable.reloadSections(IndexSet.init(arrayLiteral: 0), with: .fade)
-                    self.getWalletInfo()
+                CoreDataService.update(id: wallet.id, keyToUpdate: "balance", newValue: balance, entity: .wallets) { walletBalanceUpdated in
+                    print("walletBalanceUpdated: \(walletBalanceUpdated)")
                 }
+                
+                setBalanceValues(balance: balance)
+                getWalletInfo()
             }
         } else {
             chooseWallet()
+        }
+    }
+    
+    private func setBalanceValues(balance: Double) {
+        DispatchQueue.main.async { [weak self] in
+            guard let self = self else { return }
+    
+            onchainBalanceBtc = balance.btcBalanceWithSpaces
+            onchainBalanceSats = balance.sats
+            
+            if let exchangeRate = fxRate {
+                let onchainBalanceFiatDouble = balance * exchangeRate
+                onchainBalanceFiat = onchainBalanceFiatDouble.balanceTextWithNoSymbol
+                onchainBalanceFiatWithSymbol = onchainBalanceFiatDouble.balanceTextWithSymbol
+            }
+            
+            sectionZeroLoaded = true
+            walletTable.reloadSections(IndexSet.init(arrayLiteral: 0), with: .fade)
         }
     }
     
@@ -796,6 +812,7 @@ class ActiveWalletViewController: UIViewController {
                     showAlert(vc: self, title: "", message: message)
                     self.removeSpinner()
                 }
+                self.syncIndexes()
                 return
             }
             
@@ -823,7 +840,9 @@ class ActiveWalletViewController: UIViewController {
         OnchainUtils.listUnspent(param: p) { [weak self] (utxos, message) in
             guard let self = self else { return }
             
-            guard let utxos = utxos, utxos.count > 0, let wallet = self.wallet else {
+            guard let wallet = self.wallet, let utxos = utxos else { return }
+            
+            guard utxos.count > 0 else {
                 self.loadTransactions()
                 return
             }
