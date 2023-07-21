@@ -1,4 +1,5 @@
 //
+//
 //  SignerDetailViewController.swift
 //  BitSense
 //
@@ -1157,10 +1158,7 @@ extension SignerDetailViewController: UITableViewDelegate {
             editLabel(dict["text"] as? String ?? "")
             
         case 1:
-            switch selectedSegment {
-            default:
-                break
-            }
+            setClipBoard(dict["text"] as? String ?? "")
             
         case 2:
             setClipBoard(dict["text"] as? String ?? "")
