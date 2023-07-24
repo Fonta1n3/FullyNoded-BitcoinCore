@@ -144,32 +144,11 @@ class OnchainUtils {
             guard let wallet = wallet else { completion((nil, "No active wallet.")); return }
             Reducer.sharedInstance.makeCommand(command: .listunspent(param)) { (response, errorMessage) in
                 guard let response = response as? [[String:Any]] else {
-                    // Load from cache.
-//                    CoreDataService.retrieveEntity(entityName: .utxos) { utxos in
-//                        guard let utxos = utxos, utxos.count > 0 else {
-//                            completion((nil, errorMessage))
-//                            return
-//                        }
-//
-//                        var utxosToReturn:[Utxo] = []
-//
-//                        for (i, utxo) in utxos.enumerated() {
-//                            let utxoStr = Utxo(utxo)
-//
-//                            if utxoStr.walletId == wallet.id {
-//                                utxosToReturn.append(utxoStr)
-//                            }
-//
-//                            if i + 1 == utxos.count {
-//                                completion((utxosToReturn, nil))
-//                            }
-//                        }
-//                    }
                     completion((nil, errorMessage ?? "Unable to fetch utxos from your node."))
                     return
                 }
                 
-                updateUtxoCache(wallet: wallet, utxos: response)
+                updateUtxoCache(wallet: wallet, fetchedUtxos: response)
                 
                 guard response.count > 0 else {
                     completion(([], nil))
@@ -189,31 +168,26 @@ class OnchainUtils {
         }
     }
     
-    static func updateUtxoCache(wallet: Wallet, utxos: [[String:Any]]) {
+    static func updateUtxoCache(wallet: Wallet, fetchedUtxos: [[String:Any]]) {
         CoreDataService.retrieveEntity(entityName: .utxos) { cachedUtxos in
             guard let cachedUtxos = cachedUtxos else { return }
             
-            // Delete all cached utxos for that wallet.
             if cachedUtxos.count > 0 {
                 for cachedUtxo in cachedUtxos {
-                    let cachedUtxoStr = Utxo(cachedUtxo)
+                    let cachedUtxoStr = UtxoResponse(cachedUtxo)
                     if cachedUtxoStr.walletId == wallet.id {
-                        CoreDataService.deleteEntity(id: cachedUtxoStr.id!, entityName: .utxos) { deleted in
-                            print("utxo deleted from cache")
-                        }
+                        CoreDataService.deleteEntity(id: cachedUtxoStr.id, entityName: .utxos) { deleted in }
                     }
                 }
             }
             
-            if utxos.count > 0 {
-                for fetchedUtxo in utxos {
+            if fetchedUtxos.count > 0 {
+                for fetchedUtxo in fetchedUtxos {
                     var fetchedUtxoDict = fetchedUtxo
                     fetchedUtxoDict["walletId"] = wallet.id
                     fetchedUtxoDict["id"] = UUID()
                     let fetchedUtxoDictToSave = UtxoResponse(fetchedUtxoDict).dict
-                    CoreDataService.saveEntity(dict: fetchedUtxoDictToSave, entityName: .utxos) { utxoSaved in
-                        print("utxo saved to cache: \(utxoSaved)")
-                    }
+                    CoreDataService.saveEntity(dict: fetchedUtxoDictToSave, entityName: .utxos) { utxoSaved in }
                 }
             }
         }

@@ -1749,6 +1749,11 @@ class VerifyTransactionViewController: UIViewController, UINavigationControllerD
             }
         }
         
+//        utxoLabel.translatesAutoresizingMaskIntoConstraints = true
+//        utxoLabel.sizeToFit()
+        
+        print("utxoLabel: \(utxoLabel.text)")
+        
         inputCell.translatesAutoresizingMaskIntoConstraints = true
         inputCell.sizeToFit()
         
@@ -2745,7 +2750,7 @@ extension VerifyTransactionViewController: UITableViewDelegate {
             return defaultCell(indexPath)
         }
         
-        tableView.separatorColor = .lightGray
+        tableView.separatorColor = .none
         
         switch indexPath.section {
             

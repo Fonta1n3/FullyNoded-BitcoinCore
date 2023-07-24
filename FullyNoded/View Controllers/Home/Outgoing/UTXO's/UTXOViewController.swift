@@ -81,11 +81,7 @@ class UTXOViewController: UIViewController, UITextFieldDelegate, UINavigationCon
         }
     }
     
-//    @IBAction private func createRaw(_ sender: Any) {
-//
-//    }
-    
-    @objc func createRaw() {
+    @IBAction func createRaw(_ sender: Any) {
         guard let version = UserDefaults.standard.object(forKey: "version") as? Int, version >= 210000 else {
             showAlert(vc: self, title: "Bitcoin Core needs to be updated",
                       message: "Manual utxo selection requires Bitcoin Core 0.21, please update and try again. If you already have 0.21 go to the home screen, refresh and load it completely then try again.")
@@ -106,7 +102,6 @@ class UTXOViewController: UIViewController, UITextFieldDelegate, UINavigationCon
     }
     
     private func lock(_ utxo: Utxo) {
-        //spinner.addConnectingView(vc: self, description: "locking...")
         addNavBarSpinner()
         
         let param = Lock_Unspent(["unlock": false, "transactions": [["txid": utxo.txid,"vout": utxo.vout] as [String:Any]]])
@@ -130,7 +125,7 @@ class UTXOViewController: UIViewController, UITextFieldDelegate, UINavigationCon
                     self.loadUnlockedUtxos()
                 }
                 
-                showAlert(vc: self, title: "UTXO Locked 🔐", message: "You can tap the locked button to see your locked utxo's and unlock them. Be aware if your node reboots all utxo's will be unlocked by default!")
+                showAlert(vc: self, title: "UTXO Locked 🔐", message: "You can tap the locked button to see your locked utxo's and unlock them. Be aware if your node reboots all utxo's will be unlocked by default. These utxos will no longer be selected when creating transactions until you unlock them.")
                 
             } else {
                 DispatchQueue.main.async { [weak self] in
@@ -199,10 +194,9 @@ class UTXOViewController: UIViewController, UITextFieldDelegate, UINavigationCon
             guard let cachedUtxos = cachedUtxos, cachedUtxos.count > 0 else { return }
                         
             for (i, cachedUtxo) in cachedUtxos.enumerated() {
-                let cachedUtxoStr = UtxoResponse(cachedUtxo)
+                let cachedUtxoStr = Utxo(cachedUtxo)
                 if cachedUtxoStr.walletId == wallet.id {
-                    let utxoStr = Utxo(cachedUtxoStr.dict)
-                    updateUtxoArray(utxo: utxoStr)
+                    updateUtxoArray(utxo: cachedUtxoStr)
                 }
                 if i + 1 == cachedUtxos.count {
                     self.unlockedUtxos = self.unlockedUtxos.sorted {
@@ -292,44 +286,51 @@ class UTXOViewController: UIViewController, UITextFieldDelegate, UINavigationCon
             }
         }
     }
-        
-    private func promptToDonateChange(_ utxo: Utxo) {
+    
+    private func updateLabelNow(label: String, address: String) {
+        addNavBarSpinner()
+        let param: Set_Label_Param = .init(["label":label, "address": address])
+        Reducer.sharedInstance.makeCommand(command: .setlabel(param: param)) { [weak self] (response, errorMessage) in
+            guard let self = self else { return }
+            removeSpinner()
+            print("response: \(response)")
+            guard errorMessage == nil else {
+                showAlert(vc: self, title: "Error", message: errorMessage!)
+                return
+            }
             
-            DispatchQueue.main.async { [weak self] in
+            loadUnlockedUtxos()
+        }
+    }
+        
+    private func promptToEditLabel(_ utxo: Utxo) {
+        DispatchQueue.main.async { [weak self] in
+            guard let self = self else { return }
+            
+            let tit = "Edit label?"
+            let mess = "Labels are address based and stored by Bitcoin Core. If you reuse addresses this label will apply to multiple utxos."
+            let alert = UIAlertController(title: tit, message: mess, preferredStyle: .alert)
+            
+            let save = UIAlertAction(title: "Save", style: .default) { [weak self] alertAction in
                 guard let self = self else { return }
                 
-                let tit = "Donate toxic change?"
-                let mess = "Toxic change is best used as a donation to the developer."
+                guard let label = (alert.textFields![0] as UITextField).text else { return }
                 
-                let alert = UIAlertController(title: tit, message: mess, preferredStyle: .actionSheet)
-                
-                alert.addAction(UIAlertAction(title: "Donate", style: .default, handler: { [weak self] action in
-                    guard let self = self else { return }
-                    
-                    guard let donationAddress = Keys.donationAddress() else {
-                        return
-                    }
-                    
-                    self.depositAddress = donationAddress
-                    self.depositNow(utxo)
-                }))
-                
-                alert.addAction(UIAlertAction(title: "Cancel", style: .cancel, handler: { action in }))
-                alert.popoverPresentationController?.sourceView = self.view
-                self.present(alert, animated: true, completion: nil)
+                updateLabelNow(label: label, address: utxo.address!)
             }
+            
+            alert.addTextField { (textField) in
+                textField.placeholder = utxo.label ?? ""
+            }
+            alert.addAction(save)
+            alert.addAction(UIAlertAction(title: "Cancel", style: .cancel, handler: { action in }))
+            alert.popoverPresentationController?.sourceView = self.view
+            self.present(alert, animated: true, completion: nil)
+        }
     }
                 
     override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
         switch segue.identifier {
-            
-        case "goToLocked":
-            guard let vc = segue.destination as? LockedViewController else { fallthrough }
-            
-            vc.fxRate = fxRate
-            vc.isFiat = isFiat
-            vc.isBtc = isBtc
-            vc.isSats = isSats
             
         case "segueToSendFromUtxos":
             guard let vc = segue.destination as? CreateRawTxViewController else { fallthrough }
@@ -337,6 +338,15 @@ class UTXOViewController: UIViewController, UITextFieldDelegate, UINavigationCon
             vc.inputs = inputArray
             vc.utxoTotal = amountTotal
             vc.address = depositAddress ?? ""
+            vc.wallet = wallet
+            
+            if isBtc || isFiat {
+                vc.balanceDisplay = amountTotal.btcBalanceWithSpaces + " \\ \((amountTotal * fxRate!).fiatString)"
+            } else if isSats {
+                vc.balanceDisplay = amountTotal.sats + " \\ \((amountTotal * fxRate!).fiatString)"
+            }
+            
+            vc.availableBtcBalance = amountTotal.btc.replacingOccurrences(of: " ", with: "").doubleValue
             
         case "segueToBroadcasterFromUtxo":
             guard let vc = segue.destination as? VerifyTransactionViewController, let psbt = psbt else { fallthrough }
@@ -356,6 +366,41 @@ extension UTXOViewController: UTXOCellDelegate {
     func didTapToLock(_ utxo: Utxo) {
         lock(utxo)
     }
+    
+    func didTapToSpendUtxo(_ utxo: Utxo) {
+        print("did tap to spend utxo")
+        var utxo = utxo
+        utxo.isSelected = true
+        
+        amountTotal = utxo.amount!
+        let input:[String:Any] = ["txid": utxo.txid, "vout": utxo.vout, "sequence": 1]
+        inputArray.append(input)
+        
+        DispatchQueue.main.async { [weak self] in
+            guard let self = self else { return }
+            
+            self.performSegue(withIdentifier: "segueToSendFromUtxos", sender: self)
+        }
+    }
+    
+    func copyAddress(_ utxo: Utxo) {
+        UIPasteboard.general.string = utxo.address!
+        showAlert(vc: self, title: "", message: "Address copied ✓")
+    }
+    
+    func copyTxid(_ utxo: Utxo) {
+        UIPasteboard.general.string = utxo.txid
+        showAlert(vc: self, title: "", message: "Transaction ID copied ✓")
+    }
+    
+    func copyDesc(_ utxo: Utxo) {
+        UIPasteboard.general.string = utxo.desc!
+        showAlert(vc: self, title: "", message: "Descriptor copied ✓")
+    }
+    
+    func editLabel(_ utxo: Utxo) {
+        promptToEditLabel(utxo)
+    }
 }
 
 // Mark: UITableViewDataSource
@@ -365,7 +410,8 @@ extension UTXOViewController: UITableViewDataSource {
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         let cell = tableView.dequeueReusableCell(withIdentifier: UTXOCell.identifier, for: indexPath) as! UTXOCell
         let utxo = unlockedUtxos[indexPath.section]
-        cell.configure(utxo: utxo, isLocked: false, fxRate: fxRate, isSats: isSats, isBtc: isBtc, isFiat: isFiat, delegate: self)
+        guard let wallet = wallet else { return cell }
+        cell.configure(wallet: wallet, utxo: utxo, isLocked: false, fxRate: fxRate, isSats: isSats, isBtc: isBtc, isFiat: isFiat, delegate: self)
         return cell
     }
     

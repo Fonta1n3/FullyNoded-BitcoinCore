@@ -185,8 +185,6 @@ public let currencies:[[String:String]] = [
 ]
 
 public func isWalletRPC(command: BTC_CLI_COMMAND) -> Bool {
-    var boolToReturn = Bool()
-    
     switch command {
     case .listtransactions,
          .getbalance,
@@ -196,13 +194,12 @@ public func isWalletRPC(command: BTC_CLI_COMMAND) -> Bool {
          .importmulti,
          .importprivkey,
          .rescanblockchain,
-         //.fundrawtransaction,
+         .setlabel,
          .listunspent,
          .walletprocesspsbt,
          .gettransaction,
          .getaddressinfo,
          .bumpfee,
-         //.signrawtransactionwithwallet,
          .listaddressgroupings,
          .listlabels,
          .getaddressesbylabel,
@@ -216,14 +213,10 @@ public func isWalletRPC(command: BTC_CLI_COMMAND) -> Bool {
          .walletlock,
          .psbtbumpfee,
          .importdescriptors:
-         //.signmessage:
-        boolToReturn = true
-        
+        return true
     default:
-        boolToReturn = false
+        return false
     }
-    
-    return boolToReturn
 }
 
 public func shakeAlert(viewToShake: UIView) {

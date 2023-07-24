@@ -81,6 +81,19 @@ public struct Get_Balance_Param: CustomStringConvertible {
     }
 }
 
+public struct Set_Label_Param: CustomStringConvertible {
+    public var description: String {
+        return ""
+    }
+    let param:[String:Any]
+    
+    init(_ dict: [String:Any]) {
+        let address = dict["address"] as! String
+        let label = dict["label"] as! String
+        param = ["address":address,"label":label]
+    }
+}
+
 public struct Estimate_Smart_Fee_Param: CustomStringConvertible {
     public var description: String {
         return ""
