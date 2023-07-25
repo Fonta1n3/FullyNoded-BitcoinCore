@@ -50,14 +50,17 @@ class WalletDetailViewController: UIViewController, UITextFieldDelegate, UITable
         super.viewDidLoad()
         
         navigationController?.delegate = self
+        detailTable.sectionFooterHeight = UITableView.automaticDimension
+        detailTable.rowHeight = UITableView.automaticDimension
         detailTable.delegate = self
         detailTable.dataSource = self
+        
         addTapGesture()
         
         if (UIDevice.current.userInterfaceIdiom == .pad) {
           alertStyle = UIAlertController.Style.alert
         }
-        
+                
         load()
     }
     
@@ -720,9 +723,6 @@ class WalletDetailViewController: UIViewController, UITextFieldDelegate, UITable
     
     private func configureCell(_ cell: UITableViewCell) {
         cell.selectionStyle = .none
-//        cell.layer.cornerRadius = 8
-//        cell.layer.borderWidth = 0.5
-//        cell.layer.borderColor = UIColor.darkGray.cgColor
     }
     
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
@@ -791,20 +791,56 @@ class WalletDetailViewController: UIViewController, UITextFieldDelegate, UITable
         }
     }
     
+    func tableView(_ tableView: UITableView, heightForFooterInSection section: Int) -> CGFloat {
+        switch section {
+        case 1, 2:
+            return 110
+        default:
+            return 10
+        }
+    }
+    
+    func tableView(_ tableView: UITableView, viewForFooterInSection section: Int) -> UIView? {
+        let footer = UIView()
+        footer.backgroundColor = UIColor.clear
+        footer.frame = CGRect(x: 0, y: 0, width: view.frame.size.width - 32, height: 110)
+        
+        let textLabel = UILabel()
+        textLabel.textAlignment = .left
+        textLabel.font = UIFont.systemFont(ofSize: 15, weight: .regular)
+        textLabel.textColor = .tertiaryLabel
+        textLabel.frame = CGRect(x: 8, y: 0, width: view.frame.size.width - 32, height: 100)
+        textLabel.numberOfLines = 0
+        textLabel.lineBreakMode = .byWordWrapping
+        
+        if let section = Section(rawValue: section) {
+            switch section {
+            case .backupQr:
+                textLabel.text = "This QR is best used with Fully Noded. It includes your wallet label and the blockheight where the wallet was created. Only xpubs are included in the QR, signers must always be backed up seperately."
+                
+            case .walletExport:
+                textLabel.text = "This QR is designed for compatibilty with other wallets. It works with Sparrow, Blue Wallet, Passport, Seed Signer and many more. Only xpubs are included in the QR, signers must always be backed up seperately."
+                
+                
+            default:
+                break
+            }
+        }
+        textLabel.translatesAutoresizingMaskIntoConstraints = true
+        textLabel.sizeToFit()
+        footer.addSubview(textLabel)
+        footer.translatesAutoresizingMaskIntoConstraints = true
+        footer.sizeToFit()
+        return footer
+    }
+    
     func tableView(_ tableView: UITableView, viewForHeaderInSection section: Int) -> UIView? {
         let header = UIView()
         header.backgroundColor = UIColor.clear
         header.frame = CGRect(x: 0, y: 0, width: view.frame.size.width - 32, height: 30)
         
-//        let background = UIView()
-//        background.frame = CGRect(x: 0, y: header.frame.minY + 25, width: 35, height: 35)
-//        background.clipsToBounds = true
-//        background.layer.cornerRadius = 5
-//        background.center.y = header.center.y
-        
         let icon = UIImageView()
         icon.frame = CGRect(x: 0, y: 0, width: 25, height: 25)
-        //icon.tintColor = .white
         icon.contentMode = .scaleAspectFit
         
         let textLabel = UILabel()
