@@ -42,6 +42,7 @@
 		0A94C2392A57FAA0006653D7 /* 1024_clear.png in Resources */ = {isa = PBXBuildFile; fileRef = 0A94C2382A57FAA0006653D7 /* 1024_clear.png */; };
 		0A9FDC9126A84CE30050C4AE /* WalletTypes.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A9FDC9026A84CE30050C4AE /* WalletTypes.swift */; };
 		0AB0B694290C374F00A1C201 /* URKit in Frameworks */ = {isa = PBXBuildFile; productRef = 0AB0B693290C374F00A1C201 /* URKit */; };
+		0AB2021F2A69340300B9A53D /* Utxo.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0AB2021E2A69340300B9A53D /* Utxo.swift */; };
 		0AD9490A273C051B00AF83F5 /* ExternalFNWalletsViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0AD94909273C051B00AF83F5 /* ExternalFNWalletsViewController.swift */; };
 		0AE19ED725F4AC0D000F0AD4 /* WalletRecoveryViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0AE19ED625F4AC0D000F0AD4 /* WalletRecoveryViewController.swift */; };
 		0AF73250291DDFC4009F6296 /* BTC_Params.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0AF7324F291DDFC4009F6296 /* BTC_Params.swift */; };
@@ -193,6 +194,7 @@
 		0A94C2382A57FAA0006653D7 /* 1024_clear.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = 1024_clear.png; sourceTree = "<group>"; };
 		0A9834C526BC2E6700BAB74E /* CloudKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CloudKit.framework; path = System/Library/Frameworks/CloudKit.framework; sourceTree = SDKROOT; };
 		0A9FDC9026A84CE30050C4AE /* WalletTypes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WalletTypes.swift; sourceTree = "<group>"; };
+		0AB2021E2A69340300B9A53D /* Utxo.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Utxo.swift; sourceTree = "<group>"; };
 		0AD438842A41F7F90004F923 /* LibWally.xcframework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcframework; path = LibWally.xcframework; sourceTree = "<group>"; };
 		0AD94909273C051B00AF83F5 /* ExternalFNWalletsViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExternalFNWalletsViewController.swift; sourceTree = "<group>"; };
 		0AE19ED625F4AC0D000F0AD4 /* WalletRecoveryViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WalletRecoveryViewController.swift; sourceTree = "<group>"; };
@@ -348,6 +350,7 @@
 		0A643A1C274A4B8F007F4F44 /* FullyNoded */ = {
 			isa = PBXGroup;
 			children = (
+				D0E54DD425207A1C00BD859E /* UTXOs.swift */,
 				0A643A26274A542B007F4F44 /* Entities */,
 				D09A331224AC4C93009FA0B2 /* Descriptor.swift */,
 				D0C20EDF24A6EF3800C62AA4 /* Balances.swift */,
@@ -372,8 +375,8 @@
 				D039D3C723322F1300D1ED18 /* NodeStruct.swift */,
 				D00F851E2494A7CA008D7CD3 /* AuthKeysStruct.swift */,
 				D09F9E4D24B06A63006B588C /* SignerStruct.swift */,
-				D0E54DD425207A1C00BD859E /* UTXOs.swift */,
 				D09A330424A8C4F6009FA0B2 /* Wallet.swift */,
+				0AB2021E2A69340300B9A53D /* Utxo.swift */,
 			);
 			path = Entities;
 			sourceTree = "<group>";
@@ -997,6 +1000,7 @@
 				D09A330D24A9B10E009FA0B2 /* BIP39WordList.swift in Sources */,
 				D093E2A725A59B9C0038B59A /* TransactionStruct.swift in Sources */,
 				D0233F282361EA5F0041FFBA /* shim.swift in Sources */,
+				0AB2021F2A69340300B9A53D /* Utxo.swift in Sources */,
 				D0F3919424C0147400EA8A2A /* QRScannerViewController.swift in Sources */,
 				D05692E321434452006DF0F4 /* MainMenuViewController.swift in Sources */,
 				D07399D9245EEA5F00860B7E /* Broadcaster.swift in Sources */,
@@ -1246,7 +1250,7 @@
 				CODE_SIGN_ENTITLEMENTS = FullyNoded/FullyNoded.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 9;
+				CURRENT_PROJECT_VERSION = 3;
 				DEVELOPMENT_TEAM = 8JHDU5M9KD;
 				"ENABLE_HARDENED_RUNTIME[sdk=macosx*]" = YES;
 				FRAMEWORK_SEARCH_PATHS = (
@@ -1264,7 +1268,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0.2;
+				MARKETING_VERSION = 1.0.3;
 				PRODUCT_BUNDLE_IDENTIFIER = com.fontaine.FullyNodedBitcoinCore;
 				"PRODUCT_BUNDLE_IDENTIFIER[sdk=macosx*]" = com.fontaine.fullynodedmacos;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -1290,7 +1294,7 @@
 				CODE_SIGN_ENTITLEMENTS = FullyNoded/FullyNodedRelease.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 9;
+				CURRENT_PROJECT_VERSION = 3;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				DEVELOPMENT_TEAM = 8JHDU5M9KD;
 				"ENABLE_HARDENED_RUNTIME[sdk=macosx*]" = YES;
@@ -1310,7 +1314,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0.2;
+				MARKETING_VERSION = 1.0.3;
 				ONLY_ACTIVE_ARCH = YES;
 				PRODUCT_BUNDLE_IDENTIFIER = com.fontaine.FullyNodedBitcoinCore;
 				"PRODUCT_BUNDLE_IDENTIFIER[sdk=macosx*]" = com.fontaine.fullynodedmacos;

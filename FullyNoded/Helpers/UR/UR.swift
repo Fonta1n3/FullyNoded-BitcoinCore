@@ -59,26 +59,33 @@ class URHelper {
         return Data(bytes).base64EncodedString()
     }
     
-    static func parseUr(urString: String) -> (descriptors: [String]?, error: String?) {
+    static func parseUr(urString: String, completion: @escaping ((descriptors: [String]?, error: String?)) -> Void) {
         let lowercased = urString.lowercased()
         switch lowercased {
         case _ where lowercased.hasPrefix("ur:crypto-hdkey"):
-            return parseHdkey(urString: urString)
+            let (descriptors, error) = parseHdkey(urString: urString)
+            completion((descriptors, error))
             
         case _ where lowercased.hasPrefix("ur:crypto-account"):
-            return parseCryptoAccount(urString)
+            parseCryptoAccount(urString) { (descriptors, error) in
+                guard let descs = descriptors else {
+                    return
+                }
+                completion((descs, nil))
+            }
             
         case _ where lowercased.hasPrefix("ur:crypto-output"):
-            return parseCryptoOutput(urString)
+            let (descriptors, error) = parseCryptoOutput(urString)
+            completion((descriptors, error))
             
         case _ where lowercased.hasPrefix("ur:crypto-seed"):
-            guard let words = cryptoSeedToMnemonic(urString) else { return (nil, "Error deriving descriptors from cytpo-seed.") }
+            guard let words = cryptoSeedToMnemonic(urString) else { completion((nil, "Error deriving descriptors from cytpo-seed.")); return }
             
-            let (descriptors, errMess) = Keys.descriptorsFromSigner(words)
-            return (descriptors, errMess)
+            let (descriptors, error) = Keys.descriptorsFromSigner(words)
+            completion((descriptors, error))
         
         default:
-            return (nil, "Unsupported UR type. Please let us know about it on Twitter, Telegram or Github.")
+            completion((nil, "Unsupported UR type. Please let us know about it on Twitter, Telegram or Github."))
         }
     }
     
@@ -395,33 +402,41 @@ class URHelper {
         }
     }
     
-    static func parseCryptoAccount(_ urString: String) -> (descriptors: [String]?, error: String?) {
+    static func parseCryptoAccount(_ urString: String, completion: @escaping ((descriptors: [String]?, error: String?)) -> Void) {
         guard let ur = try? URDecoder.decode(urString.condenseWhitespace()),
               let decodedCbor = try? CBOR.decode(ur.cbor.bytes),
               case let CBOR.map(dict) = decodedCbor else {
             
-            return (nil, "Error decoding account UR.")
+            completion((nil, "Error decoding account UR."))
+            return
         }
         
-        var error:String?
         var xfp:String?
         var descriptorArray:[String] = []
-        var arrayToReturn:[String]?
         
         for (key, value) in dict {
-            
             switch key {
             case 1:
                 guard case let CBOR.unsignedInt(fingerprint) = value else {
-                    error = "Unable to decode the master key fingerprint."
-                    fallthrough
+                    completion((nil, "Unable to decode the master key fingerprint."))
+                    return
                 }
-                
                 xfp = String(Int(fingerprint), radix: 16)
+                
+                if descriptorArray.count > 0 {
+                    for (d, descriptor) in descriptorArray.enumerated() {
+                        let desc = descriptor.replacingOccurrences(of: "_xfp_", with: xfp!)
+                        descriptorArray[d] = desc
+                        
+                        if d + 1 == descriptorArray.count {
+                            completion((descriptorArray, nil))
+                        }
+                    }
+                }
                 
             case 2:
                 guard case let CBOR.array(accounts) = value else { fallthrough }
-                
+                                
                 for (i, elem) in accounts.enumerated() {
                     if case let CBOR.tagged(tag, taggedCbor) = elem {
                         switch tag.rawValue {
@@ -446,8 +461,11 @@ class URHelper {
                                 case 401:
                                     // sh(wsh())
                                     let (descArray, errorCheck) = parseSHWSHCbor(embeddedCbor: embeddedCbor)
-                                    arrayToReturn = descArray
-                                    error = errorCheck
+                                    if let error = errorCheck {
+                                        completion((nil, error))
+                                    } else {
+                                        completion((descArray, nil))
+                                    }
                                     
                                 default:
                                     break
@@ -457,8 +475,11 @@ class URHelper {
                         case 401:
                             // wsh()
                             let (descArray, errorCheck) = parseWSHCbor(taggedCbor: taggedCbor)
-                            arrayToReturn = descArray
-                            error = errorCheck
+                            if let error = errorCheck {
+                                completion((nil, error))
+                            } else {
+                                completion((descArray, nil))
+                            }
                             
                         case 403:
                             // pkh()
@@ -497,7 +518,7 @@ class URHelper {
                             descriptorArray[d] = desc
                             
                             if d + 1 == descriptorArray.count {
-                                arrayToReturn = descriptorArray
+                                completion((descriptorArray, nil))
                             }
                         }
                     }
@@ -506,8 +527,6 @@ class URHelper {
                 break
             }
         }
-                
-        return (arrayToReturn, error)
     }
         
     static func parseHdkey(urString: String) -> (descriptors: [String]?, error: String?) {

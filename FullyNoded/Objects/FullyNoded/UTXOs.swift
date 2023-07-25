@@ -24,12 +24,12 @@ public struct Utxo: CustomStringConvertible {
     let spendable: Bool?
     var isSelected: Bool
     let reused: Bool?
-    let capGain:String?
-    let originValue:String?
+    //let capGain:String?
+    //let originValue:String?
     let date: Date?
-    let txUUID: UUID?
-    let amountFiat: String?
-    let amountSats: String?
+    //let txUUID: UUID?
+//    let amountFiat: String?
+//    let amountSats: String?
     let dict: [String:Any]
     let frozen: Bool?
     let path: String?
@@ -50,12 +50,10 @@ public struct Utxo: CustomStringConvertible {
         safe = dictionary["safe"] as? Bool
         isSelected = dictionary["isSelected"] as? Bool ?? false
         reused = dictionary["reused"] as? Bool
-        capGain = dictionary["capGain"] as? String
-        originValue = dictionary["originValue"] as? String
+        //capGain = dictionary["capGain"] as? String
+        //originValue = dictionary["originValue"] as? String
         date = dictionary["date"] as? Date
-        txUUID = dictionary["txUUID"] as? UUID
-        amountFiat = dictionary["amountFiat"] as? String
-        amountSats = dictionary["amountSats"] as? String
+        //txUUID = dictionary["txUUID"] as? UUID
         frozen = dictionary["frozen"] as? Bool
         path = dictionary["path"] as? String
         value = dictionary["value"] as? Int

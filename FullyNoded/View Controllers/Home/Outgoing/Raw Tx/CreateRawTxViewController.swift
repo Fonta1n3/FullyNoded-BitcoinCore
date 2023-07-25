@@ -115,7 +115,6 @@ class CreateRawTxViewController: UIViewController, UITextFieldDelegate, UITableV
         addressInput.text = donationAddress
         let title = "Thank you!"
         
-        print("availableBtcBalance: \(availableBtcBalance)")
         if availableBtcBalance > 0.001 {
             DispatchQueue.main.async { [weak self] in
                 guard let self = self else { return }
@@ -286,9 +285,13 @@ class CreateRawTxViewController: UIViewController, UITextFieldDelegate, UITableV
             
             self.addAddress("\(address)")
             
+            UserDefaults.standard.set(wallet.name, forKey: "walletName")
+            
             OnchainUtils.getAddressInfo(address: address) { (addressInfo, message) in
                 guard let addressInfo = addressInfo else { return }
                 
+                UserDefaults.standard.set(self.wallet!.name, forKey: "walletName")
+                                
                 if addressInfo.solvable {
                     showAlert(vc: self, title: "Address verified ✓", message: "This address is verified to be owned by \(wallet.label).")
                 } else {
@@ -463,7 +466,7 @@ class CreateRawTxViewController: UIViewController, UITextFieldDelegate, UITableV
     
     override func viewDidAppear(_ animated: Bool) {
         if inputs.count > 0 {
-            showAlert(vc: self, title: "Coin control ✓", message: "Only the utxo's you have just selected will be used in this transaction. You may send the total balance of the *selected utxo's* by tapping the \"⚠️ send all\" button or enter a custom amount as normal.")
+            showAlert(vc: self, title: "Coin control ✓", message: "Only the utxo's you have just selected will be used in this transaction. You may send the total balance of the *selected utxo's* by tapping the \"sweep\" button or enter a custom amount as normal.")
         }
     }
     
@@ -626,7 +629,7 @@ class CreateRawTxViewController: UIViewController, UITextFieldDelegate, UITableV
             
             if self.inputs.count > 0 {
                 title = "⚠️ Send total balance from the selected utxo's?"
-                message = "You selected specific utxo's to sweep, this action will sweep \(self.utxoTotal) btc to the address you provide.\n\nIt is important to set a high fee as you may not use RBF if you sweep all your utxo's!"
+                message = "You selected specific utxo's to sweep, this action will sweep \(self.utxoTotal.btcBalanceWithSpaces) btc to \(addressInput.text!).\n\nIt is important to set a high fee as you may not use RBF if you sweep all your utxo's!"
             }
             
             let alert = UIAlertController(title: title, message: message, preferredStyle: .alert)

@@ -91,7 +91,7 @@ class BlindPsbt {
                                         var rule = true
                                         
                                         if strict {
-                                            rule = amountBtc == utxo.amount!
+                                            rule = amountBtc == utxo.amount
                                         } else {
                                             totalInputsAllowed = 2
                                         }

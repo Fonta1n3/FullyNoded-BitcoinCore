@@ -21,7 +21,7 @@ class FullyNodedWalletsViewController: UIViewController, UITableViewDelegate, UI
     var index = 0
     var existingActiveWalletName = ""
     var totalBtcBalance = 0.0
-    var fxRate = 0.0
+    var fxRate:Double?
     var bitcoinCoreWallets = [String]()
     let spinner = ConnectingView()
     var initialLoad = true
@@ -143,16 +143,23 @@ class FullyNodedWalletsViewController: UIViewController, UITableViewDelegate, UI
     }
     
     private func loadTotalBalance() {
+        guard wallets.count > 0 else { spinner.removeConnectingView(); return }
+        
         spinner.label.text = "getting total balance..."
         
-        FiatConverter.sharedInstance.getFxRate { [weak self] fxRate in
-            guard let self = self else { return }
+        guard let fxRate = fxRate else {
+            FiatConverter.sharedInstance.getFxRate { [weak self] fxRate in
+                guard let self = self else { return }
 
-            guard let fxRate = fxRate else { self.spinner.removeConnectingView();  self.getTotals(); return }
-            guard self.wallets.count > 0 else { self.spinner.removeConnectingView(); return }
-            self.fxRate = fxRate
-            self.getTotals()
+                guard let fxRate = fxRate else { spinner.removeConnectingView();  getTotals(); return }
+                guard self.wallets.count > 0 else { spinner.removeConnectingView(); return }
+                self.fxRate = fxRate
+                self.getTotals()
+            }
+            return
         }
+        
+        self.getTotals()
     }
     
     private func getTotals() {
@@ -192,17 +199,19 @@ class FullyNodedWalletsViewController: UIViewController, UITableViewDelegate, UI
                 
                 UserDefaults.standard.set(self.existingActiveWalletName, forKey: "walletName")
                 
-                let roundedFiat = self.totalBtcBalance * self.fxRate
-                
                 self.totalBalanceLabel.text = "\(self.totalBtcBalance.avoidNotation) btc"
                 self.totalBalanceLabel.alpha = 1
-                self.fxRateLabel.text = self.fxRate.exchangeRate
-                self.fxRateLabel.alpha = 1
-                self.balanceFiatLabel.text = roundedFiat.fiatString
-                self.balanceFiatLabel.alpha = 1
                 self.initialLoad = false
                 self.walletsTable.reloadData()
                 self.spinner.removeConnectingView()
+                
+                if let fxRate = fxRate {
+                    let roundedFiat = totalBtcBalance * fxRate
+                    self.fxRateLabel.text = fxRate.exchangeRate
+                    self.fxRateLabel.alpha = 1
+                    self.balanceFiatLabel.alpha = 1
+                    self.balanceFiatLabel.text = roundedFiat.fiatString
+                }
             }
         }
     }
@@ -238,7 +247,10 @@ class FullyNodedWalletsViewController: UIViewController, UITableViewDelegate, UI
         let wallet = wallets[indexPath.row]
         let btcBalance = (wallet["balance"] as? Double ?? 0.0)
         let walletStruct = Wallet(dictionary: wallet)
-        label.text = walletStruct.label + "\n\(btcBalance.btc) / \((btcBalance * fxRate).balanceTextWithSymbol)"
+        label.text = walletStruct.label + "\n\(btcBalance.btc)"
+        if let fxRate = fxRate {
+            label.text! += " | \((btcBalance * fxRate).balanceTextWithSymbol) "
+        }
         button.restorationIdentifier = "\(indexPath.row)"
         button.addTarget(self, action: #selector(goToDetail(_:)), for: .touchUpInside)
         if self.existingActiveWalletName == walletStruct.name {

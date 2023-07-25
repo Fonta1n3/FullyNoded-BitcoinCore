@@ -12,20 +12,14 @@ class LockedViewController: UIViewController {
     
     private var lockedUtxos = [Utxo]()
     let spinner = ConnectingView()
-    var selectedVout = Int()
-    var selectedTxid = ""
-    var fxRate:Double?
-    var isBtc = false
-    var isSats = false
-    var isFiat = false
     @IBOutlet var tableView: UITableView!
     
     override func viewDidLoad() {
         super.viewDidLoad()
         tableView.delegate = self
         tableView.dataSource = self
-        tableView.register(UINib(nibName: UTXOCell.identifier, bundle: nil), forCellReuseIdentifier: UTXOCell.identifier)
-        tableView.tableFooterView = UIView(frame: .zero)
+        //tableView.register(UINib(nibName: UTXOCell.identifier, bundle: nil), forCellReuseIdentifier: UTXOCell.identifier)
+        //tableView.tableFooterView = UIView(frame: .zero)
         spinner.addConnectingView(vc: self, description: "Getting Locked UTXO's")
     }
     
@@ -71,30 +65,7 @@ class LockedViewController: UIViewController {
                 self.lockedUtxos.append(utxoStruct)
             }
             
-            CoreDataService.retrieveEntity(entityName: .utxos) { savedLockedUtxos in
-                guard let savedLockedUtxos = savedLockedUtxos, savedLockedUtxos.count > 0 else {
-                    self.finishedLoading()
-                    return
-                }
-                
-                for savedLockedUtxo in savedLockedUtxos {
-                    let savedUtxoStruct = Utxo(savedLockedUtxo)
-                    let savedUtxoOutpoint = savedUtxoStruct.txid + "\(savedUtxoStruct.vout)"
-                    var isSaved = false
-                    
-                    for (i, utxo) in self.lockedUtxos.enumerated() {
-                        let outpoint = utxo.txid + "\(utxo.vout)"
-                        isSaved = outpoint == savedUtxoOutpoint
-                        
-                        if isSaved {
-                            self.lockedUtxos[i] = savedUtxoStruct
-                        }
-                    }
-                }
-                
-                self.lockedUtxos = self.lockedUtxos.sorted { $0.confs ?? 0 < $1.confs ?? 0 }
-                self.finishedLoading()
-            }
+            self.finishedLoading()
         }
     }
     
@@ -133,43 +104,35 @@ class LockedViewController: UIViewController {
             }
         }
     }
+    
+    @objc func unlockUtxo(_ sender: UIButton) {
+        guard let id = sender.restorationIdentifier, let section = Int(id) else { return }
+        
+        unlock(lockedUtxos[section])
+    }
+    
+    
 }
 
 // MARK: UTXOCellDelegate
 
-extension LockedViewController: UTXOCellDelegate {
-    
-    func didTapToLock(_ utxo: Utxo) {
-        unlock(utxo)
-    }
-    
-    func didTapToEditLabel(_ utxo: Utxo) {}
-    
-    func didTapToFetchOrigin(_ utxo: Utxo) {}
-    
-    func didTapToMix(_ utxo: Utxo) {}
-    
-    func didTapDonateChange(_ utxo: Utxo) {}
-    
-    func didTapFidelity(_ utxo: Utxo) {}
-    
-//    func didTapInfoFor(_ utxo: Utxo) {
-//        performSegue(withIdentifier: "getUTXOinfo", sender: utxo)
-//    }
-    
-}
+
 
 // Mark: UITableViewDataSource
 
 extension LockedViewController: UITableViewDataSource {
-    
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
-        
-        let cell = tableView.dequeueReusableCell(withIdentifier: UTXOCell.identifier, for: indexPath) as! UTXOCell
+        let cell = tableView.dequeueReusableCell(withIdentifier: "lockedCell", for: indexPath)
         let utxo = lockedUtxos[indexPath.section]
-        
-        cell.configure(utxo: utxo, isLocked: true, fxRate: fxRate, isSats: isSats, isBtc: isBtc, isFiat: isFiat, delegate: self)
-        
+        let voutLabel = cell.viewWithTag(2) as! UILabel
+        let txid = cell.viewWithTag(3) as! UILabel
+        let unlockButton = cell.viewWithTag(4) as! UIButton
+        unlockButton.restorationIdentifier = "\(indexPath.section)"
+        unlockButton.addTarget(self, action: #selector(unlockUtxo(_:)), for: .touchUpInside)
+        voutLabel.text = "vout \(utxo.vout)"
+        txid.text = utxo.txid
+        txid.translatesAutoresizingMaskIntoConstraints = true
+        txid.sizeToFit()
         return cell
     }
     
@@ -180,21 +143,12 @@ extension LockedViewController: UITableViewDataSource {
     func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
         return 1
     }
-    
 }
-
-// MarK: UITableViewDelegate
 
 extension LockedViewController: UITableViewDelegate {
-    
-    func tableView(_ tableView: UITableView, heightForHeaderInSection section: Int) -> CGFloat {
-        return 5 // Spacing between cells
+    func tableView(_ tableView: UITableView, heightForRowAt indexPath: IndexPath) -> CGFloat {
+        return UITableView.automaticDimension
     }
-    
-    func tableView(_ tableView: UITableView, viewForHeaderInSection section: Int) -> UIView? {
-        let headerView = UIView()
-        headerView.backgroundColor = .clear
-        return headerView
-    }
-    
 }
+
+

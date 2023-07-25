@@ -28,17 +28,23 @@ class CoreDataService {
             }
 
             let credential = NSManagedObject(entity: entity, insertInto: context)
-            var success = false
-
-            for (key, value) in dict {
-                credential.setValue(value, forKey: key)
-                do {
-                    try context.save()
-                    success = true
-                } catch {
-                }
+            credential.setValuesForKeys(dict)
+            do {
+                try context.save()
+                completion(true)
+            } catch {
+                completion(false)
             }
-            completion(success)
+            
+//            for (key, value) in dict {
+//                credential.setValue(value, forKey: key)
+//                do {
+//                    try context.save()
+//                    success = true
+//                } catch {
+//                }
+//            }
+            
         }
     }
     

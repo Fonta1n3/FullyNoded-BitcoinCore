@@ -170,7 +170,7 @@ class AddSignerViewController: UIViewController, UITextFieldDelegate, UINavigati
     
     private func updatePlaceHolder(wordNumber: Int) {
         DispatchQueue.main.async { [unowned vc = self] in
-            vc.textView.attributedPlaceholder = NSAttributedString(string: "add word #\(wordNumber)", attributes: [NSAttributedString.Key.foregroundColor: UIColor.lightGray])
+            vc.textView.attributedPlaceholder = NSAttributedString(string: "add word #\(wordNumber)", attributes: [NSAttributedString.Key.foregroundColor: UIColor.secondaryLabel])
         }
     }
     
@@ -240,7 +240,7 @@ class AddSignerViewController: UIViewController, UITextFieldDelegate, UINavigati
     }
     
     private func resetValues() {
-        textView.textColor = .white
+        textView.textColor = .none
         autoCompleteCharacterCount = 0
         textView.text = ""
     }
@@ -249,7 +249,7 @@ class AddSignerViewController: UIViewController, UITextFieldDelegate, UINavigati
         
         let userQuery = substring
         let suggestions = getAutocompleteSuggestions(userText: substring)
-        self.textView.textColor = .white
+        self.textView.textColor = .none
         
         if suggestions.count > 0 {
             timer = .scheduledTimer(withTimeInterval: 0.01, repeats: false, block: { (timer) in
@@ -264,7 +264,7 @@ class AddSignerViewController: UIViewController, UITextFieldDelegate, UINavigati
                 
                 if Keys.validMnemonic(vc.processedCharacters(vc.textView.text!)) {
                     vc.processTextfieldInput()
-                    vc.textView.textColor = .systemGreen
+                    vc.textView.textColor = .label
                     vc.validWordsAdded()
                 } else {
                     vc.textView.textColor = .systemRed
@@ -309,7 +309,7 @@ class AddSignerViewController: UIViewController, UITextFieldDelegate, UINavigati
     func putColorFormattedTextInTextField(autocompleteResult: String, userQuery : String) {
         let coloredString: NSMutableAttributedString = NSMutableAttributedString(string: userQuery + autocompleteResult)
         coloredString.addAttribute(NSAttributedString.Key.foregroundColor,
-                                   value: UIColor.systemGreen,
+                                   value: UIColor.label,
                                    range: NSRange(location: userQuery.count,length:autocompleteResult.count))
         self.textView.attributedText = coloredString
     }

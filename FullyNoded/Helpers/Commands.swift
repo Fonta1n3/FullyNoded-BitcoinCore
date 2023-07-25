@@ -67,9 +67,12 @@ public enum BTC_CLI_COMMAND {
     case testmempoolaccept(_ param: Test_Mempool_Accept)
     case psbtbumpfee(param: PSBT_Bump_Fee)
     case importdescriptors(param: Import_Descriptors)
+    case setlabel(param: Set_Label_Param)
     
     var stringValue:String {
         switch self {
+        case .setlabel:
+            return "setlabel"
         case .scantxoutset:
             return "scantxoutset"
         case .abortrescan:
@@ -195,6 +198,8 @@ public enum BTC_CLI_COMMAND {
     
     var paramDict:[String:Any] {
         switch self {
+        case .setlabel(param: let setLabel):
+            return setLabel.param
         case .getbalance(param: let getBalance):
             return getBalance.param
         case .createwallet(param: let createWallet):
@@ -259,6 +264,7 @@ public enum BTC_CLI_COMMAND {
     }
     
     static let all: [BTC_CLI_COMMAND] = [
+        setlabel(param: .init([:])),
         scantxoutset(.init([:])),
         abortrescan,
         listlockunspent,
