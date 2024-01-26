@@ -35,6 +35,7 @@ class NodeDetailViewController: UIViewController, UITextFieldDelegate, UINavigat
     @IBOutlet weak var addressHeaderOutlet: UILabel!
     @IBOutlet weak var showHostOutlet: UIBarButtonItem!
     @IBOutlet weak var exportNodeOutlet: UIBarButtonItem!
+    @IBOutlet weak var rpcAuthLabel: UILabel!
     
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -57,6 +58,41 @@ class NodeDetailViewController: UIViewController, UITextFieldDelegate, UINavigat
     private func hash(_ text: String) -> Data? {
         return Data(hexString: Crypto.sha256hash(text))
     }
+    
+    @IBAction func copyAuthAction(_ sender: Any) {
+        DispatchQueue.main.async { [weak self] in
+            guard let auth = self?.rpcAuthLabel.text  else { return }
+            UIPasteboard.general.string = auth
+            showAlert(vc: self, title: "", message: "Copied ✓")
+        }
+    }
+    
+    @IBAction func shareAuthAction(_ sender: Any) {
+        DispatchQueue.main.async { [weak self] in
+            guard let text = self?.rpcAuthLabel.text  else { return }
+            let textToShare = [ text ]
+            let activityViewController = UIActivityViewController(activityItems: textToShare, applicationActivities: nil)
+            activityViewController.popoverPresentationController?.sourceView = self?.view
+            self?.present(activityViewController, animated: true, completion: nil)
+        }
+    }
+    
+    @IBAction func refreshPasswordAction(_ sender: Any) {
+        guard let username = rpcUserField.text, username != "" else { 
+            showAlert(vc: self, title: "", message: "Add a username first.")
+            return
+        }
+        
+        guard let password = Crypto.secret() else { return }
+        
+        rpcPassword.text = password.urlSafeB64String
+        
+        guard let creds = RPCAuth().generateCreds(username: rpcUserField.text ?? "FullyNoded", password: rpcPassword.text) else { return }
+        rpcAuthLabel.text = creds.rpcAuth
+        
+        showAlert(vc: self, title: "Important!", message: "Your new password has not yet been saved, to save tap the save button.")
+    }
+    
     
     @IBAction func showGuideAction(_ sender: Any) {
         guard let url = URL(string: "https://github.com/Fonta1n3/FullyNoded/blob/master/Docs/Bitcoin-Core/Connect.md") else {
@@ -230,7 +266,11 @@ class NodeDetailViewController: UIViewController, UITextFieldDelegate, UINavigat
                     }
                     
                     if node.rpcpassword != nil {
-                        rpcPassword.text = decryptedValue(node.rpcpassword!)
+                        let decPass = decryptedValue(node.rpcpassword!)
+                        rpcPassword.text = decPass
+                        // show the rpcauth
+                        guard let creds = RPCAuth().generateCreds(username: rpcUserField.text ?? "Fully-Noded", password: decPass) else { return }
+                        rpcAuthLabel.text = creds.rpcAuth
                     }
                                     
                     if let enc = node.onionAddress {

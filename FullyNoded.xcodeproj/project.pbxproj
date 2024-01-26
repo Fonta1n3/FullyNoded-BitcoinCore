@@ -29,6 +29,7 @@
 		0A212D8D26C66B1800BF6FD4 /* DescriptorInfo.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A212D8C26C66B1800BF6FD4 /* DescriptorInfo.swift */; };
 		0A2B4D702716ABCB00B607EE /* SparrowWalletImport.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A2B4D6F2716ABCB00B607EE /* SparrowWalletImport.swift */; };
 		0A337D012700316E00AD087F /* WalletDir.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A337D002700316E00AD087F /* WalletDir.swift */; };
+		0A5371672B6010D900D82B12 /* RPCAuth.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A5371662B6010D900D82B12 /* RPCAuth.swift */; };
 		0A590357269875CD00510626 /* Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A590356269875CB00510626 /* Extensions.swift */; };
 		0A651ACF2A45D4D000540D23 /* 1024_fully noded logo.png in Resources */ = {isa = PBXBuildFile; fileRef = 0A651ACE2A45D4D000540D23 /* 1024_fully noded logo.png */; };
 		0A65326E2A58349E000F911A /* Launch Screen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 0A65326D2A58349E000F911A /* Launch Screen.storyboard */; };
@@ -183,6 +184,7 @@
 		0A212D8C26C66B1800BF6FD4 /* DescriptorInfo.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DescriptorInfo.swift; sourceTree = "<group>"; };
 		0A2B4D6F2716ABCB00B607EE /* SparrowWalletImport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SparrowWalletImport.swift; sourceTree = "<group>"; };
 		0A337D002700316E00AD087F /* WalletDir.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WalletDir.swift; sourceTree = "<group>"; };
+		0A5371662B6010D900D82B12 /* RPCAuth.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RPCAuth.swift; sourceTree = "<group>"; };
 		0A590356269875CB00510626 /* Extensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Extensions.swift; sourceTree = "<group>"; };
 		0A651ACE2A45D4D000540D23 /* 1024_fully noded logo.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = "1024_fully noded logo.png"; path = "FullyNoded/Assets.xcassets/AppIcon-6.appiconset/1024_fully noded logo.png"; sourceTree = SOURCE_ROOT; };
 		0A65326D2A58349E000F911A /* Launch Screen.storyboard */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; path = "Launch Screen.storyboard"; sourceTree = "<group>"; };
@@ -598,6 +600,7 @@
 				0A212D8A26C66A9600BF6FD4 /* OnchainUtils.swift */,
 				0A00D6A3271BE51600ECAB22 /* TextFileImport.swift */,
 				0A65326F2A5995AA000F911A /* Currencies.swift */,
+				0A5371662B6010D900D82B12 /* RPCAuth.swift */,
 			);
 			path = Helpers;
 			sourceTree = "<group>";
@@ -1003,6 +1006,7 @@
 				0AB2021F2A69340300B9A53D /* Utxo.swift in Sources */,
 				D0F3919424C0147400EA8A2A /* QRScannerViewController.swift in Sources */,
 				D05692E321434452006DF0F4 /* MainMenuViewController.swift in Sources */,
+				0A5371672B6010D900D82B12 /* RPCAuth.swift in Sources */,
 				D07399D9245EEA5F00860B7E /* Broadcaster.swift in Sources */,
 				0A9FDC9126A84CE30050C4AE /* WalletTypes.swift in Sources */,
 				D02FE43323136A600048F8C4 /* NodeLogic.swift in Sources */,

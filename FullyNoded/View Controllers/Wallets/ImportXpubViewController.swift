@@ -13,10 +13,12 @@ class ImportXpubViewController: UIViewController, UITextFieldDelegate {
     @IBOutlet weak var importOutlet: UIButton!
     @IBOutlet weak var labelField: UITextField!
     @IBOutlet weak var descriptorField: UILabel!
+    @IBOutlet weak var addressesField: UITextView!
     
     var spinner = ConnectingView()
     var onDoneBlock:(((Bool)) -> Void)?
     var descriptor = ""
+    var accountMap:[String:Any]?
 
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -30,6 +32,11 @@ class ImportXpubViewController: UIViewController, UITextFieldDelegate {
         view.addGestureRecognizer(tapGesture)
         labelField.removeGestureRecognizer(tapGesture)
         
+        if let accountMap = accountMap {
+            descriptor = accountMap["descriptor"] as! String
+            labelField.text = accountMap["label"] as? String ?? ""
+        }
+        addressesField.text = "loading..."
         addDescriptorToLabel(descriptor)
     }
     
@@ -55,7 +62,7 @@ class ImportXpubViewController: UIViewController, UITextFieldDelegate {
         
         spinner.addConnectingView(vc: self, description: "importing descriptor wallet, this can take a minute...")
         
-        let defaultLabel = "Descriptor import"
+        let defaultLabel = "Wallet import"
         
         var label = labelField.text ?? defaultLabel
         
@@ -63,9 +70,16 @@ class ImportXpubViewController: UIViewController, UITextFieldDelegate {
             label = defaultLabel
         }
         
-        let accountMap = ["descriptor": descriptor, "blockheight": 0, "watching": [] as [String], "label": label] as [String : Any]
+        var accountMap:[String:Any]?
         
-        ImportWallet.accountMap(accountMap) { [weak self] (success, errorDescription) in
+        if self.accountMap != nil {
+            accountMap = self.accountMap
+            accountMap!["label"] = label
+        } else {
+            accountMap = ["descriptor": descriptor, "blockheight": 0, "watching": [] as [String], "label": label] as [String : Any]
+        }
+                
+        ImportWallet.accountMap(accountMap!) { [weak self] (success, errorDescription) in
             guard let self = self else { return }
             
             if success {
@@ -84,6 +98,28 @@ class ImportXpubViewController: UIViewController, UITextFieldDelegate {
             descriptorField.text = descriptor
             descriptorField.translatesAutoresizingMaskIntoConstraints = true
             descriptorField.sizeToFit()
+            deriveAddresses()
+        }
+    }
+    
+    private func deriveAddresses() {
+        let param:Derive_Addresses = .init(["descriptor":descriptor, "range":[0,19]])
+        OnchainUtils.deriveAddresses(param: param) { (addresses, message) in
+            guard let addresses = addresses else { return }
+            
+            var addressText = ""
+            
+            for (i, address) in addresses.enumerated() {
+                addressText += "\(i): \(address)\n"
+                
+                if i + 1 == addresses.count {
+                    DispatchQueue.main.async { [weak self] in
+                        guard let self = self else { return }
+                        
+                        addressesField.text = addressText
+                    }
+                }
+            }
         }
     }
     

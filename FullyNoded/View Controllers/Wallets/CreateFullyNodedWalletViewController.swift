@@ -22,6 +22,7 @@ class CreateFullyNodedWalletViewController: UIViewController, UINavigationContro
     var descriptor = ""
     var isSegwit = false
     var isTaproot = false
+    var accountMap:[String:Any]?
     
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -60,10 +61,6 @@ class CreateFullyNodedWalletViewController: UIViewController, UINavigationContro
             return false
         }
     }
-    
-//    private func processPastedString(_ string: String) {
-//        processImportedString(string)
-//    }
     
     @IBAction func fileAction(_ sender: Any) {
         DispatchQueue.main.async { [unowned vc = self] in
@@ -447,18 +444,9 @@ class CreateFullyNodedWalletViewController: UIViewController, UINavigationContro
             if let _ = accountMap["descriptor"] as? String {
                 if (accountMap["blockheight"] as? Int) != nil || (accountMap["blockheight"] as? Int64) != nil {
                     /// It is an Account Map.
-                    ImportWallet.accountMap(accountMap) { (success, errorDescription) in
-                        if success {
-                            DispatchQueue.main.async {
-                                self.spinner.removeConnectingView()
-                                self.onDoneBlock!(true)
-                                self.navigationController?.popViewController(animated: true)
-                            }
-                        } else {
-                            self.spinner.removeConnectingView()
-                            showAlert(vc: self, title: "Error", message: "There was an error importing your wallet: \(errorDescription ?? "unknown")")
-                        }
-                    }
+                    self.accountMap = accountMap
+                    goImportDesc()
+                    
                 }
             } else if let _ = accountMap["ExtPubKey"] as? String {
                 spinner.removeConnectingView()
@@ -672,6 +660,7 @@ class CreateFullyNodedWalletViewController: UIViewController, UINavigationContro
             guard let vc = segue.destination as? ImportXpubViewController else { fallthrough }
             
             vc.descriptor = descriptor
+            vc.accountMap = accountMap
             
         default:
             break
