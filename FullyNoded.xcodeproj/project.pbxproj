@@ -47,7 +47,7 @@
 		0AD9490A273C051B00AF83F5 /* ExternalFNWalletsViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0AD94909273C051B00AF83F5 /* ExternalFNWalletsViewController.swift */; };
 		0AE19ED725F4AC0D000F0AD4 /* WalletRecoveryViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0AE19ED625F4AC0D000F0AD4 /* WalletRecoveryViewController.swift */; };
 		0AF73250291DDFC4009F6296 /* BTC_Params.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0AF7324F291DDFC4009F6296 /* BTC_Params.swift */; };
-		41E688C91FAFBAAEA80E7EA5 /* Pods_FullyNoded.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 99C03A1D137309B9595338F9 /* Pods_FullyNoded.framework */; };
+		72EC5504ECB15F0565727BEB /* Pods_FullyNoded.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F3A4DF2D06BE33B969923F57 /* Pods_FullyNoded.framework */; };
 		844D2A4B2512D4F60046372E /* UTXOCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = 844D2A492512D4F60046372E /* UTXOCell.swift */; };
 		844D2A4C2512D4F60046372E /* UTXOCell.xib in Resources */ = {isa = PBXBuildFile; fileRef = 844D2A4A2512D4F60046372E /* UTXOCell.xib */; };
 		D00B27BC255A27F300269B51 /* WalletURL.swift in Sources */ = {isa = PBXBuildFile; fileRef = D00B27BB255A27F300269B51 /* WalletURL.swift */; };
@@ -203,8 +203,7 @@
 		0AF7324F291DDFC4009F6296 /* BTC_Params.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BTC_Params.swift; sourceTree = "<group>"; };
 		844D2A492512D4F60046372E /* UTXOCell.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UTXOCell.swift; sourceTree = "<group>"; };
 		844D2A4A2512D4F60046372E /* UTXOCell.xib */ = {isa = PBXFileReference; lastKnownFileType = file.xib; path = UTXOCell.xib; sourceTree = "<group>"; };
-		8594AABAD27621360D547769 /* Pods-FullyNoded.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-FullyNoded.release.xcconfig"; path = "Target Support Files/Pods-FullyNoded/Pods-FullyNoded.release.xcconfig"; sourceTree = "<group>"; };
-		99C03A1D137309B9595338F9 /* Pods_FullyNoded.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_FullyNoded.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		8A13DADEBEFC95A7048108B4 /* Pods-FullyNoded.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-FullyNoded.debug.xcconfig"; path = "Target Support Files/Pods-FullyNoded/Pods-FullyNoded.debug.xcconfig"; sourceTree = "<group>"; };
 		A084FD782359F7B700DA63CF /* .gitignore */ = {isa = PBXFileReference; lastKnownFileType = text; path = .gitignore; sourceTree = "<group>"; };
 		D00B27BB255A27F300269B51 /* WalletURL.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WalletURL.swift; sourceTree = "<group>"; };
 		D00B9A242111427200E8B95A /* FullyNoded.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = FullyNoded.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -300,7 +299,8 @@
 		D0F3919124BFEBBB00EA8A2A /* QRDisplayerViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QRDisplayerViewController.swift; sourceTree = "<group>"; };
 		D0F3919324C0147400EA8A2A /* QRScannerViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QRScannerViewController.swift; sourceTree = "<group>"; };
 		D0F3919524C0379200EA8A2A /* ImportWallet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImportWallet.swift; sourceTree = "<group>"; };
-		F910007A79BF54B993DDCE8E /* Pods-FullyNoded.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-FullyNoded.debug.xcconfig"; path = "Target Support Files/Pods-FullyNoded/Pods-FullyNoded.debug.xcconfig"; sourceTree = "<group>"; };
+		F3A4DF2D06BE33B969923F57 /* Pods_FullyNoded.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_FullyNoded.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		F957407DBDBCFD1BD0446A8B /* Pods-FullyNoded.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-FullyNoded.release.xcconfig"; path = "Target Support Files/Pods-FullyNoded/Pods-FullyNoded.release.xcconfig"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -310,7 +310,7 @@
 			files = (
 				0AB0B694290C374F00A1C201 /* URKit in Frameworks */,
 				0A8850FF2A4201C10078A603 /* LibWally.xcframework in Frameworks */,
-				41E688C91FAFBAAEA80E7EA5 /* Pods_FullyNoded.framework in Frameworks */,
+				72EC5504ECB15F0565727BEB /* Pods_FullyNoded.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -428,8 +428,8 @@
 		B72FFE847BD98E322627D81C /* Pods */ = {
 			isa = PBXGroup;
 			children = (
-				F910007A79BF54B993DDCE8E /* Pods-FullyNoded.debug.xcconfig */,
-				8594AABAD27621360D547769 /* Pods-FullyNoded.release.xcconfig */,
+				8A13DADEBEFC95A7048108B4 /* Pods-FullyNoded.debug.xcconfig */,
+				F957407DBDBCFD1BD0446A8B /* Pods-FullyNoded.release.xcconfig */,
 			);
 			path = Pods;
 			sourceTree = "<group>";
@@ -731,7 +731,7 @@
 				0AD438842A41F7F90004F923 /* LibWally.xcframework */,
 				0A9834C526BC2E6700BAB74E /* CloudKit.framework */,
 				D026E5C7253A79DB001F1054 /* AuthenticationServices.framework */,
-				99C03A1D137309B9595338F9 /* Pods_FullyNoded.framework */,
+				F3A4DF2D06BE33B969923F57 /* Pods_FullyNoded.framework */,
 			);
 			name = Frameworks;
 			sourceTree = "<group>";
@@ -796,13 +796,13 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = D00B9A392111427200E8B95A /* Build configuration list for PBXNativeTarget "FullyNoded" */;
 			buildPhases = (
-				BFA9E37C4E781185DE7B6BB4 /* [CP] Check Pods Manifest.lock */,
+				D41065457C855A25ED7C230D /* [CP] Check Pods Manifest.lock */,
 				D00B9A202111427200E8B95A /* Sources */,
 				D00B9A212111427200E8B95A /* Frameworks */,
 				D00B9A222111427200E8B95A /* Resources */,
 				D08C1FBE2111480100B7CA79 /* ShellScript */,
 				D016AE4A25AFFCA400A59E93 /* Embed Frameworks */,
-				F765FFCE1E9A2780F5220095 /* [CP] Embed Pods Frameworks */,
+				42C3181288F441FFF1A5F0FF /* [CP] Embed Pods Frameworks */,
 			);
 			buildRules = (
 			);
@@ -924,7 +924,38 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXShellScriptBuildPhase section */
-		BFA9E37C4E781185DE7B6BB4 /* [CP] Check Pods Manifest.lock */ = {
+		42C3181288F441FFF1A5F0FF /* [CP] Embed Pods Frameworks */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputPaths = (
+				"${PODS_ROOT}/Target Support Files/Pods-FullyNoded/Pods-FullyNoded-frameworks.sh",
+				"${BUILT_PRODUCTS_DIR}/Tor/Tor.framework",
+			);
+			name = "[CP] Embed Pods Frameworks";
+			outputPaths = (
+				"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/Tor.framework",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-FullyNoded/Pods-FullyNoded-frameworks.sh\"\n";
+			showEnvVarsInLog = 0;
+		};
+		D08C1FBE2111480100B7CA79 /* ShellScript */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "\n";
+		};
+		D41065457C855A25ED7C230D /* [CP] Check Pods Manifest.lock */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -944,38 +975,6 @@
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
 			shellScript = "diff \"${PODS_PODFILE_DIR_PATH}/Podfile.lock\" \"${PODS_ROOT}/Manifest.lock\" > /dev/null\nif [ $? != 0 ] ; then\n    # print error to STDERR\n    echo \"error: The sandbox is not in sync with the Podfile.lock. Run 'pod install' or update your CocoaPods installation.\" >&2\n    exit 1\nfi\n# This output is used by Xcode 'outputs' to avoid re-running this script phase.\necho \"SUCCESS\" > \"${SCRIPT_OUTPUT_FILE_0}\"\n";
-			showEnvVarsInLog = 0;
-		};
-		D08C1FBE2111480100B7CA79 /* ShellScript */ = {
-			isa = PBXShellScriptBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			inputPaths = (
-			);
-			outputPaths = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = /bin/sh;
-			shellScript = "
-";
-		};
-		F765FFCE1E9A2780F5220095 /* [CP] Embed Pods Frameworks */ = {
-			isa = PBXShellScriptBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			inputPaths = (
-				"${PODS_ROOT}/Target Support Files/Pods-FullyNoded/Pods-FullyNoded-frameworks.sh",
-				"${BUILT_PRODUCTS_DIR}/Tor/Tor.framework",
-			);
-			name = "[CP] Embed Pods Frameworks";
-			outputPaths = (
-				"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/Tor.framework",
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = /bin/sh;
-			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-FullyNoded/Pods-FullyNoded-frameworks.sh\"\n";
 			showEnvVarsInLog = 0;
 		};
 /* End PBXShellScriptBuildPhase section */
@@ -1247,16 +1246,17 @@
 		};
 		D00B9A3A2111427200E8B95A /* Debug */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = F910007A79BF54B993DDCE8E /* Pods-FullyNoded.debug.xcconfig */;
+			baseConfigurationReference = 8A13DADEBEFC95A7048108B4 /* Pods-FullyNoded.debug.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_ENTITLEMENTS = FullyNoded/FullyNoded.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 2;
 				DEVELOPMENT_TEAM = 8JHDU5M9KD;
 				"ENABLE_HARDENED_RUNTIME[sdk=macosx*]" = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				FRAMEWORK_SEARCH_PATHS = (
 					"$(inherited)",
 					"$(LOCAL_LIBRARY_DIR)/Frameworks",
@@ -1291,18 +1291,19 @@
 		};
 		D00B9A3B2111427200E8B95A /* Release */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = 8594AABAD27621360D547769 /* Pods-FullyNoded.release.xcconfig */;
+			baseConfigurationReference = F957407DBDBCFD1BD0446A8B /* Pods-FullyNoded.release.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_ENTITLEMENTS = FullyNoded/FullyNodedRelease.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 2;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				DEVELOPMENT_TEAM = 8JHDU5M9KD;
 				"ENABLE_HARDENED_RUNTIME[sdk=macosx*]" = YES;
 				ENABLE_TESTABILITY = NO;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				FRAMEWORK_SEARCH_PATHS = (
 					"$(inherited)",
 					"$(LOCAL_LIBRARY_DIR)/Frameworks",
