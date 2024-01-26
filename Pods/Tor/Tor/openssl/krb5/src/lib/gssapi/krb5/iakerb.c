@@ -262,7 +262,6 @@ iakerb_make_token(iakerb_ctx_id_t ctx,
     /*
      * Assemble the IAKERB-HEADER from the realm and cookie
      */
-    memset(&iah, 0, sizeof(iah));
     iah.target_realm = *realm;
     iah.cookie = cookie;
 
@@ -330,7 +329,7 @@ iakerb_acceptor_step(iakerb_ctx_id_t ctx,
     krb5_data request = empty_data(), reply = empty_data();
     krb5_data realm = empty_data();
     OM_uint32 tmp;
-    int tcp_only, use_master;
+    int tcp_only, use_primary;
     krb5_ui_4 kdc_code;
 
     output_token->length = 0;
@@ -356,9 +355,9 @@ iakerb_acceptor_step(iakerb_ctx_id_t ctx,
         goto cleanup;
 
     for (tcp_only = 0; tcp_only <= 1; tcp_only++) {
-        use_master = 0;
+        use_primary = 0;
         code = krb5_sendto_kdc(ctx->k5c, &request, &realm,
-                               &reply, &use_master, tcp_only);
+                               &reply, &use_primary, tcp_only);
         if (code == 0 && krb5_is_krb_error(&reply)) {
             krb5_error *error;
 
@@ -817,8 +816,6 @@ iakerb_gss_accept_sec_context(OM_uint32 *minor_status,
         }
         if (src_name != NULL)
             *src_name = GSS_C_NO_NAME;
-        if (mech_type != NULL)
-            *mech_type = (gss_OID)gss_mech_iakerb;
         if (ret_flags != NULL)
             *ret_flags = 0;
         if (time_rec != NULL)
@@ -845,9 +842,10 @@ iakerb_gss_accept_sec_context(OM_uint32 *minor_status,
                                                        &exts);
         if (major_status == GSS_S_COMPLETE)
             ctx->established = 1;
-        if (mech_type != NULL)
-            *mech_type = (gss_OID)gss_mech_krb5;
     }
+
+    if (mech_type != NULL)
+        *mech_type = gss_mech_iakerb;
 
 cleanup:
     if (initialContextToken && GSS_ERROR(major_status)) {
@@ -971,17 +969,16 @@ iakerb_gss_init_sec_context(OM_uint32 *minor_status,
                                                      &exts);
         if (major_status == GSS_S_COMPLETE)
             ctx->established = 1;
-        if (actual_mech_type != NULL)
-            *actual_mech_type = (gss_OID)gss_mech_krb5;
     } else {
-        if (actual_mech_type != NULL)
-            *actual_mech_type = (gss_OID)gss_mech_iakerb;
         if (ret_flags != NULL)
             *ret_flags = 0;
         if (time_rec != NULL)
             *time_rec = 0;
         major_status = GSS_S_CONTINUE_NEEDED;
     }
+
+    if (actual_mech_type != NULL)
+        *actual_mech_type = gss_mech_iakerb;
 
 cleanup:
     if (cred_locked)

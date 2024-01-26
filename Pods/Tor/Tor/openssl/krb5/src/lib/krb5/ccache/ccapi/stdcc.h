@@ -35,7 +35,7 @@ typedef struct _stdccCacheData {
 } stdccCacheData, *stdccCacheDataPtr;
 
 
-/* function protoypes  */
+/* function prototypes  */
 
 void krb5_stdcc_shutdown(void);
 
@@ -101,10 +101,6 @@ krb5_error_code KRB5_CALLCONV krb5_stdccv3_ptcursor_next
 
 krb5_error_code KRB5_CALLCONV krb5_stdccv3_ptcursor_free
 (krb5_context context, krb5_cc_ptcursor *cursor);
-
-krb5_error_code KRB5_CALLCONV krb5_stdccv3_last_change_time
-(krb5_context context, krb5_ccache id,
- krb5_timestamp *change_time);
 
 krb5_error_code KRB5_CALLCONV krb5_stdccv3_lock
 (krb5_context, krb5_ccache id);

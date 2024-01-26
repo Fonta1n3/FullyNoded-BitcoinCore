@@ -10,9 +10,9 @@ import pytest
 from cryptography import utils
 
 
-class TestCachedProperty(object):
+class TestCachedProperty:
     def test_simple(self):
-        class T(object):
+        class T:
             @utils.cached_property
             def t(self):
                 accesses.append(None)
@@ -34,7 +34,7 @@ class TestCachedProperty(object):
         assert len(accesses) == 2
 
     def test_set(self):
-        class T(object):
+        class T:
             @utils.cached_property
             def t(self):
                 accesses.append(None)
@@ -56,9 +56,9 @@ class TestCachedProperty(object):
 
 def test_enum():
     class TestEnum(utils.Enum):
-        value = "something"
+        something = "something"
 
     assert issubclass(TestEnum, enum.Enum)
-    assert isinstance(TestEnum.value, enum.Enum)
-    assert repr(TestEnum.value) == "<TestEnum.value: 'something'>"
-    assert str(TestEnum.value) == "TestEnum.value"
+    assert isinstance(TestEnum.something, enum.Enum)
+    assert repr(TestEnum.something) == "<TestEnum.something: 'something'>"
+    assert str(TestEnum.something) == "TestEnum.something"

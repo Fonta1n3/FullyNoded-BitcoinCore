@@ -9,8 +9,7 @@ the set of built-in mechanisms.
 
 A mechanism module is a Unix shared object or Windows DLL, built
 separately from the krb5 tree.  Modules are loaded according to the
-``/etc/gss/mech`` or ``/etc/gss/mech.d/*.conf`` config files, as
-described in :ref:`gssapi_plugin_config`.
+GSS mechanism config files described in :ref:`gssapi_plugin_config`.
 
 For the most part, a GSSAPI mechanism module exports the same
 functions as would a GSSAPI implementation itself, with the same
@@ -32,6 +31,31 @@ the mechanism's status codes onto unique values, and then map them
 back again when **gss_display_status** is called.
 
 
+NegoEx modules
+--------------
+
+Some Windows GSSAPI mechanisms can only be negotiated via a Microsoft
+extension to SPNEGO called NegoEx.  Beginning with release 1.18,
+mechanism modules can support NegoEx as follows:
+
+* Implement the gssspi_query_meta_data(), gssspi_exchange_meta_data(),
+  and gssspi_query_mechanism_info() SPIs declared in
+  ``<gssapi/gssapi_ext.h>``.
+
+* Implement gss_inquire_sec_context_by_oid() and answer the
+  **GSS_C_INQ_NEGOEX_KEY** and **GSS_C_INQ_NEGOEX_VERIFY_KEY** OIDs
+  to provide the checksum keys for outgoing and incoming checksums,
+  respectively.  The answer must be in two buffers: the first buffer
+  contains the key contents, and the second buffer contains the key
+  encryption type as a four-byte little-endian integer.
+
+By default, NegoEx mechanisms will not be directly negotiated via
+SPNEGO.  If direct SPNEGO negotiation is required for
+interoperability, implement gss_inquire_attrs_for_mech() and assert
+the GSS_C_MA_NEGOEX_AND_SPNEGO attribute (along with any applicable
+RFC 5587 attributes).
+
+
 Interposer modules
 ------------------
 
@@ -45,10 +69,10 @@ with the following signature::
     gss_OID_set gss_mech_interposer(gss_OID mech_type);
 
 This function is invoked with the OID of the interposer mechanism as
-specified in ``/etc/gss/mech`` or in a ``/etc/gss/mech.d/*.conf``
-file, and returns a set of mechanism OIDs to be interposed.  The
-returned OID set must have been created using the mechglue's
-gss_create_empty_oid_set and gss_add_oid_set_member functions.
+specified in the mechanism config file, and returns a set of mechanism
+OIDs to be interposed.  The returned OID set must have been created
+using the mechglue's gss_create_empty_oid_set and
+gss_add_oid_set_member functions.
 
 An interposer module must use the prefix ``gssi_`` for the GSSAPI
 functions it exports, instead of the prefix ``gss_``.

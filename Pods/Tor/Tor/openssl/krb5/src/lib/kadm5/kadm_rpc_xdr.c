@@ -244,7 +244,7 @@ static bool_t xdr_krb5_boolean(XDR *xdrs, krb5_boolean *kbool)
 bool_t xdr_krb5_key_data_nocontents(XDR *xdrs, krb5_key_data *objp)
 {
      /*
-      * Note that this function intentionally DOES NOT tranfer key
+      * Note that this function intentionally DOES NOT transfer key
       * length or contents!  xdr_krb5_key_data in adb_xdr.c does, but
       * that is only for use within the server-side library.
       */
@@ -711,25 +711,6 @@ xdr_chpass3_arg(XDR *xdrs, chpass3_arg *objp)
 }
 
 bool_t
-xdr_setv4key_arg(XDR *xdrs, setv4key_arg *objp)
-{
-	unsigned int n_keys = 1;
-
-	if (!xdr_ui_4(xdrs, &objp->api_version)) {
-		return (FALSE);
-	}
-	if (!xdr_krb5_principal(xdrs, &objp->princ)) {
-		return (FALSE);
-	}
-	if (!xdr_array(xdrs, (caddr_t *) &objp->keyblock,
-		       &n_keys, ~0,
-		       sizeof(krb5_keyblock), xdr_krb5_keyblock)) {
-		return (FALSE);
-	}
-	return (TRUE);
-}
-
-bool_t
 xdr_setkey_arg(XDR *xdrs, setkey_arg *objp)
 {
 	if (!xdr_ui_4(xdrs, &objp->api_version)) {
@@ -1128,16 +1109,6 @@ xdr_krb5_octet(XDR *xdrs, krb5_octet *objp)
 bool_t
 xdr_krb5_enctype(XDR *xdrs, krb5_enctype *objp)
 {
-   /*
-    * This used to be xdr_krb5_keytype, but keytypes and enctypes have
-    * been merged into only enctypes.  However, randkey_principal
-    * already ensures that only a key of ENCTYPE_DES_CBC_CRC will be
-    * returned to v1 clients, and ENCTYPE_DES_CBC_CRC has the same
-    * value as KEYTYPE_DES used too, which is what all v1 clients
-    * expect.  Therefore, IMHO, just encoding whatever enctype we get
-    * is safe.
-    */
-
    if (!xdr_int32(xdrs, (int32_t *) objp))
 	return (FALSE);
    return (TRUE);
@@ -1154,14 +1125,16 @@ xdr_krb5_salttype(XDR *xdrs, krb5_int32 *objp)
 bool_t
 xdr_krb5_keyblock(XDR *xdrs, krb5_keyblock *objp)
 {
+   char *cp;
+
    /* XXX This only works because free_keyblock assumes ->contents
       is allocated by malloc() */
-
    if(!xdr_krb5_enctype(xdrs, &objp->enctype))
       return FALSE;
-   if(!xdr_bytes(xdrs, (char **) &objp->contents, (unsigned int *)
-		 &objp->length, ~0))
+   cp = (char *)objp->contents;
+   if(!xdr_bytes(xdrs, &cp, &objp->length, ~0))
       return FALSE;
+   objp->contents = (uint8_t *)cp;
    return TRUE;
 }
 

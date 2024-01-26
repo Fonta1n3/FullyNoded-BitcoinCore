@@ -11,30 +11,34 @@ import pytest
 from cryptography import x509
 from cryptography.exceptions import _Reasons
 from cryptography.hazmat.primitives import hashes, serialization
-from cryptography.hazmat.primitives.asymmetric import ed25519
+from cryptography.hazmat.primitives.asymmetric import ed25519, rsa
 from cryptography.hazmat.primitives.serialization import pkcs7
 
 from ...utils import load_vectors_from_file, raises_unsupported_algorithm
 
 
-class TestPKCS7Loading(object):
-    def test_load_invalid_der_pkcs7(self):
+@pytest.mark.supported(
+    only_if=lambda backend: backend.pkcs7_supported(),
+    skip_message="Requires OpenSSL with PKCS7 support",
+)
+class TestPKCS7Loading:
+    def test_load_invalid_der_pkcs7(self, backend):
         with pytest.raises(ValueError):
             pkcs7.load_der_pkcs7_certificates(b"nonsense")
 
-    def test_load_invalid_pem_pkcs7(self):
+    def test_load_invalid_pem_pkcs7(self, backend):
         with pytest.raises(ValueError):
             pkcs7.load_pem_pkcs7_certificates(b"nonsense")
 
-    def test_not_bytes_der(self):
+    def test_not_bytes_der(self, backend):
         with pytest.raises(TypeError):
             pkcs7.load_der_pkcs7_certificates(38)  # type: ignore[arg-type]
 
-    def test_not_bytes_pem(self):
+    def test_not_bytes_pem(self, backend):
         with pytest.raises(TypeError):
             pkcs7.load_pem_pkcs7_certificates(38)  # type: ignore[arg-type]
 
-    def test_load_pkcs7_pem(self):
+    def test_load_pkcs7_pem(self, backend):
         certs = load_vectors_from_file(
             os.path.join("pkcs7", "isrg.pem"),
             lambda pemfile: pkcs7.load_pem_pkcs7_certificates(pemfile.read()),
@@ -45,9 +49,16 @@ class TestPKCS7Loading(object):
             x509.oid.NameOID.COMMON_NAME
         ) == [x509.NameAttribute(x509.oid.NameOID.COMMON_NAME, "ISRG Root X1")]
 
-    def test_load_pkcs7_der(self):
-        certs = load_vectors_from_file(
+    @pytest.mark.parametrize(
+        "filepath",
+        [
+            os.path.join("pkcs7", "amazon-roots.der"),
             os.path.join("pkcs7", "amazon-roots.p7b"),
+        ],
+    )
+    def test_load_pkcs7_der(self, filepath, backend):
+        certs = load_vectors_from_file(
+            filepath,
             lambda derfile: pkcs7.load_der_pkcs7_certificates(derfile.read()),
             mode="rb",
         )
@@ -67,7 +78,7 @@ class TestPKCS7Loading(object):
             )
         ]
 
-    def test_load_pkcs7_unsupported_type(self):
+    def test_load_pkcs7_unsupported_type(self, backend):
         with raises_unsupported_algorithm(_Reasons.UNSUPPORTED_SERIALIZATION):
             load_vectors_from_file(
                 os.path.join("pkcs7", "enveloped.pem"),
@@ -147,23 +158,27 @@ def _load_cert_key():
     return cert, key
 
 
-class TestPKCS7Builder(object):
-    def test_invalid_data(self):
+@pytest.mark.supported(
+    only_if=lambda backend: backend.pkcs7_supported(),
+    skip_message="Requires OpenSSL with PKCS7 support",
+)
+class TestPKCS7Builder:
+    def test_invalid_data(self, backend):
         builder = pkcs7.PKCS7SignatureBuilder()
         with pytest.raises(TypeError):
             builder.set_data("not bytes")  # type: ignore[arg-type]
 
-    def test_set_data_twice(self):
+    def test_set_data_twice(self, backend):
         builder = pkcs7.PKCS7SignatureBuilder().set_data(b"test")
         with pytest.raises(ValueError):
             builder.set_data(b"test")
 
-    def test_sign_no_signer(self):
+    def test_sign_no_signer(self, backend):
         builder = pkcs7.PKCS7SignatureBuilder().set_data(b"test")
         with pytest.raises(ValueError):
             builder.sign(serialization.Encoding.SMIME, [])
 
-    def test_sign_no_data(self):
+    def test_sign_no_data(self, backend):
         cert, key = _load_cert_key()
         builder = pkcs7.PKCS7SignatureBuilder().add_signer(
             cert, key, hashes.SHA256()
@@ -171,14 +186,14 @@ class TestPKCS7Builder(object):
         with pytest.raises(ValueError):
             builder.sign(serialization.Encoding.SMIME, [])
 
-    def test_unsupported_hash_alg(self):
+    def test_unsupported_hash_alg(self, backend):
         cert, key = _load_cert_key()
         with pytest.raises(TypeError):
             pkcs7.PKCS7SignatureBuilder().add_signer(
                 cert, key, hashes.SHA512_256()  # type: ignore[arg-type]
             )
 
-    def test_not_a_cert(self):
+    def test_not_a_cert(self, backend):
         cert, key = _load_cert_key()
         with pytest.raises(TypeError):
             pkcs7.PKCS7SignatureBuilder().add_signer(
@@ -197,7 +212,7 @@ class TestPKCS7Builder(object):
                 cert, key, hashes.SHA256()  # type: ignore[arg-type]
             )
 
-    def test_sign_invalid_options(self):
+    def test_sign_invalid_options(self, backend):
         cert, key = _load_cert_key()
         builder = (
             pkcs7.PKCS7SignatureBuilder()
@@ -210,7 +225,7 @@ class TestPKCS7Builder(object):
                 [b"invalid"],  # type: ignore[list-item]
             )
 
-    def test_sign_invalid_encoding(self):
+    def test_sign_invalid_encoding(self, backend):
         cert, key = _load_cert_key()
         builder = (
             pkcs7.PKCS7SignatureBuilder()
@@ -220,7 +235,7 @@ class TestPKCS7Builder(object):
         with pytest.raises(ValueError):
             builder.sign(serialization.Encoding.Raw, [])
 
-    def test_sign_invalid_options_text_no_detached(self):
+    def test_sign_invalid_options_text_no_detached(self, backend):
         cert, key = _load_cert_key()
         builder = (
             pkcs7.PKCS7SignatureBuilder()
@@ -231,7 +246,7 @@ class TestPKCS7Builder(object):
         with pytest.raises(ValueError):
             builder.sign(serialization.Encoding.SMIME, options)
 
-    def test_sign_invalid_options_text_der_encoding(self):
+    def test_sign_invalid_options_text_der_encoding(self, backend):
         cert, key = _load_cert_key()
         builder = (
             pkcs7.PKCS7SignatureBuilder()
@@ -245,7 +260,7 @@ class TestPKCS7Builder(object):
         with pytest.raises(ValueError):
             builder.sign(serialization.Encoding.DER, options)
 
-    def test_sign_invalid_options_no_attrs_and_no_caps(self):
+    def test_sign_invalid_options_no_attrs_and_no_caps(self, backend):
         cert, key = _load_cert_key()
         builder = (
             pkcs7.PKCS7SignatureBuilder()
@@ -293,7 +308,7 @@ class TestPKCS7Builder(object):
             backend,
         )
 
-    def test_sign_byteslike(self):
+    def test_sign_byteslike(self, backend):
         data = bytearray(b"hello world")
         cert, key = _load_cert_key()
         options = [pkcs7.PKCS7Options.DetachedSignature]
@@ -329,7 +344,6 @@ class TestPKCS7Builder(object):
     @pytest.mark.parametrize(
         ("hash_alg", "expected_value"),
         [
-            (hashes.SHA1(), b"\x06\x05+\x0e\x03\x02\x1a"),
             (hashes.SHA256(), b"\x06\t`\x86H\x01e\x03\x04\x02\x01"),
             (hashes.SHA384(), b"\x06\t`\x86H\x01e\x03\x04\x02\x02"),
             (hashes.SHA512(), b"\x06\t`\x86H\x01e\x03\x04\x02\x03"),
@@ -338,9 +352,6 @@ class TestPKCS7Builder(object):
     def test_sign_alternate_digests_der(
         self, hash_alg, expected_value, backend
     ):
-        if isinstance(hash_alg, hashes.SHA1) and backend._fips_enabled:
-            pytest.skip("SHA1 not supported in FIPS mode")
-
         data = b"hello world"
         cert, key = _load_cert_key()
         builder = (
@@ -358,7 +369,6 @@ class TestPKCS7Builder(object):
     @pytest.mark.parametrize(
         ("hash_alg", "expected_value"),
         [
-            (hashes.SHA1(), b"sha1"),
             (hashes.SHA256(), b"sha-256"),
             (hashes.SHA384(), b"sha-384"),
             (hashes.SHA512(), b"sha-512"),
@@ -367,9 +377,6 @@ class TestPKCS7Builder(object):
     def test_sign_alternate_digests_detached(
         self, hash_alg, expected_value, backend
     ):
-        if isinstance(hash_alg, hashes.SHA1) and backend._fips_enabled:
-            pytest.skip("SHA1 not supported in FIPS mode")
-
         data = b"hello world"
         cert, key = _load_cert_key()
         builder = (
@@ -578,6 +585,7 @@ class TestPKCS7Builder(object):
             ),
             mode="rb",
         )
+        assert isinstance(rsa_key, rsa.RSAPrivateKey)
         rsa_cert = load_vectors_from_file(
             os.path.join("x509", "custom", "ca", "rsa_ca.pem"),
             loader=lambda pemfile: x509.load_pem_x509_certificate(
@@ -621,6 +629,7 @@ class TestPKCS7Builder(object):
             ),
             mode="rb",
         )
+        assert isinstance(rsa_key, rsa.RSAPrivateKey)
         builder = (
             pkcs7.PKCS7SignatureBuilder()
             .set_data(data)
@@ -691,3 +700,78 @@ class TestPKCS7Builder(object):
         assert (
             sig.count(rsa_cert.public_bytes(serialization.Encoding.DER)) == 2
         )
+
+
+@pytest.mark.supported(
+    only_if=lambda backend: backend.pkcs7_supported(),
+    skip_message="Requires OpenSSL with PKCS7 support",
+)
+class TestPKCS7SerializeCerts:
+    @pytest.mark.parametrize(
+        ("encoding", "loader"),
+        [
+            (serialization.Encoding.PEM, pkcs7.load_pem_pkcs7_certificates),
+            (serialization.Encoding.DER, pkcs7.load_der_pkcs7_certificates),
+        ],
+    )
+    def test_roundtrip(self, encoding, loader, backend):
+        certs = load_vectors_from_file(
+            os.path.join("pkcs7", "amazon-roots.der"),
+            lambda derfile: pkcs7.load_der_pkcs7_certificates(derfile.read()),
+            mode="rb",
+        )
+        p7 = pkcs7.serialize_certificates(certs, encoding)
+        certs2 = loader(p7)
+        assert certs == certs2
+
+    def test_ordering(self, backend):
+        certs = load_vectors_from_file(
+            os.path.join("pkcs7", "amazon-roots.der"),
+            lambda derfile: pkcs7.load_der_pkcs7_certificates(derfile.read()),
+            mode="rb",
+        )
+        p7 = pkcs7.serialize_certificates(
+            list(reversed(certs)), serialization.Encoding.DER
+        )
+        certs2 = pkcs7.load_der_pkcs7_certificates(p7)
+        assert certs == certs2
+
+    def test_pem_matches_vector(self, backend):
+        p7_pem = load_vectors_from_file(
+            os.path.join("pkcs7", "isrg.pem"),
+            lambda p: p.read(),
+            mode="rb",
+        )
+        certs = pkcs7.load_pem_pkcs7_certificates(p7_pem)
+        p7 = pkcs7.serialize_certificates(certs, serialization.Encoding.PEM)
+        assert p7 == p7_pem
+
+    def test_der_matches_vector(self, backend):
+        p7_der = load_vectors_from_file(
+            os.path.join("pkcs7", "amazon-roots.der"),
+            lambda p: p.read(),
+            mode="rb",
+        )
+        certs = pkcs7.load_der_pkcs7_certificates(p7_der)
+        p7 = pkcs7.serialize_certificates(certs, serialization.Encoding.DER)
+        assert p7 == p7_der
+
+    def test_invalid_types(self):
+        certs = load_vectors_from_file(
+            os.path.join("pkcs7", "amazon-roots.der"),
+            lambda derfile: pkcs7.load_der_pkcs7_certificates(derfile.read()),
+            mode="rb",
+        )
+        with pytest.raises(TypeError):
+            pkcs7.serialize_certificates(
+                "not a list of certs",  # type: ignore[arg-type]
+                serialization.Encoding.PEM,
+            )
+
+        with pytest.raises(TypeError):
+            pkcs7.serialize_certificates([], serialization.Encoding.PEM)
+
+        with pytest.raises(TypeError):
+            pkcs7.serialize_certificates(
+                certs, "not an encoding"  # type: ignore[arg-type]
+            )

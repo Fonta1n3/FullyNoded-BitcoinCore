@@ -4,10 +4,25 @@
 
 
 INCLUDES = """
-/* define our OpenSSL API compatibility level to 1.0.1. Any symbols older than
-   that will raise an error during compilation. We can raise this number again
-   after we drop 1.0.2 support in the distant future.  */
-#define OPENSSL_API_COMPAT 0x10001000L
+/* define our OpenSSL API compatibility level to 1.1.0. Any symbols older than
+   that will raise an error during compilation. */
+#define OPENSSL_API_COMPAT 0x10100000L
+
+#if defined(_WIN32)
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
+#include <Wincrypt.h>
+#include <Winsock2.h>
+/*
+    undef some macros that are defined by wincrypt.h but are also types in
+    boringssl. openssl has worked around this but boring has not yet. see:
+    https://chromium.googlesource.com/chromium/src/+/refs/heads/main/base
+    /win/wincrypt_shim.h
+*/
+#undef X509_NAME
+#undef X509_EXTENSIONS
+#undef PKCS7_SIGNER_INFO
+#endif
 
 #include <openssl/opensslv.h>
 
@@ -18,67 +33,61 @@ INCLUDES = """
 #define CRYPTOGRAPHY_IS_LIBRESSL 0
 #endif
 
-/*
-    LibreSSL removed e_os2.h from the public headers so we'll only include it
-    if we're using vanilla OpenSSL.
-*/
-#if !CRYPTOGRAPHY_IS_LIBRESSL
-#include <openssl/e_os2.h>
-#endif
-#if defined(_WIN32)
-#define WIN32_LEAN_AND_MEAN
-#include <windows.h>
-#include <Wincrypt.h>
-#include <Winsock2.h>
+#if defined(OPENSSL_IS_BORINGSSL)
+#define CRYPTOGRAPHY_IS_BORINGSSL 1
+#else
+#define CRYPTOGRAPHY_IS_BORINGSSL 0
 #endif
 
 #if CRYPTOGRAPHY_IS_LIBRESSL
-#define CRYPTOGRAPHY_LIBRESSL_LESS_THAN_332 \
-    (LIBRESSL_VERSION_NUMBER < 0x3030200f)
-#define CRYPTOGRAPHY_LIBRESSL_LESS_THAN_340 \
-    (LIBRESSL_VERSION_NUMBER < 0x3040000f)
+#define CRYPTOGRAPHY_LIBRESSL_LESS_THAN_360 \
+    (LIBRESSL_VERSION_NUMBER < 0x3060000f)
+#define CRYPTOGRAPHY_LIBRESSL_LESS_THAN_370 \
+    (LIBRESSL_VERSION_NUMBER < 0x3070000f)
+
 #else
-#define CRYPTOGRAPHY_LIBRESSL_LESS_THAN_332 (0)
-#define CRYPTOGRAPHY_LIBRESSL_LESS_THAN_340 (0)
+#define CRYPTOGRAPHY_LIBRESSL_LESS_THAN_360 (0)
+#define CRYPTOGRAPHY_LIBRESSL_LESS_THAN_370 (0)
 #endif
 
-#if OPENSSL_VERSION_NUMBER < 0x10100000
-    #error "pyca/cryptography MUST be linked with Openssl 1.1.0 or later"
+#if OPENSSL_VERSION_NUMBER < 0x10101000
+    #error "pyca/cryptography MUST be linked with Openssl 1.1.1 or later"
 #endif
 
-#define CRYPTOGRAPHY_OPENSSL_110F_OR_GREATER \
-    (OPENSSL_VERSION_NUMBER >= 0x1010006f && !CRYPTOGRAPHY_IS_LIBRESSL)
 #define CRYPTOGRAPHY_OPENSSL_111D_OR_GREATER \
     (OPENSSL_VERSION_NUMBER >= 0x10101040 && !CRYPTOGRAPHY_IS_LIBRESSL)
 #define CRYPTOGRAPHY_OPENSSL_300_OR_GREATER \
     (OPENSSL_VERSION_NUMBER >= 0x30000000 && !CRYPTOGRAPHY_IS_LIBRESSL)
 
-#define CRYPTOGRAPHY_OPENSSL_LESS_THAN_110J \
-    (OPENSSL_VERSION_NUMBER < 0x101000af || CRYPTOGRAPHY_IS_LIBRESSL)
-#define CRYPTOGRAPHY_OPENSSL_LESS_THAN_111 \
-    (OPENSSL_VERSION_NUMBER < 0x10101000 || CRYPTOGRAPHY_IS_LIBRESSL)
 #define CRYPTOGRAPHY_OPENSSL_LESS_THAN_111B \
     (OPENSSL_VERSION_NUMBER < 0x10101020 || CRYPTOGRAPHY_IS_LIBRESSL)
 #define CRYPTOGRAPHY_OPENSSL_LESS_THAN_111D \
     (OPENSSL_VERSION_NUMBER < 0x10101040 || CRYPTOGRAPHY_IS_LIBRESSL)
+#define CRYPTOGRAPHY_OPENSSL_LESS_THAN_111E \
+    (OPENSSL_VERSION_NUMBER < 0x10101050 || CRYPTOGRAPHY_IS_LIBRESSL)
 #if (CRYPTOGRAPHY_OPENSSL_LESS_THAN_111D && !CRYPTOGRAPHY_IS_LIBRESSL && \
     !defined(OPENSSL_NO_ENGINE)) || defined(USE_OSRANDOM_RNG_FOR_TESTING)
 #define CRYPTOGRAPHY_NEEDS_OSRANDOM_ENGINE 1
 #else
 #define CRYPTOGRAPHY_NEEDS_OSRANDOM_ENGINE 0
 #endif
+/* Ed25519 support is available from OpenSSL 1.1.1b and LibreSSL 3.7.0. */
+#define CRYPTOGRAPHY_HAS_WORKING_ED25519 \
+    (!CRYPTOGRAPHY_OPENSSL_LESS_THAN_111B || \
+    (CRYPTOGRAPHY_IS_LIBRESSL && !CRYPTOGRAPHY_LIBRESSL_LESS_THAN_370))
 """
 
 TYPES = """
-static const int CRYPTOGRAPHY_OPENSSL_110F_OR_GREATER;
 static const int CRYPTOGRAPHY_OPENSSL_111D_OR_GREATER;
 static const int CRYPTOGRAPHY_OPENSSL_300_OR_GREATER;
 
-static const int CRYPTOGRAPHY_OPENSSL_LESS_THAN_111;
 static const int CRYPTOGRAPHY_OPENSSL_LESS_THAN_111B;
+static const int CRYPTOGRAPHY_OPENSSL_LESS_THAN_111E;
 static const int CRYPTOGRAPHY_NEEDS_OSRANDOM_ENGINE;
+static const int CRYPTOGRAPHY_HAS_WORKING_ED25519;
 
 static const int CRYPTOGRAPHY_IS_LIBRESSL;
+static const int CRYPTOGRAPHY_IS_BORINGSSL;
 """
 
 FUNCTIONS = """

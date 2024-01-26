@@ -98,8 +98,8 @@ static OM_uint32 get_available_mechs(OM_uint32 *, gss_name_t, gss_cred_usage_t,
 				     gss_const_key_value_set_t,
 				     gss_cred_id_t *, gss_OID_set *,
 				     OM_uint32 *);
-static OM_uint32 get_negotiable_mechs(OM_uint32 *, spnego_gss_cred_id_t,
-				      gss_cred_usage_t, gss_OID_set *);
+static OM_uint32 get_negotiable_mechs(OM_uint32 *, spnego_gss_ctx_id_t,
+				      spnego_gss_cred_id_t, gss_cred_usage_t);
 static void release_spnego_ctx(spnego_gss_ctx_id_t *);
 static spnego_gss_ctx_id_t create_spnego_ctx(int);
 static int put_mech_set(gss_OID_set mechSet, gss_buffer_t buf);
@@ -119,21 +119,19 @@ init_ctx_new(OM_uint32 *, spnego_gss_cred_id_t, send_token_flag *,
 	     spnego_gss_ctx_id_t *);
 static OM_uint32
 init_ctx_nego(OM_uint32 *, spnego_gss_ctx_id_t, OM_uint32, gss_OID,
-	      gss_buffer_t *, gss_buffer_t *,
-	      OM_uint32 *, send_token_flag *);
+	      gss_buffer_t *, gss_buffer_t *, send_token_flag *);
 static OM_uint32
 init_ctx_cont(OM_uint32 *, spnego_gss_ctx_id_t, gss_buffer_t,
 	      gss_buffer_t *, gss_buffer_t *,
 	      OM_uint32 *, send_token_flag *);
 static OM_uint32
 init_ctx_reselect(OM_uint32 *, spnego_gss_ctx_id_t, OM_uint32,
-		  gss_OID, gss_buffer_t *, gss_buffer_t *,
-		  OM_uint32 *, send_token_flag *);
+		  gss_OID, gss_buffer_t *, gss_buffer_t *, send_token_flag *);
 static OM_uint32
 init_ctx_call_init(OM_uint32 *, spnego_gss_ctx_id_t, spnego_gss_cred_id_t,
-		   gss_name_t, OM_uint32, OM_uint32, gss_buffer_t,
-		   gss_OID *, gss_buffer_t, OM_uint32 *, OM_uint32 *,
-		   OM_uint32 *, send_token_flag *);
+		   OM_uint32, gss_name_t, OM_uint32, OM_uint32, gss_buffer_t,
+		   gss_channel_bindings_t,
+		   gss_buffer_t, OM_uint32 *, send_token_flag *);
 
 static OM_uint32
 acc_ctx_new(OM_uint32 *, gss_buffer_t, spnego_gss_cred_id_t, gss_buffer_t *,
@@ -147,12 +145,11 @@ acc_ctx_vfy_oid(OM_uint32 *, spnego_gss_ctx_id_t, gss_OID,
 		OM_uint32 *, send_token_flag *);
 static OM_uint32
 acc_ctx_call_acc(OM_uint32 *, spnego_gss_ctx_id_t, spnego_gss_cred_id_t,
-		 gss_buffer_t, gss_OID *, gss_buffer_t,
-		 OM_uint32 *, OM_uint32 *, gss_cred_id_t *,
-		 OM_uint32 *, send_token_flag *);
+		 gss_buffer_t, gss_channel_bindings_t, gss_buffer_t,
+		 OM_uint32 *, OM_uint32 *, send_token_flag *);
 
 static gss_OID
-negotiate_mech(gss_OID_set, gss_OID_set, OM_uint32 *);
+negotiate_mech(spnego_gss_ctx_id_t, gss_OID_set, OM_uint32 *);
 static int
 g_get_tag_and_length(unsigned char **, int, unsigned int, unsigned int *);
 
@@ -188,6 +185,8 @@ static const gss_OID_set_desc spnego_oidsets[] = {
 	{1, (gss_OID) spnego_oids+0},
 };
 const gss_OID_set_desc * const gss_mech_set_spnego = spnego_oidsets+0;
+
+static gss_OID_desc negoex_mech = { NEGOEX_OID_LENGTH, NEGOEX_OID };
 
 static int make_NegHints(OM_uint32 *, gss_buffer_t *);
 static int put_neg_hints(unsigned char **, gss_buffer_t, unsigned int);
@@ -239,7 +238,7 @@ static struct gss_config spnego_mechanism =
 	spnego_gss_inquire_context,	/* gss_inquire_context */
 	NULL,				/* gss_internal_release_oid */
 	spnego_gss_wrap_size_limit,	/* gss_wrap_size_limit */
-	NULL,				/* gssd_pname_to_uid */
+	spnego_gss_localname,
 	NULL,				/* gss_userok */
 	NULL,				/* gss_export_name */
 	spnego_gss_duplicate_name,	/* gss_duplicate_name */
@@ -326,6 +325,7 @@ int gss_spnegoint_lib_init(void)
 
 void gss_spnegoint_lib_fini(void)
 {
+	k5_key_delete(K5_KEY_GSS_SPNEGO_STATUS);
 }
 
 static OM_uint32
@@ -335,7 +335,7 @@ create_spnego_cred(OM_uint32 *minor_status, gss_cred_id_t mcred,
 	spnego_gss_cred_id_t spcred;
 
 	*cred_out = NULL;
-	spcred = calloc(1, sizeof(spnego_gss_cred_id_rec));
+	spcred = calloc(1, sizeof(*spcred));
 	if (spcred == NULL) {
 		*minor_status = ENOMEM;
 		return GSS_S_FAILURE;
@@ -448,9 +448,8 @@ static spnego_gss_ctx_id_t
 create_spnego_ctx(int initiate)
 {
 	spnego_gss_ctx_id_t spnego_ctx = NULL;
-	spnego_ctx = (spnego_gss_ctx_id_t)
-		malloc(sizeof (spnego_gss_ctx_id_rec));
 
+	spnego_ctx = malloc(sizeof(*spnego_ctx));
 	if (spnego_ctx == NULL) {
 		return (NULL);
 	}
@@ -470,6 +469,13 @@ create_spnego_ctx(int initiate)
 	spnego_ctx->initiate = initiate;
 	spnego_ctx->internal_name = GSS_C_NO_NAME;
 	spnego_ctx->actual_mech = GSS_C_NO_OID;
+	spnego_ctx->deleg_cred = GSS_C_NO_CREDENTIAL;
+	spnego_ctx->negoex_step = 0;
+	memset(&spnego_ctx->negoex_transcript, 0, sizeof(struct k5buf));
+	spnego_ctx->negoex_seqnum = 0;
+	K5_TAILQ_INIT(&spnego_ctx->negoex_mechs);
+	spnego_ctx->kctx = NULL;
+	memset(spnego_ctx->negoex_conv_id, 0, GUID_LENGTH);
 
 	return (spnego_ctx);
 }
@@ -680,8 +686,7 @@ init_ctx_new(OM_uint32 *minor_status,
 		return GSS_S_FAILURE;
 
 	/* determine negotiation mech set */
-	ret = get_negotiable_mechs(minor_status, spcred, GSS_C_INITIATE,
-				   &sc->mech_set);
+	ret = get_negotiable_mechs(minor_status, sc, spcred, GSS_C_INITIATE);
 	if (ret != GSS_S_COMPLETE)
 		goto cleanup;
 
@@ -697,7 +702,7 @@ init_ctx_new(OM_uint32 *minor_status,
 	*sc_out = sc;
 	sc = NULL;
 	*tokflag = INIT_TOKEN_SEND;
-	ret = GSS_S_CONTINUE_NEEDED;
+	ret = GSS_S_COMPLETE;
 
 cleanup:
 	release_spnego_ctx(&sc);
@@ -711,38 +716,44 @@ cleanup:
 static OM_uint32
 init_ctx_cont(OM_uint32 *minor_status, spnego_gss_ctx_id_t sc,
 	      gss_buffer_t buf, gss_buffer_t *responseToken,
-	      gss_buffer_t *mechListMIC, OM_uint32 *negState,
+	      gss_buffer_t *mechListMIC, OM_uint32 *acc_negState,
 	      send_token_flag *tokflag)
 {
-	OM_uint32 ret, tmpmin, acc_negState;
+	OM_uint32 ret, tmpmin;
 	unsigned char *ptr;
 	gss_OID supportedMech = GSS_C_NO_OID;
 
-	*negState = REJECT;
+	*acc_negState = UNSPECIFIED;
 	*tokflag = ERROR_TOKEN_SEND;
 
 	ptr = buf->value;
-	ret = get_negTokenResp(minor_status, ptr, buf->length,
-			       &acc_negState, &supportedMech,
-			       responseToken, mechListMIC);
+	ret = get_negTokenResp(minor_status, ptr, buf->length, acc_negState,
+			       &supportedMech, responseToken, mechListMIC);
 	if (ret != GSS_S_COMPLETE)
 		goto cleanup;
-	if (acc_negState == REJECT) {
-		*minor_status = ERR_SPNEGO_NEGOTIATION_FAILED;
-		map_errcode(minor_status);
+
+	/* Bail out now on a reject with no error token.  If we have an error
+	 * token, keep going and get a better error status from the mech. */
+	if (*acc_negState == REJECT && *responseToken == GSS_C_NO_BUFFER) {
+		if (!sc->nego_done) {
+			/* RFC 4178 says to return GSS_S_BAD_MECH on a
+			 * mechanism negotiation failure. */
+			*minor_status = ERR_SPNEGO_NEGOTIATION_FAILED;
+			map_errcode(minor_status);
+			ret = GSS_S_BAD_MECH;
+		} else {
+			ret = GSS_S_FAILURE;
+		}
 		*tokflag = NO_TOKEN_SEND;
-		ret = GSS_S_FAILURE;
 		goto cleanup;
 	}
 	/*
 	 * nego_done is false for the first call to init_ctx_cont()
 	 */
 	if (!sc->nego_done) {
-		ret = init_ctx_nego(minor_status, sc,
-				    acc_negState,
-				    supportedMech, responseToken,
-				    mechListMIC,
-				    negState, tokflag);
+		ret = init_ctx_nego(minor_status, sc, *acc_negState,
+				    supportedMech, responseToken, mechListMIC,
+				    tokflag);
 	} else if ((!sc->mech_complete && *responseToken == GSS_C_NO_BUFFER) ||
 		   (sc->mech_complete && *responseToken != GSS_C_NO_BUFFER)) {
 		/* Missing or spurious token from acceptor. */
@@ -752,12 +763,10 @@ init_ctx_cont(OM_uint32 *minor_status, spnego_gss_ctx_id_t sc,
 		    (sc->ctx_flags & GSS_C_INTEG_FLAG))) {
 		/* Not obviously done; we may decide we're done later in
 		 * init_ctx_call_init or handle_mic. */
-		*negState = ACCEPT_INCOMPLETE;
 		*tokflag = CONT_TOKEN_SEND;
-		ret = GSS_S_CONTINUE_NEEDED;
+		ret = GSS_S_COMPLETE;
 	} else {
 		/* mech finished on last pass and no MIC required, so done. */
-		*negState = ACCEPT_COMPLETE;
 		*tokflag = NO_TOKEN_SEND;
 		ret = GSS_S_COMPLETE;
 	}
@@ -776,11 +785,10 @@ static OM_uint32
 init_ctx_nego(OM_uint32 *minor_status, spnego_gss_ctx_id_t sc,
 	      OM_uint32 acc_negState, gss_OID supportedMech,
 	      gss_buffer_t *responseToken, gss_buffer_t *mechListMIC,
-	      OM_uint32 *negState, send_token_flag *tokflag)
+	      send_token_flag *tokflag)
 {
 	OM_uint32 ret;
 
-	*negState = REJECT;
 	*tokflag = ERROR_TOKEN_SEND;
 	ret = GSS_S_DEFECTIVE_TOKEN;
 
@@ -807,8 +815,7 @@ init_ctx_nego(OM_uint32 *minor_status, spnego_gss_ctx_id_t sc,
 	    !g_OID_equal(supportedMech, sc->internal_mech)) {
 		ret = init_ctx_reselect(minor_status, sc,
 					acc_negState, supportedMech,
-					responseToken, mechListMIC,
-					negState, tokflag);
+					responseToken, mechListMIC, tokflag);
 
 	} else if (*responseToken == GSS_C_NO_BUFFER) {
 		if (sc->mech_complete) {
@@ -817,7 +824,6 @@ init_ctx_nego(OM_uint32 *minor_status, spnego_gss_ctx_id_t sc,
 			 * init_sec_context().  Acceptor sends no mech
 			 * token.
 			 */
-			*negState = ACCEPT_COMPLETE;
 			*tokflag = NO_TOKEN_SEND;
 			ret = GSS_S_COMPLETE;
 		} else {
@@ -832,16 +838,14 @@ init_ctx_nego(OM_uint32 *minor_status, spnego_gss_ctx_id_t sc,
 	} else if ((*responseToken)->length == 0 && sc->mech_complete) {
 		/* Handle old IIS servers returning empty token instead of
 		 * null tokens in the non-mutual auth case. */
-		*negState = ACCEPT_COMPLETE;
 		*tokflag = NO_TOKEN_SEND;
 		ret = GSS_S_COMPLETE;
 	} else if (sc->mech_complete) {
 		/* Reject spurious mech token. */
 		ret = GSS_S_DEFECTIVE_TOKEN;
 	} else {
-		*negState = ACCEPT_INCOMPLETE;
 		*tokflag = CONT_TOKEN_SEND;
-		ret = GSS_S_CONTINUE_NEEDED;
+		ret = GSS_S_COMPLETE;
 	}
 	sc->nego_done = 1;
 	return ret;
@@ -854,7 +858,7 @@ static OM_uint32
 init_ctx_reselect(OM_uint32 *minor_status, spnego_gss_ctx_id_t sc,
 		  OM_uint32 acc_negState, gss_OID supportedMech,
 		  gss_buffer_t *responseToken, gss_buffer_t *mechListMIC,
-		  OM_uint32 *negState, send_token_flag *tokflag)
+		  send_token_flag *tokflag)
 {
 	OM_uint32 tmpmin;
 	size_t i;
@@ -886,9 +890,8 @@ init_ctx_reselect(OM_uint32 *minor_status, spnego_gss_ctx_id_t sc,
 
 	sc->mech_complete = 0;
 	sc->mic_reqd = (acc_negState == REQUEST_MIC);
-	*negState = acc_negState;
 	*tokflag = CONT_TOKEN_SEND;
-	return GSS_S_CONTINUE_NEEDED;
+	return GSS_S_COMPLETE;
 }
 
 /*
@@ -899,15 +902,14 @@ static OM_uint32
 init_ctx_call_init(OM_uint32 *minor_status,
 		   spnego_gss_ctx_id_t sc,
 		   spnego_gss_cred_id_t spcred,
+		   OM_uint32 acc_negState,
 		   gss_name_t target_name,
 		   OM_uint32 req_flags,
 		   OM_uint32 time_req,
 		   gss_buffer_t mechtok_in,
-		   gss_OID *actual_mech,
+		   gss_channel_bindings_t bindings,
 		   gss_buffer_t mechtok_out,
-		   OM_uint32 *ret_flags,
 		   OM_uint32 *time_rec,
-		   OM_uint32 *negState,
 		   send_token_flag *send_token)
 {
 	OM_uint32 ret, tmpret, tmpmin, mech_req_flags;
@@ -919,23 +921,28 @@ init_ctx_call_init(OM_uint32 *minor_status,
 	if (spcred == NULL || !spcred->no_ask_integ)
 		mech_req_flags |= GSS_C_INTEG_FLAG;
 
-	ret = gss_init_sec_context(minor_status,
-				   mcred,
-				   &sc->ctx_handle,
-				   target_name,
-				   sc->internal_mech,
-				   mech_req_flags,
-				   time_req,
-				   GSS_C_NO_CHANNEL_BINDINGS,
-				   mechtok_in,
-				   &sc->actual_mech,
-				   mechtok_out,
-				   &sc->ctx_flags,
-				   time_rec);
+	if (gss_oid_equal(sc->internal_mech, &negoex_mech)) {
+		ret = negoex_init(minor_status, sc, mcred, target_name,
+				  mech_req_flags, time_req, mechtok_in,
+				  bindings, mechtok_out, time_rec);
+	} else {
+		ret = gss_init_sec_context(minor_status, mcred,
+					   &sc->ctx_handle, target_name,
+					   sc->internal_mech, mech_req_flags,
+					   time_req, bindings, mechtok_in,
+					   &sc->actual_mech, mechtok_out,
+					   &sc->ctx_flags, time_rec);
+	}
+
+	/* Bail out if the acceptor gave us an error token but the mech didn't
+	 * see it as an error. */
+	if (acc_negState == REJECT && !GSS_ERROR(ret)) {
+		ret = GSS_S_DEFECTIVE_TOKEN;
+		goto fail;
+	}
+
 	if (ret == GSS_S_COMPLETE) {
 		sc->mech_complete = 1;
-		if (ret_flags != NULL)
-			*ret_flags = sc->ctx_flags;
 		/*
 		 * Microsoft SPNEGO implementations expect an even number of
 		 * token exchanges.  So if we're sending a final token, ask for
@@ -945,26 +952,17 @@ init_ctx_call_init(OM_uint32 *minor_status,
 		 */
 		if (*send_token == CONT_TOKEN_SEND &&
 		    mechtok_out->length == 0 &&
-		    (!sc->mic_reqd ||
-		     !(sc->ctx_flags & GSS_C_INTEG_FLAG))) {
-			/* The exchange is complete. */
-			*negState = ACCEPT_COMPLETE;
-			ret = GSS_S_COMPLETE;
+		    (!sc->mic_reqd || !(sc->ctx_flags & GSS_C_INTEG_FLAG)))
 			*send_token = NO_TOKEN_SEND;
-		} else {
-			/* Ask for one more hop. */
-			*negState = ACCEPT_INCOMPLETE;
-			ret = GSS_S_CONTINUE_NEEDED;
-		}
-		return ret;
+
+		return GSS_S_COMPLETE;
 	}
 
 	if (ret == GSS_S_CONTINUE_NEEDED)
-		return ret;
+		return GSS_S_COMPLETE;
 
 	if (*send_token != INIT_TOKEN_SEND) {
 		*send_token = ERROR_TOKEN_SEND;
-		*negState = REJECT;
 		return ret;
 	}
 
@@ -983,10 +981,10 @@ init_ctx_call_init(OM_uint32 *minor_status,
 	if (put_mech_set(sc->mech_set, &sc->DER_mechTypes) < 0)
 		goto fail;
 	gss_delete_sec_context(&tmpmin, &sc->ctx_handle, GSS_C_NO_BUFFER);
-	tmpret = init_ctx_call_init(&tmpmin, sc, spcred, target_name,
-				    req_flags, time_req, mechtok_in,
-				    actual_mech, mechtok_out, ret_flags,
-				    time_rec, negState, send_token);
+	tmpret = init_ctx_call_init(&tmpmin, sc, spcred, acc_negState,
+				    target_name, req_flags, time_req,
+				    mechtok_in, bindings, mechtok_out,
+				    time_rec, send_token);
 	if (HARD_ERROR(tmpret))
 		goto fail;
 	*minor_status = tmpmin;
@@ -995,7 +993,6 @@ init_ctx_call_init(OM_uint32 *minor_status,
 fail:
 	/* Don't output token on error from first call. */
 	*send_token = NO_TOKEN_SEND;
-	*negState = REJECT;
 	return ret;
 }
 
@@ -1009,7 +1006,7 @@ spnego_gss_init_sec_context(
 			gss_OID mech_type,
 			OM_uint32 req_flags,
 			OM_uint32 time_req,
-			gss_channel_bindings_t input_chan_bindings,
+			gss_channel_bindings_t bindings,
 			gss_buffer_t input_token,
 			gss_OID *actual_mech,
 			gss_buffer_t output_token,
@@ -1017,7 +1014,7 @@ spnego_gss_init_sec_context(
 			OM_uint32 *time_rec)
 {
 	send_token_flag send_token = NO_TOKEN_SEND;
-	OM_uint32 tmpmin, ret, negState;
+	OM_uint32 tmpmin, ret, negState = UNSPECIFIED, acc_negState;
 	gss_buffer_t mechtok_in, mechListMIC_in, mechListMIC_out;
 	gss_buffer_desc mechtok_out = GSS_C_EMPTY_BUFFER;
 	spnego_gss_cred_id_t spcred = NULL;
@@ -1026,7 +1023,6 @@ spnego_gss_init_sec_context(
 	dsyslog("Entering init_sec_context\n");
 
 	mechtok_in = mechListMIC_out = mechListMIC_in = GSS_C_NO_BUFFER;
-	negState = REJECT;
 
 	/*
 	 * This function works in three steps:
@@ -1064,6 +1060,8 @@ spnego_gss_init_sec_context(
 
 	if (actual_mech != NULL)
 		*actual_mech = GSS_C_NO_OID;
+	if (time_rec != NULL)
+		*time_rec = 0;
 
 	/* Step 1: perform mechanism negotiation. */
 	spcred = (spnego_gss_cred_id_t)claimant_cred_handle;
@@ -1071,38 +1069,37 @@ spnego_gss_init_sec_context(
 	if (spnego_ctx == NULL) {
 		ret = init_ctx_new(minor_status, spcred, &send_token,
 				   &spnego_ctx);
-		if (ret != GSS_S_CONTINUE_NEEDED) {
+		if (ret != GSS_S_COMPLETE)
 			goto cleanup;
-		}
 		*context_handle = (gss_ctx_id_t)spnego_ctx;
+		acc_negState = UNSPECIFIED;
 	} else {
-		ret = init_ctx_cont(minor_status, spnego_ctx,
-				    input_token, &mechtok_in,
-				    &mechListMIC_in, &negState, &send_token);
-		if (HARD_ERROR(ret)) {
+		ret = init_ctx_cont(minor_status, spnego_ctx, input_token,
+				    &mechtok_in, &mechListMIC_in,
+				    &acc_negState, &send_token);
+		if (ret != GSS_S_COMPLETE)
 			goto cleanup;
-		}
 	}
 
 	/* Step 2: invoke the selected or optimistic mechanism's
 	 * gss_init_sec_context function, if it didn't complete previously. */
 	if (!spnego_ctx->mech_complete) {
-		ret = init_ctx_call_init(
-			minor_status, spnego_ctx, spcred,
-			target_name, req_flags,
-			time_req, mechtok_in,
-			actual_mech, &mechtok_out,
-			ret_flags, time_rec,
-			&negState, &send_token);
+		ret = init_ctx_call_init(minor_status, spnego_ctx, spcred,
+					 acc_negState, target_name, req_flags,
+					 time_req, mechtok_in, bindings,
+					 &mechtok_out, time_rec, &send_token);
+		if (ret != GSS_S_COMPLETE)
+			goto cleanup;
 
 		/* Give the mechanism a chance to force a mechlistMIC. */
-		if (!HARD_ERROR(ret) && mech_requires_mechlistMIC(spnego_ctx))
+		if (mech_requires_mechlistMIC(spnego_ctx))
 			spnego_ctx->mic_reqd = 1;
 	}
 
 	/* Step 3: process or generate the MIC, if the negotiated mech is
-	 * complete and supports MICs. */
-	if (!HARD_ERROR(ret) && spnego_ctx->mech_complete &&
+	 * complete and supports MICs.  Also decide the outgoing negState. */
+	negState = ACCEPT_INCOMPLETE;
+	if (spnego_ctx->mech_complete &&
 	    (spnego_ctx->ctx_flags & GSS_C_INTEG_FLAG)) {
 
 		ret = handle_mic(minor_status,
@@ -1110,7 +1107,16 @@ spnego_gss_init_sec_context(
 				 (mechtok_out.length != 0),
 				 spnego_ctx, &mechListMIC_out,
 				 &negState, &send_token);
+		if (HARD_ERROR(ret))
+			goto cleanup;
 	}
+
+	if (ret_flags != NULL)
+		*ret_flags = spnego_ctx->ctx_flags & ~GSS_C_PROT_READY_FLAG;
+
+	ret = (send_token == NO_TOKEN_SEND || negState == ACCEPT_COMPLETE) ?
+		GSS_S_COMPLETE : GSS_S_CONTINUE_NEEDED;
+
 cleanup:
 	if (send_token == INIT_TOKEN_SEND) {
 		if (make_spnego_tokenInit_msg(spnego_ctx,
@@ -1122,6 +1128,8 @@ cleanup:
 			ret = GSS_S_FAILURE;
 		}
 	} else if (send_token != NO_TOKEN_SEND) {
+		if (send_token == ERROR_TOKEN_SEND)
+			negState = REJECT;
 		if (make_spnego_tokenTarg_msg(negState, GSS_C_NO_OID,
 					      &mechtok_out, mechListMIC_out,
 					      send_token,
@@ -1134,8 +1142,12 @@ cleanup:
 		spnego_ctx->opened = 1;
 		if (actual_mech != NULL)
 			*actual_mech = spnego_ctx->actual_mech;
-		if (ret_flags != NULL)
-			*ret_flags = spnego_ctx->ctx_flags;
+		/* Get an updated lifetime if we didn't call into the mech. */
+		if (time_rec != NULL && *time_rec == 0) {
+			(void) gss_context_time(&tmpmin,
+						spnego_ctx->ctx_handle,
+						time_rec);
+		}
 	} else if (ret != GSS_S_CONTINUE_NEEDED) {
 		if (spnego_ctx != NULL) {
 			gss_delete_sec_context(&tmpmin,
@@ -1272,7 +1284,7 @@ errout:
  * spnego_gss_accept_sec_context() when the request is empty.  For empty
  * requests, we implement the Microsoft NegHints extension to SPNEGO for
  * compatibility with some versions of Samba.  See:
- * http://msdn.microsoft.com/en-us/library/cc247039(PROT.10).aspx
+ * https://docs.microsoft.com/en-us/openspecs/windows_protocols/ms-spng/8e71cf53-e867-4b79-b5b5-38c92be3d472
  */
 static OM_uint32
 acc_ctx_hints(OM_uint32 *minor_status,
@@ -1282,21 +1294,14 @@ acc_ctx_hints(OM_uint32 *minor_status,
 	      send_token_flag *return_token,
 	      spnego_gss_ctx_id_t *sc_out)
 {
-	OM_uint32 tmpmin, ret;
-	gss_OID_set supported_mechSet;
+	OM_uint32 ret;
 	spnego_gss_ctx_id_t sc = NULL;
 
 	*mechListMIC = GSS_C_NO_BUFFER;
-	supported_mechSet = GSS_C_NO_OID_SET;
 	*return_token = NO_TOKEN_SEND;
 	*negState = REJECT;
 	*minor_status = 0;
 	*sc_out = NULL;
-
-	ret = get_negotiable_mechs(minor_status, spcred, GSS_C_ACCEPT,
-				   &supported_mechSet);
-	if (ret != GSS_S_COMPLETE)
-		goto cleanup;
 
 	ret = make_NegHints(minor_status, mechListMIC);
 	if (ret != GSS_S_COMPLETE)
@@ -1307,7 +1312,12 @@ acc_ctx_hints(OM_uint32 *minor_status,
 		ret = GSS_S_FAILURE;
 		goto cleanup;
 	}
-	if (put_mech_set(supported_mechSet, &sc->DER_mechTypes) < 0) {
+
+	ret = get_negotiable_mechs(minor_status, sc, spcred, GSS_C_ACCEPT);
+	if (ret != GSS_S_COMPLETE)
+		goto cleanup;
+
+	if (put_mech_set(sc->mech_set, &sc->DER_mechTypes) < 0) {
 		ret = GSS_S_FAILURE;
 		goto cleanup;
 	}
@@ -1322,7 +1332,6 @@ acc_ctx_hints(OM_uint32 *minor_status,
 
 cleanup:
 	release_spnego_ctx(&sc);
-	gss_release_oid_set(&tmpmin, &supported_mechSet);
 
 	return ret;
 }
@@ -1344,7 +1353,7 @@ acc_ctx_new(OM_uint32 *minor_status,
 	    spnego_gss_ctx_id_t *sc_out)
 {
 	OM_uint32 tmpmin, ret, req_flags;
-	gss_OID_set supported_mechSet, mechTypes;
+	gss_OID_set mechTypes;
 	gss_buffer_desc der_mechTypes;
 	gss_OID mech_wanted;
 	spnego_gss_ctx_id_t sc = NULL;
@@ -1353,7 +1362,7 @@ acc_ctx_new(OM_uint32 *minor_status,
 	der_mechTypes.length = 0;
 	der_mechTypes.value = NULL;
 	*mechToken = *mechListMIC = GSS_C_NO_BUFFER;
-	supported_mechSet = mechTypes = GSS_C_NO_OID_SET;
+	mechTypes = GSS_C_NO_OID_SET;
 	*return_token = ERROR_TOKEN_SEND;
 	*negState = REJECT;
 	*minor_status = 0;
@@ -1364,8 +1373,15 @@ acc_ctx_new(OM_uint32 *minor_status,
 	if (ret != GSS_S_COMPLETE) {
 		goto cleanup;
 	}
-	ret = get_negotiable_mechs(minor_status, spcred, GSS_C_ACCEPT,
-				   &supported_mechSet);
+
+	sc = create_spnego_ctx(0);
+	if (sc == NULL) {
+		ret = GSS_S_FAILURE;
+		*return_token = NO_TOKEN_SEND;
+		goto cleanup;
+	}
+
+	ret = get_negotiable_mechs(minor_status, sc, spcred, GSS_C_ACCEPT);
 	if (ret != GSS_S_COMPLETE) {
 		*return_token = NO_TOKEN_SEND;
 		goto cleanup;
@@ -1375,19 +1391,12 @@ acc_ctx_new(OM_uint32 *minor_status,
 	 * that the initiator requested and the list that
 	 * the acceptor will support.
 	 */
-	mech_wanted = negotiate_mech(supported_mechSet, mechTypes, negState);
+	mech_wanted = negotiate_mech(sc, mechTypes, negState);
 	if (*negState == REJECT) {
 		ret = GSS_S_BAD_MECH;
 		goto cleanup;
 	}
-	sc = create_spnego_ctx(0);
-	if (sc == NULL) {
-		ret = GSS_S_FAILURE;
-		*return_token = NO_TOKEN_SEND;
-		goto cleanup;
-	}
-	sc->mech_set = mechTypes;
-	mechTypes = GSS_C_NO_OID_SET;
+
 	sc->internal_mech = mech_wanted;
 	sc->DER_mechTypes = der_mechTypes;
 	der_mechTypes.length = 0;
@@ -1399,10 +1408,12 @@ acc_ctx_new(OM_uint32 *minor_status,
 	*return_token = INIT_TOKEN_SEND;
 	sc->firstpass = 1;
 	*sc_out = sc;
+	sc = NULL;
 	ret = GSS_S_COMPLETE;
+
 cleanup:
+	release_spnego_ctx(&sc);
 	gss_release_oid_set(&tmpmin, &mechTypes);
-	gss_release_oid_set(&tmpmin, &supported_mechSet);
 	if (der_mechTypes.length != 0)
 		gss_release_buffer(&tmpmin, &der_mechTypes);
 
@@ -1533,16 +1544,16 @@ cleanup:
 static OM_uint32
 acc_ctx_call_acc(OM_uint32 *minor_status, spnego_gss_ctx_id_t sc,
 		 spnego_gss_cred_id_t spcred, gss_buffer_t mechtok_in,
-		 gss_OID *mech_type, gss_buffer_t mechtok_out,
-		 OM_uint32 *ret_flags, OM_uint32 *time_rec,
-		 gss_cred_id_t *delegated_cred_handle,
-		 OM_uint32 *negState, send_token_flag *tokflag)
+		 gss_channel_bindings_t bindings, gss_buffer_t mechtok_out,
+		 OM_uint32 *time_rec, OM_uint32 *negState,
+		 send_token_flag *tokflag)
 {
-	OM_uint32 ret;
+	OM_uint32 ret, tmpmin;
 	gss_OID_desc mechoid;
 	gss_cred_id_t mcred;
+	int negoex = gss_oid_equal(sc->internal_mech, &negoex_mech);
 
-	if (sc->ctx_handle == GSS_C_NO_CONTEXT) {
+	if (sc->ctx_handle == GSS_C_NO_CONTEXT && !negoex) {
 		/*
 		 * mechoid is an alias; don't free it.
 		 */
@@ -1558,17 +1569,19 @@ acc_ctx_call_acc(OM_uint32 *minor_status, spnego_gss_ctx_id_t sc,
 	}
 
 	mcred = (spcred == NULL) ? GSS_C_NO_CREDENTIAL : spcred->mcred;
-	ret = gss_accept_sec_context(minor_status,
-				     &sc->ctx_handle,
-				     mcred,
-				     mechtok_in,
-				     GSS_C_NO_CHANNEL_BINDINGS,
-				     &sc->internal_name,
-				     mech_type,
-				     mechtok_out,
-				     &sc->ctx_flags,
-				     time_rec,
-				     delegated_cred_handle);
+	if (negoex) {
+		ret = negoex_accept(minor_status, sc, mcred, mechtok_in,
+				    bindings, mechtok_out, time_rec);
+	} else {
+		(void) gss_release_name(&tmpmin, &sc->internal_name);
+		(void) gss_release_cred(&tmpmin, &sc->deleg_cred);
+		ret = gss_accept_sec_context(minor_status, &sc->ctx_handle,
+					     mcred, mechtok_in, bindings,
+					     &sc->internal_name,
+					     &sc->actual_mech, mechtok_out,
+					     &sc->ctx_flags, time_rec,
+					     &sc->deleg_cred);
+	}
 	if (ret == GSS_S_COMPLETE) {
 #ifdef MS_BUG_TEST
 		/*
@@ -1585,8 +1598,6 @@ acc_ctx_call_acc(OM_uint32 *minor_status, spnego_gss_ctx_id_t sc,
 		}
 #endif
 		sc->mech_complete = 1;
-		if (ret_flags != NULL)
-			*ret_flags = sc->ctx_flags;
 
 		if (!sc->mic_reqd ||
 		    !(sc->ctx_flags & GSS_C_INTEG_FLAG)) {
@@ -1611,7 +1622,7 @@ spnego_gss_accept_sec_context(
 			    gss_ctx_id_t *context_handle,
 			    gss_cred_id_t verifier_cred_handle,
 			    gss_buffer_t input_token,
-			    gss_channel_bindings_t input_chan_bindings,
+			    gss_channel_bindings_t bindings,
 			    gss_name_t *src_name,
 			    gss_OID *mech_type,
 			    gss_buffer_t output_token,
@@ -1724,10 +1735,8 @@ spnego_gss_accept_sec_context(
 	 * whether it is the first round-trip.
 	 */
 	if (negState != REQUEST_MIC && mechtok_in != GSS_C_NO_BUFFER) {
-		ret = acc_ctx_call_acc(minor_status, sc, spcred,
-				       mechtok_in, mech_type, &mechtok_out,
-				       ret_flags, time_rec,
-				       delegated_cred_handle,
+		ret = acc_ctx_call_acc(minor_status, sc, spcred, mechtok_in,
+				       bindings, &mechtok_out, time_rec,
 				       &negState, &return_token);
 	}
 
@@ -1741,6 +1750,10 @@ spnego_gss_accept_sec_context(
 				 sc, &mic_out,
 				 &negState, &return_token);
 	}
+
+	if (!HARD_ERROR(ret) && ret_flags != NULL)
+		*ret_flags = sc->ctx_flags & ~GSS_C_PROT_READY_FLAG;
+
 cleanup:
 	if (return_token == INIT_TOKEN_SEND && sendTokenInit) {
 		assert(sc != NULL);
@@ -1767,6 +1780,17 @@ cleanup:
 			*src_name = sc->internal_name;
 			sc->internal_name = GSS_C_NO_NAME;
 		}
+		if (mech_type != NULL)
+			*mech_type = sc->actual_mech;
+		/* Get an updated lifetime if we didn't call into the mech. */
+		if (time_rec != NULL && *time_rec == 0) {
+			(void) gss_context_time(&tmpmin, sc->ctx_handle,
+						time_rec);
+		}
+		if (delegated_cred_handle != NULL) {
+			*delegated_cred_handle = sc->deleg_cred;
+			sc->deleg_cred = GSS_C_NO_CREDENTIAL;
+		}
 	} else if (ret != GSS_S_CONTINUE_NEEDED) {
 		if (sc != NULL) {
 			gss_delete_sec_context(&tmpmin, &sc->ctx_handle,
@@ -1792,6 +1816,50 @@ cleanup:
 }
 #endif /*  LEAN_CLIENT */
 
+static struct {
+	OM_uint32 status;
+	const char *msg;
+} msg_table[] = {
+	{ ERR_SPNEGO_NO_MECHS_AVAILABLE,
+	  N_("SPNEGO cannot find mechanisms to negotiate") },
+	{ ERR_SPNEGO_NO_CREDS_ACQUIRED,
+	  N_("SPNEGO failed to acquire creds") },
+	{ ERR_SPNEGO_NO_MECH_FROM_ACCEPTOR,
+	  N_("SPNEGO acceptor did not select a mechanism") },
+	{ ERR_SPNEGO_NEGOTIATION_FAILED,
+	  N_("SPNEGO failed to negotiate a mechanism") },
+	{ ERR_SPNEGO_NO_TOKEN_FROM_ACCEPTOR,
+	  N_("SPNEGO acceptor did not return a valid token") },
+	{ ERR_NEGOEX_INVALID_MESSAGE_SIGNATURE,
+	  N_("Invalid NegoEx signature") },
+	{ ERR_NEGOEX_INVALID_MESSAGE_TYPE,
+	  N_("Invalid NegoEx message type") },
+	{ ERR_NEGOEX_INVALID_MESSAGE_SIZE,
+	  N_("Invalid NegoEx message size") },
+	{ ERR_NEGOEX_INVALID_CONVERSATION_ID,
+	  N_("Invalid NegoEx conversation ID") },
+	{ ERR_NEGOEX_AUTH_SCHEME_NOT_FOUND,
+	  N_("NegoEx authentication scheme not found") },
+	{ ERR_NEGOEX_MISSING_NEGO_MESSAGE,
+	  N_("Missing NegoEx negotiate message") },
+	{ ERR_NEGOEX_MISSING_AP_REQUEST_MESSAGE,
+	  N_("Missing NegoEx authentication protocol request message") },
+	{ ERR_NEGOEX_NO_AVAILABLE_MECHS,
+	  N_("No mutually supported NegoEx authentication schemes") },
+	{ ERR_NEGOEX_NO_VERIFY_KEY,
+	  N_("No NegoEx verify key") },
+	{ ERR_NEGOEX_UNKNOWN_CHECKSUM_SCHEME,
+	  N_("Unknown NegoEx checksum scheme") },
+	{ ERR_NEGOEX_INVALID_CHECKSUM,
+	  N_("Invalid NegoEx checksum") },
+	{ ERR_NEGOEX_UNSUPPORTED_CRITICAL_EXTENSION,
+	  N_("Unsupported critical NegoEx extension") },
+	{ ERR_NEGOEX_UNSUPPORTED_VERSION,
+	  N_("Unsupported NegoEx version") },
+	{ ERR_NEGOEX_MESSAGE_OUT_OF_SEQUENCE,
+	  N_("NegoEx message out of sequence") },
+};
+
 /*ARGSUSED*/
 OM_uint32 KRB5_CALLCONV
 spnego_gss_display_status(
@@ -1803,62 +1871,40 @@ spnego_gss_display_status(
 		gss_buffer_t status_string)
 {
 	OM_uint32 maj = GSS_S_COMPLETE;
+	const char *msg;
+	size_t i;
 	int ret;
 
-	dsyslog("Entering display_status\n");
-
 	*message_context = 0;
-	switch (status_value) {
-	    case ERR_SPNEGO_NO_MECHS_AVAILABLE:
-		/* CSTYLED */
-		*status_string = make_err_msg(_("SPNEGO cannot find "
-						"mechanisms to negotiate"));
-		break;
-	    case ERR_SPNEGO_NO_CREDS_ACQUIRED:
-		/* CSTYLED */
-		*status_string = make_err_msg(_("SPNEGO failed to acquire "
-						"creds"));
-		break;
-	    case ERR_SPNEGO_NO_MECH_FROM_ACCEPTOR:
-		/* CSTYLED */
-		*status_string = make_err_msg(_("SPNEGO acceptor did not "
-						"select a mechanism"));
-		break;
-	    case ERR_SPNEGO_NEGOTIATION_FAILED:
-		/* CSTYLED */
-		*status_string = make_err_msg(_("SPNEGO failed to negotiate a "
-						"mechanism"));
-		break;
-	    case ERR_SPNEGO_NO_TOKEN_FROM_ACCEPTOR:
-		/* CSTYLED */
-		*status_string = make_err_msg(_("SPNEGO acceptor did not "
-						"return a valid token"));
-		break;
-	    default:
-		/* Not one of our minor codes; might be from a mech.  Call back
-		 * to gss_display_status, but first check for recursion. */
-		if (k5_getspecific(K5_KEY_GSS_SPNEGO_STATUS) != NULL) {
-			/* Perhaps we returned a com_err code like ENOMEM. */
-			const char *err = error_message(status_value);
-			*status_string = make_err_msg(err);
-			break;
+	for (i = 0; i < sizeof(msg_table) / sizeof(*msg_table); i++) {
+		if (status_value == msg_table[i].status) {
+			msg = dgettext(KRB5_TEXTDOMAIN, msg_table[i].msg);
+			*status_string = make_err_msg(msg);
+			return GSS_S_COMPLETE;
 		}
-		/* Set a non-null pointer value; doesn't matter which one. */
-		ret = k5_setspecific(K5_KEY_GSS_SPNEGO_STATUS, &ret);
-		if (ret != 0) {
-			*minor_status = ret;
-			maj = GSS_S_FAILURE;
-			break;
-		}
-		maj = gss_display_status(minor_status, status_value,
-					 status_type, mech_type,
-					 message_context, status_string);
-		/* This is unlikely to fail; not much we can do if it does. */
-		(void)k5_setspecific(K5_KEY_GSS_SPNEGO_STATUS, NULL);
-		break;
 	}
 
-	dsyslog("Leaving display_status\n");
+	/* Not one of our minor codes; might be from a mech.  Call back
+	 * to gss_display_status, but first check for recursion. */
+	if (k5_getspecific(K5_KEY_GSS_SPNEGO_STATUS) != NULL) {
+		/* Perhaps we returned a com_err code like ENOMEM. */
+		const char *err = error_message(status_value);
+		*status_string = make_err_msg(err);
+		return GSS_S_COMPLETE;
+	}
+	/* Set a non-null pointer value; doesn't matter which one. */
+	ret = k5_setspecific(K5_KEY_GSS_SPNEGO_STATUS, &ret);
+	if (ret != 0) {
+		*minor_status = ret;
+		return GSS_S_FAILURE;
+	}
+
+	maj = gss_display_status(minor_status, status_value,
+				 status_type, mech_type,
+				 message_context, status_string);
+	/* This is unlikely to fail; not much we can do if it does. */
+	(void)k5_setspecific(K5_KEY_GSS_SPNEGO_STATUS, NULL);
+
 	return maj;
 }
 
@@ -2325,6 +2371,13 @@ spnego_gss_wrap_size_limit(
 				req_output_size,
 				max_input_size);
 	return (ret);
+}
+
+OM_uint32 KRB5_CALLCONV
+spnego_gss_localname(OM_uint32 *minor_status, const gss_name_t pname,
+		     const gss_const_OID mech_type, gss_buffer_t localname)
+{
+	return gss_localname(minor_status, pname, GSS_C_NO_OID, localname);
 }
 
 OM_uint32 KRB5_CALLCONV
@@ -2890,6 +2943,12 @@ spnego_gss_set_neg_mechs(OM_uint32 *minor_status,
 	gss_release_oid_set(minor_status, &spcred->neg_mechs);
 	ret = generic_gss_copy_oid_set(minor_status, mech_list,
 				       &spcred->neg_mechs);
+	if (ret == GSS_S_COMPLETE) {
+		(void) gss_set_neg_mechs(minor_status,
+					 spcred->mcred,
+					 spcred->neg_mechs);
+	}
+
 	return (ret);
 }
 
@@ -3065,6 +3124,9 @@ release_spnego_ctx(spnego_gss_ctx_id_t *ctx)
 		(void) gss_release_oid_set(&minor_stat, &context->mech_set);
 
 		(void) gss_release_name(&minor_stat, &context->internal_name);
+		(void) gss_release_cred(&minor_stat, &context->deleg_cred);
+
+		negoex_release_context(context);
 
 		free(context);
 		*ctx = NULL;
@@ -3076,7 +3138,12 @@ release_spnego_ctx(spnego_gss_ctx_id_t *ctx)
  * SPNEGO because it will also return the SPNEGO mech and we do not
  * want to consider SPNEGO as an available security mech for
  * negotiation. For this reason, get_available_mechs will return
- * all available, non-deprecated mechs except SPNEGO.
+ * all available, non-deprecated mechs except SPNEGO and NegoEx-
+ * only mechanisms.
+ *
+ * Note that gss_acquire_cred_from(GSS_C_NO_OID_SET) will filter
+ * out hidden (GSS_C_MA_NOT_INDICATED) mechanisms such as NegoEx, so
+ * calling gss_indicate_mechs_by_attrs() also works around that.
  *
  * If a ptr to a creds list is given, this function will attempt
  * to acquire creds for the creds given and trim the list of
@@ -3089,57 +3156,33 @@ get_available_mechs(OM_uint32 *minor_status,
 	gss_const_key_value_set_t cred_store,
 	gss_cred_id_t *creds, gss_OID_set *rmechs, OM_uint32 *time_rec)
 {
-	unsigned int	i;
-	int		found = 0;
 	OM_uint32 major_status = GSS_S_COMPLETE, tmpmin;
 	gss_OID_set mechs, goodmechs;
 	gss_OID_set_desc except_attrs;
-	gss_OID_desc attr_oids[2];
+	gss_OID_desc attr_oids[3];
+
+	*rmechs = GSS_C_NO_OID_SET;
 
 	attr_oids[0] = *GSS_C_MA_DEPRECATED;
 	attr_oids[1] = *GSS_C_MA_NOT_DFLT_MECH;
-	except_attrs.count = 2;
+	attr_oids[2] = *GSS_C_MA_MECH_NEGO;     /* Exclude ourselves */
+	except_attrs.count = sizeof(attr_oids) / sizeof(attr_oids[0]);
 	except_attrs.elements = attr_oids;
 	major_status = gss_indicate_mechs_by_attrs(minor_status,
 						   GSS_C_NO_OID_SET,
 						   &except_attrs,
 						   GSS_C_NO_OID_SET, &mechs);
 
-	if (major_status != GSS_S_COMPLETE) {
-		return (major_status);
-	}
-
-	major_status = gss_create_empty_oid_set(minor_status, rmechs);
-
-	if (major_status != GSS_S_COMPLETE) {
-		(void) gss_release_oid_set(minor_status, &mechs);
-		return (major_status);
-	}
-
-	for (i = 0; i < mechs->count && major_status == GSS_S_COMPLETE; i++) {
-		if ((mechs->elements[i].length
-		    != spnego_mechanism.mech_type.length) ||
-		    memcmp(mechs->elements[i].elements,
-			spnego_mechanism.mech_type.elements,
-			spnego_mechanism.mech_type.length)) {
-
-			major_status = gss_add_oid_set_member(minor_status,
-							      &mechs->elements[i],
-							      rmechs);
-			if (major_status == GSS_S_COMPLETE)
-				found++;
-		}
-	}
-
 	/*
 	 * If the caller wanted a list of creds returned,
 	 * trim the list of mechanisms down to only those
 	 * for which the creds are valid.
 	 */
-	if (found > 0 && major_status == GSS_S_COMPLETE && creds != NULL) {
+	if (mechs->count > 0 && major_status == GSS_S_COMPLETE &&
+	    creds != NULL) {
 		major_status = gss_acquire_cred_from(minor_status, name,
 						     GSS_C_INDEFINITE,
-						     *rmechs, usage,
+						     mechs, usage,
 						     cred_store, creds,
 						     &goodmechs, time_rec);
 
@@ -3147,16 +3190,16 @@ get_available_mechs(OM_uint32 *minor_status,
 		 * Drop the old list in favor of the new
 		 * "trimmed" list.
 		 */
-		(void) gss_release_oid_set(&tmpmin, rmechs);
 		if (major_status == GSS_S_COMPLETE) {
-			(void) gssint_copy_oid_set(&tmpmin,
-					goodmechs, rmechs);
-			(void) gss_release_oid_set(&tmpmin, &goodmechs);
+			(void) gss_release_oid_set(&tmpmin, &mechs);
+			mechs = goodmechs;
 		}
 	}
 
-	(void) gss_release_oid_set(&tmpmin, &mechs);
-	if (found == 0 || major_status != GSS_S_COMPLETE) {
+	if (mechs->count > 0 && major_status == GSS_S_COMPLETE) {
+		*rmechs = mechs;
+	} else {
+		(void) gss_release_oid_set(&tmpmin, &mechs);
 		*minor_status = ERR_SPNEGO_NO_MECHS_AVAILABLE;
 		map_errcode(minor_status);
 		if (major_status == GSS_S_COMPLETE)
@@ -3166,81 +3209,121 @@ get_available_mechs(OM_uint32 *minor_status,
 	return (major_status);
 }
 
-/*
- * Return a list of mechanisms we are willing to negotiate for a credential,
- * taking into account the mech set provided with gss_set_neg_mechs if it
- * exists.
- */
-static OM_uint32
-get_negotiable_mechs(OM_uint32 *minor_status, spnego_gss_cred_id_t spcred,
-		     gss_cred_usage_t usage, gss_OID_set *rmechs)
+/* Return true if mech asserts the GSS_C_MA_NEGOEX_AND_SPNEGO attribute. */
+static int
+negoex_and_spnego(gss_OID mech)
 {
-	OM_uint32 ret, tmpmin;
-	gss_cred_id_t creds = GSS_C_NO_CREDENTIAL, *credptr;
-	gss_OID_set cred_mechs = GSS_C_NULL_OID_SET;
-	gss_OID_set intersect_mechs = GSS_C_NULL_OID_SET;
-	unsigned int i;
+	OM_uint32 ret, minor;
+	gss_OID_set attrs;
 	int present;
 
-	if (spcred == NULL) {
-		/*
-		 * The default credentials were supplied.  Return a list of all
-		 * available mechs except SPNEGO.  When initiating, trim this
-		 * list to mechs we can acquire credentials for.
-		 */
-		credptr = (usage == GSS_C_INITIATE) ? &creds : NULL;
-		ret = get_available_mechs(minor_status, GSS_C_NO_NAME, usage,
-					  GSS_C_NO_CRED_STORE, credptr,
-					  rmechs, NULL);
-		gss_release_cred(&tmpmin, &creds);
-		return (ret);
-	}
+	ret = gss_inquire_attrs_for_mech(&minor, mech, &attrs, NULL);
+	if (ret != GSS_S_COMPLETE || attrs == GSS_C_NO_OID_SET)
+		return 0;
 
-	/* Get the list of mechs in the mechglue cred. */
-	ret = gss_inquire_cred(minor_status, spcred->mcred, NULL, NULL, NULL,
-			       &cred_mechs);
-	if (ret != GSS_S_COMPLETE)
-		return (ret);
+	(void) generic_gss_test_oid_set_member(&minor,
+					       GSS_C_MA_NEGOEX_AND_SPNEGO,
+					       attrs, &present);
+	(void) gss_release_oid_set(&minor, &attrs);
+	return present;
+}
 
-	if (spcred->neg_mechs == GSS_C_NULL_OID_SET) {
-		/* gss_set_neg_mechs was never called; return cred_mechs. */
-		*rmechs = cred_mechs;
-		*minor_status = 0;
-		return (GSS_S_COMPLETE);
-	}
+/*
+ * Fill sc->mech_set with the SPNEGO-negotiable mechanism OIDs, and
+ * sc->negoex_mechs with an entry for each NegoEx-negotiable mechanism.  Take
+ * into account the mech set provided with gss_set_neg_mechs() if it exists.
+ */
+static OM_uint32
+get_negotiable_mechs(OM_uint32 *minor_status, spnego_gss_ctx_id_t sc,
+		     spnego_gss_cred_id_t spcred, gss_cred_usage_t usage)
+{
+	OM_uint32 ret, tmpmin;
+	gss_cred_id_t creds = GSS_C_NO_CREDENTIAL;
+	gss_OID_set cred_mechs = GSS_C_NULL_OID_SET, mechs;
+	unsigned int i;
+	int present, added_negoex = 0;
+	auth_scheme scheme;
 
-	/* Compute the intersection of cred_mechs and spcred->neg_mechs,
-	 * preserving the order in spcred->neg_mechs. */
-	ret = gss_create_empty_oid_set(minor_status, &intersect_mechs);
-	if (ret != GSS_S_COMPLETE) {
-		gss_release_oid_set(&tmpmin, &cred_mechs);
-		return (ret);
-	}
-
-	for (i = 0; i < spcred->neg_mechs->count; i++) {
-		gss_test_oid_set_member(&tmpmin,
-					&spcred->neg_mechs->elements[i],
-					cred_mechs, &present);
-		if (!present)
-			continue;
-		ret = gss_add_oid_set_member(minor_status,
-					     &spcred->neg_mechs->elements[i],
-					     &intersect_mechs);
+	if (spcred != NULL) {
+		/* Get the list of mechs in the mechglue cred. */
+		ret = gss_inquire_cred(minor_status, spcred->mcred, NULL,
+				       NULL, NULL, &cred_mechs);
 		if (ret != GSS_S_COMPLETE)
-			break;
+			return (ret);
+	} else {
+		/* Start with the list of available mechs. */
+		ret = get_available_mechs(minor_status, GSS_C_NO_NAME, usage,
+					  GSS_C_NO_CRED_STORE, &creds,
+					  &cred_mechs, NULL);
+		if (ret != GSS_S_COMPLETE)
+			return (ret);
+		gss_release_cred(&tmpmin, &creds);
+	}
+
+	/* If gss_set_neg_mechs() was called, use that to determine the
+	 * iteration order.  Otherwise iterate over the credential mechs. */
+	mechs = (spcred != NULL && spcred->neg_mechs != GSS_C_NULL_OID_SET) ?
+	    spcred->neg_mechs : cred_mechs;
+
+	ret = gss_create_empty_oid_set(minor_status, &sc->mech_set);
+	if (ret != GSS_S_COMPLETE)
+		goto cleanup;
+
+	for (i = 0; i < mechs->count; i++) {
+		if (mechs != cred_mechs) {
+			/* Intersect neg_mechs with cred_mechs. */
+			gss_test_oid_set_member(&tmpmin, &mechs->elements[i],
+						cred_mechs, &present);
+			if (!present)
+				continue;
+		}
+
+		/* Query the auth scheme to see if this is a NegoEx mech. */
+		ret = gssspi_query_mechanism_info(&tmpmin, &mechs->elements[i],
+						  scheme);
+		if (ret == GSS_S_COMPLETE) {
+			/* Add an entry for this mech to the NegoEx list. */
+			ret = negoex_add_auth_mech(minor_status, sc,
+						   &mechs->elements[i],
+						   scheme);
+			if (ret != GSS_S_COMPLETE)
+				goto cleanup;
+
+			/* Add the NegoEx OID to the SPNEGO list at the
+			 * position of the first NegoEx mechanism. */
+			if (!added_negoex) {
+				ret = gss_add_oid_set_member(minor_status,
+							     &negoex_mech,
+							     &sc->mech_set);
+				if (ret != GSS_S_COMPLETE)
+					goto cleanup;
+				added_negoex = 1;
+			}
+
+			/* Skip this mech in the SPNEGO list unless it asks for
+			 * direct SPNEGO negotiation. */
+			if (!negoex_and_spnego(&mechs->elements[i]))
+				continue;
+		}
+
+		/* Add this mech to the SPNEGO list. */
+		ret = gss_add_oid_set_member(minor_status, &mechs->elements[i],
+					     &sc->mech_set);
+		if (ret != GSS_S_COMPLETE)
+			goto cleanup;
+	}
+
+	*minor_status = 0;
+
+cleanup:
+	if (ret != GSS_S_COMPLETE || sc->mech_set->count == 0) {
+		*minor_status = ERR_SPNEGO_NO_MECHS_AVAILABLE;
+		map_errcode(minor_status);
+		ret = GSS_S_FAILURE;
 	}
 
 	gss_release_oid_set(&tmpmin, &cred_mechs);
-	if (intersect_mechs->count == 0 || ret != GSS_S_COMPLETE) {
-		gss_release_oid_set(&tmpmin, &intersect_mechs);
-		*minor_status = ERR_SPNEGO_NO_MECHS_AVAILABLE;
-		map_errcode(minor_status);
-		return (GSS_S_FAILURE);
-	}
-
-	*rmechs = intersect_mechs;
-	*minor_status = 0;
-	return (GSS_S_COMPLETE);
+	return (ret);
 }
 
 /* following are token creation and reading routines */
@@ -3256,20 +3339,19 @@ get_mech_oid(OM_uint32 *minor_status, unsigned char **buff_in, size_t length)
 	OM_uint32	status;
 	gss_OID_desc 	toid;
 	gss_OID		mech_out = NULL;
-	unsigned char		*start, *end;
+	unsigned int	bytes;
+	int		oid_length;
 
 	if (length < 1 || **buff_in != MECH_OID)
 		return (NULL);
-
-	start = *buff_in;
-	end = start + length;
-
 	(*buff_in)++;
-	toid.length = *(*buff_in)++;
+	length--;
 
-	if ((*buff_in + toid.length) > end)
+	oid_length = gssint_get_der_length(buff_in, length, &bytes);
+	if (oid_length < 0 || length - bytes < (size_t)oid_length)
 		return (NULL);
 
+	toid.length = oid_length;
 	toid.elements = *buff_in;
 	*buff_in += toid.length;
 
@@ -3380,14 +3462,14 @@ get_mech_set(OM_uint32 *minor_status, unsigned char **buff_in,
 	unsigned char		*start;
 	int i;
 
-	if (**buff_in != SEQUENCE_OF)
+	if (buff_length < 1 || **buff_in != SEQUENCE_OF)
 		return (NULL);
 
 	start = *buff_in;
 	(*buff_in)++;
 
-	length = gssint_get_der_length(buff_in, buff_length, &bytes);
-	if (length < 0 || buff_length - bytes < (unsigned int)length)
+	length = gssint_get_der_length(buff_in, buff_length - 1, &bytes);
+	if (length < 0 || buff_length - 1 - bytes < (unsigned int)length)
 		return NULL;
 
 	major_status = gss_create_empty_oid_set(minor_status,
@@ -3467,11 +3549,11 @@ get_req_flags(unsigned char **buff_in, OM_uint32 bodysize,
 {
 	unsigned int len;
 
-	if (**buff_in != (CONTEXT | 0x01))
+	if (bodysize < 1 || **buff_in != (CONTEXT | 0x01))
 		return (0);
 
 	if (g_get_tag_and_length(buff_in, (CONTEXT | 0x01),
-				bodysize, &len) < 0)
+				 bodysize, &len) < 0 || len != 4)
 		return GSS_S_DEFECTIVE_TOKEN;
 
 	if (*(*buff_in)++ != BIT_STRING)
@@ -3575,7 +3657,7 @@ get_negTokenResp(OM_uint32 *minor_status,
 	int tmplen;
 	unsigned int tag, bytes;
 
-	*negState = ACCEPT_DEFECTIVE_TOKEN;
+	*negState = UNSPECIFIED;
 	*supportedMech = GSS_C_NO_OID;
 	*responseToken = *mechListMIC = GSS_C_NO_BUFFER;
 	ptr = bufstart = buf;
@@ -3685,7 +3767,7 @@ put_negResult(unsigned char **buf_out, OM_uint32 negResult,
 }
 
 /*
- * This routine compares the recieved mechset to the mechset that
+ * This routine compares the received mechset to the mechset that
  * this server can support. It looks sequentially through the mechset
  * and the first one that matches what the server can support is
  * chosen as the negotiated mechanism. If one is found, negResult
@@ -3698,23 +3780,30 @@ put_negResult(unsigned char **buf_out, OM_uint32 negResult,
  * mechanisms supported by the acceptor.
  */
 static gss_OID
-negotiate_mech(gss_OID_set supported, gss_OID_set received,
+negotiate_mech(spnego_gss_ctx_id_t ctx, gss_OID_set received,
 	       OM_uint32 *negResult)
 {
 	size_t i, j;
+	int wrong_krb5_oid;
 
 	for (i = 0; i < received->count; i++) {
 		gss_OID mech_oid = &received->elements[i];
 
 		/* Accept wrong mechanism OID from MS clients */
-		if (g_OID_equal(mech_oid, &gss_mech_krb5_wrong_oid))
+		wrong_krb5_oid = 0;
+		if (g_OID_equal(mech_oid, &gss_mech_krb5_wrong_oid)) {
 			mech_oid = (gss_OID)&gss_mech_krb5_oid;
+			wrong_krb5_oid = 1;
+		}
 
-		for (j = 0; j < supported->count; j++) {
-			if (g_OID_equal(mech_oid, &supported->elements[j])) {
+		for (j = 0; j < ctx->mech_set->count; j++) {
+			if (g_OID_equal(mech_oid,
+					&ctx->mech_set->elements[j])) {
 				*negResult = (i == 0) ? ACCEPT_INCOMPLETE :
 					REQUEST_MIC;
-				return &received->elements[i];
+				return wrong_krb5_oid ?
+					(gss_OID)&gss_mech_krb5_wrong_oid :
+					&ctx->mech_set->elements[j];
 			}
 		}
 	}

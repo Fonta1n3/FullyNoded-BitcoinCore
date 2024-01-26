@@ -8,37 +8,32 @@ import typing
 from cryptography import utils
 from cryptography.exceptions import (
     AlreadyFinalized,
-    UnsupportedAlgorithm,
-    _Reasons,
 )
-from cryptography.hazmat.backends import _get_backend
-from cryptography.hazmat.backends.interfaces import Backend, HMACBackend
+from cryptography.hazmat.backends.openssl.hmac import _HMACContext
 from cryptography.hazmat.primitives import hashes
 
 
 class HMAC(hashes.HashContext):
+    _ctx: typing.Optional[_HMACContext]
+
     def __init__(
         self,
         key: bytes,
         algorithm: hashes.HashAlgorithm,
-        backend: typing.Optional[Backend] = None,
+        backend: typing.Any = None,
         ctx=None,
     ):
-        backend = _get_backend(backend)
-        if not isinstance(backend, HMACBackend):
-            raise UnsupportedAlgorithm(
-                "Backend object does not implement HMACBackend.",
-                _Reasons.BACKEND_MISSING_INTERFACE,
-            )
-
         if not isinstance(algorithm, hashes.HashAlgorithm):
             raise TypeError("Expected instance of hashes.HashAlgorithm.")
         self._algorithm = algorithm
 
-        self._backend = backend
         self._key = key
         if ctx is None:
-            self._ctx = self._backend.create_hmac_ctx(key, self.algorithm)
+            from cryptography.hazmat.backends.openssl.backend import (
+                backend as ossl,
+            )
+
+            self._ctx = ossl.create_hmac_ctx(key, self.algorithm)
         else:
             self._ctx = ctx
 
@@ -58,7 +53,6 @@ class HMAC(hashes.HashContext):
         return HMAC(
             self._key,
             self.algorithm,
-            backend=self._backend,
             ctx=self._ctx.copy(),
         )
 

@@ -1,12 +1,11 @@
 Test vectors
 ============
 
-Testing the correctness of the primitives implemented in each ``cryptography``
-backend requires trusted test vectors. Where possible these vectors are
+Testing the correctness of the primitives implemented in ``cryptography``
+requires trusted test vectors. Where possible these vectors are
 obtained from official sources such as `NIST`_ or `IETF`_ RFCs. When this is
 not possible ``cryptography`` has chosen to create a set of custom vectors
-using an official vector file as input to verify consistency between
-implemented backends.
+using an official vector file as input.
 
 Vectors are kept in the ``cryptography_vectors`` package rather than within our
 main test suite.
@@ -37,6 +36,7 @@ Asymmetric ciphers
 * Ed25519 test vectors from the `Ed25519 website_`.
 * OpenSSL PEM RSA serialization vectors from the `OpenSSL example key`_ and
   `GnuTLS key parsing tests`_.
+* ``asymmetric/PEM_Serialization/rsa-bad-1025-q-is-2.pem`` from `badkeys`_.
 * OpenSSL PEM DSA serialization vectors from the `GnuTLS example keys`_.
 * PKCS #8 PEM serialization vectors from
 
@@ -141,6 +141,19 @@ Custom asymmetric vectors
   ``asymmetric/Ed448/ed448-pkcs8.der`` contain an unencrypted Ed448 key.
 * ``asymmetric/Ed448/ed448-pub.pem`` and ``asymmetric/Ed448/ed448-pub.der``
   contain an Ed448 public key.
+* ``asymmetric/PKCS8/rsa_pss_2048.pem`` - A 2048-bit RSA PSS key with no
+  explicit parameters set.
+* ``asymmetric/PKCS8/rsa_pss_2048_pub.der`` - The public key corresponding to
+  ``asymmetric/PKCS8/rsa_pss_2048.pem``.
+* ``asymmetric/PKCS8/rsa_pss_2048_hash.pem`` - A 2048-bit RSA PSS key with the
+  hash algorithm PSS parameter set to SHA256.
+* ``asymmetric/PKCS8/rsa_pss_2048_hash_mask.pem`` - A 2048-bit RSA PSS key with
+  with the hash (SHA256) and mask algorithm (SHA256) PSS parameters set.
+* ``asymmetric/PKCS8/rsa_pss_2048_hash_mask_diff.pem`` - A 2048-bit RSA PSS key
+  with the hash (SHA256) and mask algorithm (SHA512) PSS parameters set.
+* ``asymmetric/PKCS8/rsa_pss_2048_hash_mask_salt.pem`` - A 2048-bit RSA PSS key
+  with the hash (SHA256), mask algorithm (SHA256), and salt length (32)
+  PSS parameters set.
 
 
 Key exchange
@@ -205,8 +218,10 @@ X.509
 * ``cryptography.io.old_header.pem`` - A leaf certificate issued by RapidSSL
   for the cryptography website. This certificate uses the ``X509 CERTIFICATE``
   legacy PEM header format.
-* ``cryptography.io.repeated_twice.pem`` - The same as ``cryptography.io.pem``,
-  but the certificate is repeated twice.
+* ``cryptography.io.chain.pem`` - The same as ``cryptography.io.pem``,
+  but ``rapidssl_sha256_ca_g3.pem`` is concatenated to the end.
+* ``cryptography.io.chain_with_garbage.pem`` - The same as
+  ``cryptography.io.chain.pem``, but with other sections and text around it.
 * ``cryptography.io.with_garbage.pem`` - The same as ``cryptography.io.pem``,
   but with other sections and text around it.
 * ``rapidssl_sha256_ca_g3.pem`` - The intermediate CA that issued the
@@ -231,6 +246,11 @@ X.509
   signature OID for RSA with SHA1. This certificate has an invalid signature.
 * ``badssl-sct.pem`` - A certificate with the certificate transparency signed
   certificate timestamp extension.
+* ``badssl-sct-none-hash.der`` - The same as ``badssl-sct.pem``, but DER-encoded
+  and with the SCT's signature hash manually changed to "none" (``0x00``).
+* ``badssl-sct-anonymous-sig.der`` - The same as ``badssl-sct.pem``, but
+  DER-encoded and with the SCT's signature algorithm manually changed to
+  "anonymous" (``0x00``).
 * ``bigoid.pem`` - A certificate with a rather long OID in the
   Certificate Policies extension.  We need to make sure we can parse
   long OIDs.
@@ -259,6 +279,12 @@ X.509
 * ``server-ed448-cert.pem`` - An ``ed448`` server certificate (RSA
   signature with ``ed448`` public key) from the OpenSSL test suite.
   (`server-ed448-cert.pem`_)
+* ``accvraiz1.pem`` - An RSA root certificate that contains an
+  ``explicitText`` entry with a ``BMPString`` type.
+* ``scottishpower-bitstring-dn.pem`` - An ECDSA certificate that contains
+  a subject DN with a bit string type.
+* ``cryptography-scts-tbs-precert.der`` - The "to-be-signed" pre-certificate
+  bytes from ``cryptography-scts.pem``, with the SCT list extension removed.
 
 Custom X.509 Vectors
 ~~~~~~~~~~~~~~~~~~~~
@@ -279,6 +305,8 @@ Custom X.509 Vectors
 * ``utf8_common_name.pem`` - An RSA 2048 bit self-signed CA certificate
   generated using OpenSSL that contains a UTF8String common name with the value
   "We heart UTF8!™".
+* ``invalid_utf8_common_name.pem`` - A certificate that contains a
+  ``UTF8String`` common name with an invalid UTF-8 byte sequence.
 * ``two_basic_constraints.pem`` - An RSA 2048 bit self-signed certificate
   containing two basic constraints extensions.
 * ``basic_constraints_not_critical.pem`` - An RSA 2048 bit self-signed
@@ -443,6 +471,13 @@ Custom X.509 Vectors
   version.
 * ``invalid-sct-length.der`` - A certificate with an SCT with an internal
   length greater than the amount of data.
+* ``bad_country.pem`` - A certificate with country name and jurisdiction
+  country name values in its subject and issuer distinguished names which
+  are longer than 2 characters.
+* ``rsa_pss_cert.pem`` - A self-signed certificate with an RSA PSS signature
+  with ``asymmetric/PKCS8/rsa_pss_2048.pem`` as its key.
+* ``long-form-name-attribute.pem`` - A certificate with ``subject`` and ``issuer``
+  names containing attributes whose value's tag is encoded in long-form.
 
 Custom X.509 Request Vectors
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -463,18 +498,19 @@ Custom X.509 Request Vectors
   request using RSA and SHA1 with a subject alternative name extension
   generated using OpenSSL.
 * ``two_basic_constraints.pem`` - A certificate signing request
-  for an RSA 2048 bit key containing two basic constraints extensions.
+  for an RSA 2048 bit key containing two basic constraints extensions. The
+  signature on this CSR is invalid.
 * ``unsupported_extension.pem`` - A certificate signing request
   for an RSA 2048 bit key containing containing an unsupported
   extension type. The OID was encoded as "1.2.3.4" with an
-  ``extnValue`` of "value".
+  ``extnValue`` of "value". The signature on this CSR is invalid.
 * ``unsupported_extension_critical.pem`` - A certificate signing
   request for an RSA 2048 bit key containing containing an unsupported
   extension type marked critical. The OID was encoded as "1.2.3.4"
-  with an ``extnValue`` of "value".
+  with an ``extnValue`` of "value". The signature on this CSR is invalid.
 * ``basic_constraints.pem`` - A certificate signing request for an RSA
   2048 bit key containing a basic constraints extension marked as
-  critical.
+  critical. The signature on this CSR is invalid.
 * ``invalid_signature.pem`` - A certificate signing request for an RSA
   1024 bit key containing an invalid signature with correct padding.
 * ``challenge.pem`` - A certificate signing request for an RSA 2048 bit key
@@ -488,6 +524,12 @@ Custom X.509 Request Vectors
 * ``challenge-multi-valued.der`` - A certificate signing request for an RSA
   2048 bit key containing a challenge password attribute with two values
   inside the ASN.1 set. The signature on this request is invalid.
+* ``freeipa-bad-critical.pem`` - A certificate signing request where the
+  extensions value has a ``critical`` value of ``False`` explicitly encoded.
+* ``bad-version.pem`` - A certificate signing request where the version is
+  invalid.
+* ``long-form-attribute.pem`` - A certificate signing request containing an
+  attribute whose value's tag is encoded in the long form.
 
 Custom X.509 Certificate Revocation List Vectors
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -496,16 +538,18 @@ Custom X.509 Certificate Revocation List Vectors
   serials match their list position. It includes one revocation without
   any entry extensions, 10 revocations with every supported reason code and one
   revocation with an unsupported, non-critical entry extension with the OID
-  value set to "1.2.3.4".
+  value set to "1.2.3.4". The signature on this CRL is invalid.
 * ``crl_dup_entry_ext.pem`` - Contains a CRL with one revocation which has a
-  duplicate entry extension.
+  duplicate entry extension. The signature on this CRL is invalid.
 * ``crl_md2_unknown_crit_entry_ext.pem`` - Contains a CRL with one revocation
   which contains an unsupported critical entry extension with the OID value set
-  to "1.2.3.4". The CRL uses an unsupported MD2 signature algorithm.
+  to "1.2.3.4". The CRL uses an unsupported MD2 signature algorithm, and the
+  signature on this CRL is invalid.
 * ``crl_unsupported_reason.pem`` - Contains a CRL with one revocation which has
-  an unsupported reason code.
+  an unsupported reason code. The signature on this CRL is invalid.
 * ``crl_inval_cert_issuer_entry_ext.pem`` - Contains a CRL with one revocation
-  which has one entry extension for certificate issuer with an empty value.
+  which has one entry extension for certificate issuer with an empty value. The
+  signature on this CRL is invalid.
 * ``crl_empty.pem`` - Contains a CRL with no revoked certificates.
 * ``crl_empty_no_sequence.der`` - Contains a CRL with no revoked certificates
   and the optional ASN.1 sequence for revoked certificates is omitted.
@@ -554,6 +598,8 @@ Custom X.509 Certificate Revocation List Vectors
   value in ``thisUpdate``. The signature on this CRL is invalid.
 * ``crl_no_next_time.pem`` - Contains a CRL with no ``nextUpdate`` value. The
   signature on this CRL is invalid.
+* ``crl_bad_version.pem`` - Contains a CRL with an invalid version.
+* ``crl_almost_10k.pem`` - Contains a CRL with 9,999 entries.
 
 X.509 OCSP Test Vectors
 ~~~~~~~~~~~~~~~~~~~~~~~
@@ -736,8 +782,10 @@ Custom PKCS7 Test Vectors
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 * ``pkcs7/isrg.pem`` - A PEM encoded PKCS7 file containing the ISRG X1 root
   CA.
-* ``pkcs7/amazon-roots.p7b`` - A DER encoded PCKS7 file containing Amazon Root
-  CA 2 and 3.
+* ``pkcs7/amazon-roots.p7b`` - A BER encoded PCKS7 file containing Amazon Root
+  CA 2 and 3 generated by Apple Keychain.
+* ``pkcs7/amazon-roots.der`` - A DER encoded PCKS7 file containing Amazon Root
+  CA 2 and 3 generated by OpenSSL.
 * ``pkcs7/enveloped.pem`` - A PEM encoded PKCS7 file with enveloped data.
 
 Custom OpenSSH Test Vectors
@@ -820,6 +868,8 @@ Symmetric ciphers
 
 * AES (CBC, CFB, ECB, GCM, OFB, CCM) from `NIST CAVP`_.
 * AES CTR from :rfc:`3686`.
+* AES OCB3 from :rfc:`7253`, `dkg's additional OCB3 vectors`_, and `OpenSSL's OCB vectors`_.
+* AES SIV from OpenSSL's `evpciph_aes_siv.txt`_.
 * 3DES (CBC, CFB, ECB, OFB) from `NIST CAVP`_.
 * ARC4 (KEY-LENGTH: 40, 56, 64, 80, 128, 192, 256) from :rfc:`6229`.
 * ARC4 (KEY-LENGTH: 160) generated by this project.
@@ -932,3 +982,7 @@ header format (substituting the correct information):
 .. _`root-ed25519.pem`: https://github.com/openssl/openssl/blob/2a1e2fe145c6eb8e75aa2e1b3a8c3a49384b2852/test/certs/root-ed25519.pem
 .. _`server-ed25519-cert.pem`: https://github.com/openssl/openssl/blob/2a1e2fe145c6eb8e75aa2e1b3a8c3a49384b2852/test/certs/server-ed25519-cert.pem
 .. _`server-ed448-cert.pem`: https://github.com/openssl/openssl/blob/2a1e2fe145c6eb8e75aa2e1b3a8c3a49384b2852/test/certs/server-ed448-cert.pem
+.. _`evpciph_aes_siv.txt`: https://github.com/openssl/openssl/blob/d830526c711074fdcd82c70c24c31444366a1ed8/test/recipes/30-test_evp_data/evpciph_aes_siv.txt
+.. _`dkg's additional OCB3 vectors`: https://gitlab.com/dkg/ocb-test-vectors
+.. _`OpenSSL's OCB vectors`: https://github.com/openssl/openssl/commit/2f19ab18a29cf9c82cdd68bc8c7e5be5061b19be
+.. _`badkeys`: https://github.com/vcsjones/badkeys/tree/50f1cc5f8d13bf3a2046d689f6452decb15d9c3c

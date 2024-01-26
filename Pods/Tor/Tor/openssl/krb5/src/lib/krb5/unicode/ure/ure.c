@@ -8,7 +8,7 @@
  *
  * A copy of this license is available in file LICENSE in the
  * top-level directory of the distribution or, alternatively, at
- * <http://www.OpenLDAP.org/license.html>.
+ * <https://www.OpenLDAP.org/license.html>.
  */
 /* Copyright 1997, 1998, 1999 Computing Research Labs,
  * New Mexico State University
@@ -33,7 +33,7 @@
  */
 
 /*
- * This work is part of OpenLDAP Software <http://www.openldap.org/>.
+ * This work is part of OpenLDAP Software <https://www.openldap.org/>.
  * $OpenLDAP: pkg/ldap/libraries/liblunicode/ure/ure.c,v 1.19 2008/01/07 23:20:05 kurt Exp $
  * $Id: ure.c,v 1.2 1999/09/21 15:47:43 mleisher Exp $"
  */
@@ -1725,7 +1725,7 @@ ure_compile(ucs2_t *re, unsigned long relen, int casefold, ure_buffer_t buf)
     buf->states.states_used = 0;
 
     /*
-     * Construct the NFA.  If this stage returns a 0, then an error occured or
+     * Construct the NFA.  If this stage returns a 0, then an error occurred or
      * an empty expression was passed.
      */
     if ((state = _ure_re2nfa(re, relen, buf)) == _URE_NOOP)

@@ -189,15 +189,12 @@ krb5_ldap_get_principal(krb5_context context, krb5_const_principal searchfor,
             if ((values=ldap_get_values(ld, ent, "krbcanonicalname")) != NULL) {
                 if (values[0] && strcmp(values[0], user) != 0) {
                     /* We matched an alias, not the canonical name. */
-                    if (flags & KRB5_KDB_FLAG_ALIAS_OK) {
-                        st = krb5_ldap_parse_principal_name(values[0], &cname);
-                        if (st != 0)
-                            goto cleanup;
-                        st = krb5_parse_name(context, cname, &cprinc);
-                        if (st != 0)
-                            goto cleanup;
-                    } else /* No canonicalization, so don't return aliases. */
-                        found = FALSE;
+                    st = krb5_ldap_parse_principal_name(values[0], &cname);
+                    if (st != 0)
+                        goto cleanup;
+                    st = krb5_parse_name(context, cname, &cprinc);
+                    if (st != 0)
+                        goto cleanup;
                 }
                 ldap_value_free(values);
                 if (!found)
@@ -630,12 +627,22 @@ update_ldap_mod_auth_ind(krb5_context context, krb5_db_entry *entry,
     char *auth_ind = NULL;
     char *strval[10] = { 0 };
     char *ai, *ai_save = NULL;
-    int sv_num = sizeof(strval) / sizeof(*strval);
+    int mask, sv_num = sizeof(strval) / sizeof(*strval);
 
     ret = krb5_dbe_get_string(context, entry, KRB5_KDB_SK_REQUIRE_AUTH,
                               &auth_ind);
-    if (ret || auth_ind == NULL)
-        goto cleanup;
+    if (ret)
+        return ret;
+    if (auth_ind == NULL) {
+        /* If we know krbPrincipalAuthInd attributes are present from loading
+         * the entry, delete them. */
+        ret = krb5_get_attributes_mask(context, entry, &mask);
+        if (!ret && (mask & KDB_AUTH_IND_ATTR)) {
+            return krb5_add_str_mem_ldap_mod(mods, "krbPrincipalAuthInd",
+                                             LDAP_MOD_DELETE, NULL);
+        }
+        return 0;
+    }
 
     ai = strtok_r(auth_ind, " ", &ai_save);
     while (ai != NULL && i < sv_num) {
@@ -645,8 +652,6 @@ update_ldap_mod_auth_ind(krb5_context context, krb5_db_entry *entry,
 
     ret = krb5_add_str_mem_ldap_mod(mods, "krbPrincipalAuthInd",
                                     LDAP_MOD_REPLACE, strval);
-
-cleanup:
     krb5_dbe_free_string(context, auth_ind);
     return ret;
 }
@@ -1233,19 +1238,6 @@ krb5_ldap_put_principal(krb5_context context, krb5_db_entry *entry,
                 goto cleanup;
         }
 
-        if (!(entry->mask & KADM5_PRINCIPAL)) {
-            memset(strval, 0, sizeof(strval));
-            if ((strval[0]=getstringtime(entry->pw_expiration)) == NULL)
-                goto cleanup;
-            if ((st=krb5_add_str_mem_ldap_mod(&mods,
-                                              "krbpasswordexpiration",
-                                              LDAP_MOD_REPLACE, strval)) != 0) {
-                free (strval[0]);
-                goto cleanup;
-            }
-            free (strval[0]);
-        }
-
         /* Update last password change whenever a new key is set */
         {
             krb5_timestamp last_pw_changed;
@@ -1267,18 +1259,19 @@ krb5_ldap_put_principal(krb5_context context, krb5_db_entry *entry,
 
     } /* Modify Key data ends here */
 
-    /* Auth indicators will also be stored in krbExtraData when processing
-     * tl_data. */
-    st = update_ldap_mod_auth_ind(context, entry, &mods);
-    if (st != 0)
-        goto cleanup;
-
     /* Set tl_data */
     if (entry->tl_data != NULL) {
         int count = 0;
         struct berval **ber_tl_data = NULL;
         krb5_tl_data *ptr;
         krb5_timestamp unlock_time;
+
+        /* Normalize required auth indicators, but also store them as string
+         * attributes within krbExtraData. */
+        st = update_ldap_mod_auth_ind(context, entry, &mods);
+        if (st != 0)
+            goto cleanup;
+
         for (ptr = entry->tl_data; ptr != NULL; ptr = ptr->tl_data_next) {
             if (ptr->tl_data_type == KRB5_TL_LAST_PWD_CHANGE
 #ifdef SECURID

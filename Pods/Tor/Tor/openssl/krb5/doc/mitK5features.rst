@@ -19,9 +19,9 @@ Quick facts
 License - :ref:`mitK5license`
 
 Releases:
-    - Latest stable: https://web.mit.edu/kerberos/krb5-1.17/
-    - Supported: https://web.mit.edu/kerberos/krb5-1.16/
-    - Release cycle: 9 -- 12 months
+    - Latest stable: https://web.mit.edu/kerberos/krb5-1.18/
+    - Supported: https://web.mit.edu/kerberos/krb5-1.17/
+    - Release cycle: approximately 12 months
 
 Supported platforms \/ OS distributions:
     - Windows (KfW 4.0): Windows 7, Vista, XP
@@ -37,7 +37,7 @@ Database backends: LDAP, DB2, LMDB
 
 krb4 support: Kerberos 5 release < 1.8
 
-DES support: configurable (See :ref:`retiring-des`)
+DES support: Kerberos 5 release < 1.18 (See :ref:`retiring-des`)
 
 Interoperability
 ----------------
@@ -112,7 +112,7 @@ Release 1.9
  -   Plugin to test password quality           :ref:`pwqual_plugin`
  -   Plugin to synchronize password changes    :ref:`kadm5_hook_plugin`
  -   Parallel KDC
- -   GSS-API extentions for SASL GS2 bridge    :rfc:`5801` :rfc:`5587`
+ -   GSS-API extensions for SASL GS2 bridge    :rfc:`5801` :rfc:`5587`
  -   Purging old keys
  -   Naming extensions for delegation chain
  -   Password expiration API
@@ -146,7 +146,7 @@ Release 1.13
      protocol.
  -   Add support for `hierarchical incremental propagation
      <https://k5wiki.kerberos.org/wiki/Projects/Hierarchical_iprop>`_,
-     where replicas can act as intermediates between an upstream master
+     where replicas can act as intermediates between an upstream primary
      and other downstream replicas.
  -   Add support for configuring GSS mechanisms using
      ``/etc/gss/mech.d/*.conf`` files in addition to
@@ -255,9 +255,9 @@ Release 1.14
 
  * Performance:
 
-   - On replica KDCs, poll the master KDC immediately after processing
-     a full resync, and do not require two full resyncs after the
-     master KDC's log file is reset.
+   - On replica KDCs, poll the primary KDC immediately after
+     processing a full resync, and do not require two full resyncs
+     after the primary KDC's log file is reset.
 
 Release 1.15
 
@@ -279,7 +279,7 @@ Release 1.15
 
   - Add DNS auto-discovery of KDC and kpasswd servers from URI
     records, in addition to SRV records.  URI records can convey TCP
-    and UDP servers and master KDC status in a single DNS lookup, and
+    and UDP servers and primary KDC status in a single DNS lookup, and
     can also point to HTTPS proxy servers.
 
   - Add support for password history to the LDAP back end.
@@ -470,6 +470,129 @@ Release 1.17
     with more recent versions of Visual Studio.  A large volume of
     unused Windows-specific code has been removed.  Visual Studio 2013
     or later is now required.
+
+Release 1.18
+
+* Administrator experience:
+
+  - Remove support for single-DES encryption types.
+
+  - Change the replay cache format to be more efficient and robust.
+    Replay cache filenames using the new format end with ``.rcache2``
+    by default.
+
+  - setuid programs will automatically ignore environment variables
+    that normally affect krb5 API functions, even if the caller does
+    not use krb5_init_secure_context().
+
+  - Add an ``enforce_ok_as_delegate`` krb5.conf relation to disable
+    credential forwarding during GSSAPI authentication unless the KDC
+    sets the ok-as-delegate bit in the service ticket.
+
+* Developer experience:
+
+  - Implement krb5_cc_remove_cred() for all credential cache types.
+
+  - Add the krb5_pac_get_client_info() API to get the client account
+    name from a PAC.
+
+* Protocol evolution:
+
+  - Add KDC support for S4U2Self requests where the user is identified
+    by X.509 certificate.  (Requires support for certificate lookup
+    from a third-party KDB module.)
+
+  - Remove support for an old ("draft 9") variant of PKINIT.
+
+  - Add support for Microsoft NegoEx.  (Requires one or more
+    third-party GSS modules implementing NegoEx mechanisms.)
+
+* User experience:
+
+  - Add support for ``dns_canonicalize_hostname=fallback``, causing
+    host-based principal names to be tried first without DNS
+    canonicalization, and again with DNS canonicalization if the
+    un-canonicalized server is not found.
+
+  - Expand single-component hostnames in hhost-based principal names
+    when DNS canonicalization is not used, adding the system's first
+    DNS search path as a suffix.  Add a ``qualify_shortname``
+    krb5.conf relation to override this suffix or disable expansion.
+
+* Code quality:
+
+  - The libkrb5 serialization code (used to export and import krb5 GSS
+    security contexts) has been simplified and made type-safe.
+
+  - The libkrb5 code for creating KRB-PRIV, KRB-SAFE, and KRB-CRED
+    messages has been revised to conform to current coding practices.
+
+  - The test suite has been modified to work with macOS System
+    Integrity Protection enabled.
+
+  - The test suite incorporates soft-pkcs11 so that PKINIT PKCS11
+    support can always be tested.
+
+Release 1.19
+
+* Administrator experience:
+
+  - When a client keytab is present, the GSSAPI krb5 mech will refresh
+    credentials even if the current credentials were acquired
+    manually.
+
+  - It is now harder to accidentally delete the K/M entry from a KDB.
+
+* Developer experience:
+
+  - gss_acquire_cred_from() now supports the "password" and "verify"
+    options, allowing credentials to be acquired via password and
+    verified using a keytab key.
+
+  - When an application accepts a GSS security context, the new
+    GSS_C_CHANNEL_BOUND_FLAG will be set if the initiator and acceptor
+    both provided matching channel bindings.
+
+  - Added the GSS_KRB5_NT_X509_CERT name type, allowing S4U2Self
+    requests to identify the desired client principal by certificate.
+
+  - PKINIT certauth modules can now cause the hw-authent flag to be
+    set in issued tickets.
+
+  - The krb5_init_creds_step() API will now issue the same password
+    expiration warnings as krb5_get_init_creds_password().
+
+* Protocol evolution:
+
+  - Added client and KDC support for Microsoft's Resource-Based
+    Constrained Delegation, which allows cross-realm S4U2Proxy
+    requests.  A third-party database module is required for KDC
+    support.
+
+  - kadmin/admin is now the preferred server principal name for kadmin
+    connections, and the host-based form is no longer created by
+    default.  The client will still try the host-based form as a
+    fallback.
+
+  - Added client and server support for Microsoft's
+    KERB_AP_OPTIONS_CBT extension, which causes channel bindings to be
+    required for the initiator if the acceptor provided them.  The
+    client will send this option if the client_aware_gss_bindings
+    profile option is set.
+
+User experience:
+
+  - The default setting of dns_canonicalize_realm is now "fallback".
+    Hostnames provided from applications will be tried in principal
+    names as given (possibly with shortname qualification), falling
+    back to the canonicalized name.
+
+  - kinit will now issue a warning if the des3-cbc-sha1 encryption
+    type is used in the reply.  This encryption type will be
+    deprecated and removed in future releases.
+
+  - Added kvno flags --out-cache, --no-store, and --cached-only
+    (inspired by Heimdal's kgetcred).
 
 `Pre-authentication mechanisms`
 

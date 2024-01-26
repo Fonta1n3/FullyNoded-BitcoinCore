@@ -48,7 +48,7 @@ struct tgsflagrule {
 };
 
 /* Service principal TGS policy checking functions */
-typedef int (check_tgs_svc_pol_fn)(krb5_kdc_req *, krb5_db_entry,
+typedef int (check_tgs_svc_pol_fn)(krb5_kdc_req *, krb5_db_entry *,
                                    krb5_ticket *, krb5_timestamp,
                                    const char **);
 
@@ -63,9 +63,9 @@ static check_tgs_svc_pol_fn * const svc_pol_fns[] = {
 };
 
 static const struct tgsflagrule tgsflagrules[] = {
-    { (KDC_OPT_FORWARDED | KDC_OPT_FORWARDABLE), TKT_FLG_FORWARDABLE,
+    { KDC_OPT_FORWARDED, TKT_FLG_FORWARDABLE,
       "TGT NOT FORWARDABLE", KDC_ERR_BADOPTION },
-    { (KDC_OPT_PROXY | KDC_OPT_PROXIABLE), TKT_FLG_PROXIABLE,
+    { KDC_OPT_PROXY, TKT_FLG_PROXIABLE,
       "TGT NOT PROXIABLE", KDC_ERR_BADOPTION },
     { (KDC_OPT_ALLOW_POSTDATE | KDC_OPT_POSTDATED), TKT_FLG_MAY_POSTDATE,
       "TGT NOT POSTDATABLE", KDC_ERR_BADOPTION },
@@ -94,16 +94,19 @@ check_tgs_opts(krb5_kdc_req *req, krb5_ticket *tkt, const char **status)
             }
         }
     }
+
+    if (isflagset(tkt->enc_part2->flags, TKT_FLG_INVALID) &&
+        !isflagset(req->kdc_options, KDC_OPT_VALIDATE)) {
+        *status = "TICKET NOT VALID";
+        return KRB_AP_ERR_TKT_NYV;
+    }
+
     return 0;
 }
 
 static const struct tgsflagrule svcdenyrules[] = {
-    { KDC_OPT_FORWARDABLE, KRB5_KDB_DISALLOW_FORWARDABLE,
-      "NON-FORWARDABLE TICKET", KDC_ERR_POLICY },
     { KDC_OPT_RENEWABLE, KRB5_KDB_DISALLOW_RENEWABLE,
       "NON-RENEWABLE TICKET", KDC_ERR_POLICY },
-    { KDC_OPT_PROXIABLE, KRB5_KDB_DISALLOW_PROXIABLE,
-      "NON-PROXIABLE TICKET", KDC_ERR_POLICY },
     { KDC_OPT_ALLOW_POSTDATE, KRB5_KDB_DISALLOW_POSTDATED,
       "NON-POSTDATABLE TICKET", KDC_ERR_CANNOT_POSTDATE },
     { KDC_OPT_ENC_TKT_IN_SKEY, KRB5_KDB_DISALLOW_DUP_SKEY,
@@ -114,7 +117,7 @@ static const struct tgsflagrule svcdenyrules[] = {
  * A service principal can forbid some TGS-REQ options.
  */
 static int
-check_tgs_svc_deny_opts(krb5_kdc_req *req, krb5_db_entry server,
+check_tgs_svc_deny_opts(krb5_kdc_req *req, krb5_db_entry *server,
                         krb5_ticket *tkt, krb5_timestamp kdc_time,
                         const char **status)
 {
@@ -126,7 +129,7 @@ check_tgs_svc_deny_opts(krb5_kdc_req *req, krb5_db_entry server,
         r = &svcdenyrules[i];
         if (!(r->reqflags & req->kdc_options))
             continue;
-        if (r->checkflag & server.attributes) {
+        if (r->checkflag & server->attributes) {
             *status = r->status;
             return r->err;
         }
@@ -138,20 +141,20 @@ check_tgs_svc_deny_opts(krb5_kdc_req *req, krb5_db_entry server,
  * A service principal can deny all TGS-REQs for it.
  */
 static int
-check_tgs_svc_deny_all(krb5_kdc_req *req, krb5_db_entry server,
+check_tgs_svc_deny_all(krb5_kdc_req *req, krb5_db_entry *server,
                        krb5_ticket *tkt, krb5_timestamp kdc_time,
                        const char **status)
 {
-    if (server.attributes & KRB5_KDB_DISALLOW_ALL_TIX) {
+    if (server->attributes & KRB5_KDB_DISALLOW_ALL_TIX) {
         *status = "SERVER LOCKED OUT";
         return KDC_ERR_S_PRINCIPAL_UNKNOWN;
     }
-    if ((server.attributes & KRB5_KDB_DISALLOW_SVR) &&
+    if ((server->attributes & KRB5_KDB_DISALLOW_SVR) &&
         !(req->kdc_options & KDC_OPT_ENC_TKT_IN_SKEY)) {
         *status = "SERVER NOT ALLOWED";
         return KDC_ERR_MUST_USE_USER2USER;
     }
-    if (server.attributes & KRB5_KDB_DISALLOW_TGT_BASED) {
+    if (server->attributes & KRB5_KDB_DISALLOW_TGT_BASED) {
         if (krb5_is_tgs_principal(tkt->server)) {
             *status = "TGT BASED NOT ALLOWED";
             return KDC_ERR_POLICY;
@@ -164,17 +167,17 @@ check_tgs_svc_deny_all(krb5_kdc_req *req, krb5_db_entry server,
  * A service principal can require certain TGT flags.
  */
 static int
-check_tgs_svc_reqd_flags(krb5_kdc_req *req, krb5_db_entry server,
+check_tgs_svc_reqd_flags(krb5_kdc_req *req, krb5_db_entry *server,
                          krb5_ticket *tkt,
                          krb5_timestamp kdc_time, const char **status)
 {
-    if (server.attributes & KRB5_KDB_REQUIRES_HW_AUTH) {
+    if (server->attributes & KRB5_KDB_REQUIRES_HW_AUTH) {
         if (!(tkt->enc_part2->flags & TKT_FLG_HW_AUTH)) {
             *status = "NO HW PREAUTH";
             return KRB_ERR_GENERIC;
         }
     }
-    if (server.attributes & KRB5_KDB_REQUIRES_PRE_AUTH) {
+    if (server->attributes & KRB5_KDB_REQUIRES_PRE_AUTH) {
         if (!(tkt->enc_part2->flags & TKT_FLG_PRE_AUTH)) {
             *status = "NO PREAUTH";
             return KRB_ERR_GENERIC;
@@ -184,10 +187,10 @@ check_tgs_svc_reqd_flags(krb5_kdc_req *req, krb5_db_entry server,
 }
 
 static int
-check_tgs_svc_time(krb5_kdc_req *req, krb5_db_entry server, krb5_ticket *tkt,
+check_tgs_svc_time(krb5_kdc_req *req, krb5_db_entry *server, krb5_ticket *tkt,
                    krb5_timestamp kdc_time, const char **status)
 {
-    if (server.expiration && ts_after(kdc_time, server.expiration)) {
+    if (server->expiration && ts_after(kdc_time, server->expiration)) {
         *status = "SERVICE EXPIRED";
         return KDC_ERR_SERVICE_EXP;
     }
@@ -195,8 +198,9 @@ check_tgs_svc_time(krb5_kdc_req *req, krb5_db_entry server, krb5_ticket *tkt,
 }
 
 static int
-check_tgs_svc_policy(krb5_kdc_req *req, krb5_db_entry server, krb5_ticket *tkt,
-                     krb5_timestamp kdc_time, const char **status)
+check_tgs_svc_policy(krb5_kdc_req *req, krb5_db_entry *server,
+                     krb5_ticket *tkt, krb5_timestamp kdc_time,
+                     const char **status)
 {
     int errcode;
     size_t i;
@@ -240,38 +244,180 @@ check_tgs_times(krb5_kdc_req *req, krb5_ticket_times *times,
     return 0;
 }
 
+/* Check for local user tickets issued by foreign realms.  This check is
+ * skipped for S4U2Self requests. */
 static int
-check_tgs_s4u2proxy(kdc_realm_t *kdc_active_realm,
-                    krb5_kdc_req *req, const char **status)
+check_tgs_lineage(krb5_db_entry *server, krb5_ticket *tkt,
+                  krb5_boolean is_crossrealm, const char **status)
 {
-    if (req->kdc_options & KDC_OPT_CNAME_IN_ADDL_TKT) {
-        /* Check that second ticket is in request. */
-        if (!req->second_ticket || !req->second_ticket[0]) {
-            *status = "NO_2ND_TKT";
-            return KDC_ERR_BADOPTION;
-        }
+    if (is_crossrealm && data_eq(tkt->enc_part2->client->realm,
+                                 server->princ->realm)) {
+        *status = "INVALID LINEAGE";
+        return KDC_ERR_POLICY;
     }
     return 0;
 }
 
 static int
-check_tgs_u2u(kdc_realm_t *kdc_active_realm,
-              krb5_kdc_req *req, const char **status)
+check_tgs_s4u2self(kdc_realm_t *kdc_active_realm, krb5_kdc_req *req,
+                   krb5_db_entry *server, krb5_ticket *tkt,
+                   krb5_timestamp kdc_time,
+                   krb5_pa_s4u_x509_user *s4u_x509_user, krb5_db_entry *client,
+                   krb5_boolean is_crossrealm, krb5_boolean is_referral,
+                   const char **status, krb5_pa_data ***e_data)
 {
-    if (req->kdc_options & KDC_OPT_ENC_TKT_IN_SKEY) {
-        /* Check that second ticket is in request. */
-        if (!req->second_ticket || !req->second_ticket[0]) {
-            *status = "NO_2ND_TKT";
-            return KDC_ERR_BADOPTION;
-        }
-        /* Check that second ticket is a TGT. */
-        if (!krb5_principal_compare(kdc_context,
-                                    req->second_ticket[0]->server,
-                                    tgs_server)) {
-            *status = "2ND_TKT_NOT_TGS";
-            return KDC_ERR_POLICY;
-        }
+    krb5_db_entry empty_server = { 0 };
+
+    /* If the server is local, check that the request is for self. */
+    if (!is_referral &&
+        !is_client_db_alias(kdc_context, server, tkt->enc_part2->client)) {
+        *status = "INVALID_S4U2SELF_REQUEST_SERVER_MISMATCH";
+        return KDC_ERR_C_PRINCIPAL_UNKNOWN; /* match Windows error */
     }
+
+    /* S4U2Self requests must use options valid for AS requests. */
+    if (req->kdc_options & AS_INVALID_OPTIONS) {
+        *status = "INVALID S4U2SELF OPTIONS";
+        return KDC_ERR_BADOPTION;
+    }
+
+    /*
+     * Valid S4U2Self requests can occur in the following combinations:
+     *
+     * (1) local TGT, local user, local server
+     * (2) cross TGT, local user, issuing referral
+     * (3) cross TGT, non-local user, issuing referral
+     * (4) cross TGT, non-local user, local server
+     *
+     * The first case is for a single-realm S4U2Self scenario; the second,
+     * third, and fourth cases are for the initial, intermediate (if any), and
+     * final cross-realm requests in a multi-realm scenario.
+     */
+
+    if (!is_crossrealm && is_referral) {
+        /* This could happen if the requesting server no longer exists, and we
+         * found a referral instead.  Treat this as a server lookup failure. */
+        *status = "LOOKING_UP_SERVER";
+        return KDC_ERR_S_PRINCIPAL_UNKNOWN;
+    }
+    if (client != NULL && is_crossrealm && !is_referral) {
+        /* A local server should not need a cross-realm TGT to impersonate
+         * a local principal. */
+        *status = "NOT_CROSS_REALM_REQUEST";
+        return KDC_ERR_C_PRINCIPAL_UNKNOWN; /* match Windows error */
+    }
+    if (client == NULL && !is_crossrealm) {
+        /*
+         * The server is asking to impersonate a principal from another realm,
+         * using a local TGT.  It should instead ask that principal's realm and
+         * follow referrals back to us.
+         */
+        *status = "S4U2SELF_CLIENT_NOT_OURS";
+        return KDC_ERR_POLICY; /* match Windows error */
+    }
+    if (client == NULL && s4u_x509_user->user_id.user->length == 0) {
+        /*
+         * Only a KDC in the client realm can handle a certificate-only
+         * S4U2Self request.  Other KDCs require a principal name and ignore
+         * the subject-certificate field.
+         */
+        *status = "INVALID_XREALM_S4U2SELF_REQUEST";
+        return KDC_ERR_POLICY; /* match Windows error */
+    }
+
+    if (client != NULL) {
+        /* Validate the client policy.  Use an empty server principal to bypass
+         * server policy checks. */
+        return validate_as_request(kdc_active_realm, req, client,
+                                   &empty_server, kdc_time, status, e_data);
+    }
+
+    return 0;
+}
+
+static int
+check_tgs_s4u2proxy(kdc_realm_t *kdc_active_realm, krb5_kdc_req *req,
+                    krb5_db_entry *server, krb5_ticket *tkt,
+                    const krb5_ticket *stkt, krb5_db_entry *stkt_server,
+                    krb5_boolean is_crossrealm, krb5_boolean is_referral,
+                    const char **status)
+{
+    /* A second ticket must be present in the request. */
+    if (stkt == NULL) {
+        *status = "NO_2ND_TKT";
+        return KDC_ERR_BADOPTION;
+    }
+
+    /* Constrained delegation is mutually exclusive with renew/forward/etc.
+     * (and therefore requires the header ticket to be a TGT). */
+    if (req->kdc_options & (NON_TGT_OPTION | KDC_OPT_ENC_TKT_IN_SKEY)) {
+        *status = "INVALID_S4U2PROXY_OPTIONS";
+        return KDC_ERR_BADOPTION;
+    }
+
+    /* Can't get a TGT (otherwise it would be unconstrained delegation). */
+    if (krb5_is_tgs_principal(req->server)) {
+        *status = "NOT_ALLOWED_TO_DELEGATE";
+        return KDC_ERR_POLICY;
+    }
+
+    /*
+     * An S4U2Proxy request must be an initial request to the impersonator's
+     * realm (possibly for a target resource in the same realm), or a final
+     * cross-realm RBCD request to the resource realm.  Intermediate
+     * referral-chasing requests do not use the CNAME-IN-ADDL-TKT flag.
+     */
+
+    /* For an initial or same-realm request, the second ticket server and
+     * header ticket client must be the same principal. */
+    if (!is_crossrealm && !is_client_db_alias(kdc_context, stkt_server,
+                                              tkt->enc_part2->client)) {
+        *status = "EVIDENCE_TICKET_MISMATCH";
+        return KDC_ERR_SERVER_NOMATCH;
+    }
+
+    /*
+     * For a cross-realm request, the second ticket must be a referral TGT to
+     * our realm with the impersonator as client.  (Unlike the header ticket,
+     * the second ticket contains authdata for the subject client.)  The target
+     * server must also be local, so we must not be issuing a referral.
+     */
+    if (is_crossrealm &&
+        (is_referral || !is_cross_tgs_principal(stkt_server->princ) ||
+         !data_eq(stkt_server->princ->data[1], server->princ->realm) ||
+         !krb5_principal_compare(kdc_context, stkt->enc_part2->client,
+                                 tkt->enc_part2->client))) {
+        *status = "XREALM_EVIDENCE_TICKET_MISMATCH";
+        return KDC_ERR_BADOPTION;
+    }
+
+    return 0;
+}
+
+static int
+check_tgs_u2u(kdc_realm_t *kdc_active_realm, krb5_kdc_req *req,
+              const krb5_ticket *stkt, krb5_db_entry *server,
+              const char **status)
+{
+    /* A second ticket must be present in the request. */
+    if (stkt == NULL) {
+        *status = "NO_2ND_TKT";
+        return KDC_ERR_BADOPTION;
+    }
+
+    /* The second ticket must be a TGT to the server realm. */
+    if (!is_local_tgs_principal(stkt->server) ||
+        !data_eq(stkt->server->data[1], server->princ->realm)) {
+        *status = "2ND_TKT_NOT_TGS";
+        return KDC_ERR_POLICY;
+    }
+
+    /* The second ticket client must match the requested server. */
+    if (!is_client_db_alias(kdc_context, server, stkt->enc_part2->client)) {
+        *status = "2ND_TKT_MISMATCH";
+        return KDC_ERR_SERVER_NOMATCH;
+    }
+
     return 0;
 }
 
@@ -321,8 +467,12 @@ check_tgs_tgt(kdc_realm_t *kdc_active_realm, krb5_kdc_req *req,
 
 int
 validate_tgs_request(kdc_realm_t *kdc_active_realm,
-                     krb5_kdc_req *request, krb5_db_entry server,
-                     krb5_ticket *ticket, krb5_timestamp kdc_time,
+                     krb5_kdc_req *request, krb5_db_entry *server,
+                     krb5_ticket *ticket, const krb5_ticket *stkt,
+                     krb5_db_entry *stkt_server, krb5_timestamp kdc_time,
+                     krb5_pa_s4u_x509_user *s4u_x509_user,
+                     krb5_db_entry *s4u2self_client,
+                     krb5_boolean is_crossrealm, krb5_boolean is_referral,
                      const char **status, krb5_pa_data ***e_data)
 {
     int errcode;
@@ -356,13 +506,31 @@ validate_tgs_request(kdc_realm_t *kdc_active_realm,
         return(KRB_AP_ERR_REPEAT);
     }
 
-    errcode = check_tgs_u2u(kdc_active_realm, request, status);
+    if (s4u_x509_user != NULL) {
+        errcode = check_tgs_s4u2self(kdc_active_realm, request, server, ticket,
+                                     kdc_time, s4u_x509_user, s4u2self_client,
+                                     is_crossrealm, is_referral,
+                                     status, e_data);
+    } else {
+        errcode = check_tgs_lineage(server, ticket, is_crossrealm, status);
+    }
     if (errcode != 0)
         return errcode;
 
-    errcode = check_tgs_s4u2proxy(kdc_active_realm, request, status);
-    if (errcode != 0)
-        return errcode;
+    if (request->kdc_options & KDC_OPT_ENC_TKT_IN_SKEY) {
+        errcode = check_tgs_u2u(kdc_active_realm, request, stkt, server,
+                                status);
+        if (errcode != 0)
+            return errcode;
+    }
+
+    if (request->kdc_options & KDC_OPT_CNAME_IN_ADDL_TKT) {
+        errcode = check_tgs_s4u2proxy(kdc_active_realm, request, server,
+                                      ticket, stkt, stkt_server, is_crossrealm,
+                                      is_referral, status);
+        if (errcode != 0)
+            return errcode;
+    }
 
     if (check_anon(kdc_active_realm, ticket->enc_part2->client,
                    request->server) != 0) {
@@ -371,8 +539,8 @@ validate_tgs_request(kdc_realm_t *kdc_active_realm,
     }
 
     /* Perform KDB module policy checks. */
-    ret = krb5_db_check_policy_tgs(kdc_context, request, &server,
-                                   ticket, status, e_data);
+    ret = krb5_db_check_policy_tgs(kdc_context, request, server, ticket,
+                                   status, e_data);
     if (ret && ret != KRB5_PLUGIN_OP_NOTSUPP)
         return errcode_to_protocol(ret);
 

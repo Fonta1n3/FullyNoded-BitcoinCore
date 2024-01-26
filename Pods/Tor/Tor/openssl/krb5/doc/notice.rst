@@ -1,4 +1,4 @@
-Copyright |copy| 1985-2019 by the Massachusetts Institute of Technology.
+Copyright |copy| 1985-2021 by the Massachusetts Institute of Technology.
 
 All rights reserved.
 
@@ -134,27 +134,22 @@ Portions of ``src/lib/crypto`` have the following copyright:
 The implementation of the AES encryption algorithm in
 ``src/lib/crypto/builtin/aes`` has the following copyright:
 
-    | Copyright |copy| 2001, Dr Brian Gladman ``brg@gladman.uk.net``,
-        Worcester, UK.
-    | All rights reserved.
+    | Copyright |copy| 1998-2013, Brian Gladman, Worcester, UK. All
+    | rights reserved.
 
-    LICENSE TERMS
+    The redistribution and use of this software (with or without
+    changes) is allowed without the payment of fees or royalties
+    provided that:
 
-    The free distribution and use of this software in both source and binary
-    form is allowed (with or without changes) provided that:
+      source code distributions include the above copyright notice,
+      this list of conditions and the following disclaimer;
 
-    1.  distributions of this source code include the above copyright
-        notice, this list of conditions and the following disclaimer;
-    2.  distributions in binary form include the above copyright
-        notice, this list of conditions and the following disclaimer
-        in the documentation and/or other associated materials;
-    3.  the copyright holder's name is not used to endorse products
-        built using this software without specific written permission.
+      binary distributions include the above copyright notice, this
+      list of conditions and the following disclaimer in their
+      documentation.
 
-    DISCLAIMER
-
-    This software is provided 'as is' with no explcit or implied warranties
-    in respect of any properties, including, but not limited to, correctness
+    This software is provided 'as is' with no explicit or implied warranties
+    in respect of its operation, including, but not limited to, correctness
     and fitness for purpose.
 
 -------------------
@@ -952,16 +947,6 @@ The following notice applies to ``src/util/profile/argv_parse.c`` and
     IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.  (Isn't
     it sick that the U.S. culture of lawsuit-happy lawyers requires
     this kind of disclaimer?)
-
--------------------
-
-The following notice applies to SWIG-generated code in
-``src/util/profile/profile_tcl.c``:
-
-    Copyright |copy| 1999-2000, The University of Chicago
-
-    This file may be freely redistributed without license or fee provided
-    this copyright message remains intact.
 
 -------------------
 

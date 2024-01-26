@@ -58,7 +58,6 @@ krb5_c_prf_length
 krb5int_c_mandatory_cksumtype
 krb5_c_fx_cf2_simple
 krb5int_c_weak_enctype
-krb5int_c_combine_keys
 krb5_encrypt_data
 krb5int_c_copy_keyblock
 krb5int_c_copy_keyblock_contents
@@ -85,7 +84,6 @@ krb5_k_prf
 krb5_k_reference_key
 krb5_k_verify_checksum
 krb5_k_verify_checksum_iov
-mit_crc32
 krb5int_aes_encrypt
 krb5int_aes_decrypt
 krb5int_enc_des3
@@ -98,8 +96,8 @@ krb5int_enc_camellia128
 krb5int_enc_camellia256
 krb5int_derive_key
 krb5int_derive_random
-krb5int_aes_enc_blk
-krb5int_aes_enc_key
+k5_aes_encrypt
+k5_aes_encrypt_key256
 k5_sha256
 k5_sha256_final
 k5_sha256_init
@@ -109,3 +107,4 @@ k5_allow_weak_pbkdf2iter
 krb5_c_prfplus
 krb5_c_derive_prfplus
 k5_enctype_to_ssf
+krb5int_c_deprecated_enctype

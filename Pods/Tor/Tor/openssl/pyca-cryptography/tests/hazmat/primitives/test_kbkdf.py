@@ -3,6 +3,8 @@
 # for complete details.
 
 
+import re
+
 import pytest
 
 from cryptography.exceptions import AlreadyFinalized, InvalidKey, _Reasons
@@ -23,7 +25,7 @@ from ...doubles import (
 from ...utils import raises_unsupported_algorithm
 
 
-class TestKBKDFHMAC(object):
+class TestKBKDFHMAC:
     def test_invalid_key(self, backend):
         kdf = KBKDFHMAC(
             hashes.SHA256(),
@@ -232,6 +234,156 @@ class TestKBKDFHMAC(object):
                 backend=backend,
             )
 
+    def test_missing_break_location(self, backend):
+        with pytest.raises(
+            ValueError, match=re.escape("Please specify a break_location")
+        ):
+            KBKDFHMAC(
+                hashes.SHA256(),
+                Mode.CounterMode,
+                32,
+                4,
+                4,
+                CounterLocation.MiddleFixed,
+                b"label",
+                b"context",
+                None,
+                backend=backend,
+            )
+
+        with pytest.raises(
+            ValueError, match=re.escape("Please specify a break_location")
+        ):
+            KBKDFHMAC(
+                hashes.SHA256(),
+                Mode.CounterMode,
+                32,
+                4,
+                4,
+                CounterLocation.MiddleFixed,
+                b"label",
+                b"context",
+                None,
+                backend=backend,
+                break_location=None,
+            )
+
+    def test_keyword_only_break_location(self, backend):
+        with pytest.raises(
+            TypeError, match=r"\d+ positional arguments but \d+ were given\Z"
+        ):
+            KBKDFHMAC(
+                hashes.SHA256(),
+                Mode.CounterMode,
+                32,
+                4,
+                4,
+                CounterLocation.MiddleFixed,
+                b"label",
+                b"context",
+                None,
+                backend,
+                0,  # break_location
+            )  # type: ignore
+
+    def test_invalid_break_location(self, backend):
+        with pytest.raises(
+            TypeError, match=re.escape("break_location must be an integer")
+        ):
+            KBKDFHMAC(
+                hashes.SHA256(),
+                Mode.CounterMode,
+                32,
+                4,
+                4,
+                CounterLocation.MiddleFixed,
+                b"label",
+                b"context",
+                None,
+                backend=backend,
+                break_location="0",  # type: ignore[arg-type]
+            )
+
+        with pytest.raises(
+            ValueError,
+            match=re.escape("break_location must be a positive integer"),
+        ):
+            KBKDFHMAC(
+                hashes.SHA256(),
+                Mode.CounterMode,
+                32,
+                4,
+                4,
+                CounterLocation.MiddleFixed,
+                b"label",
+                b"context",
+                None,
+                backend=backend,
+                break_location=-1,
+            )
+
+        with pytest.raises(
+            ValueError, match=re.escape("break_location offset > len(fixed)")
+        ):
+            kdf = KBKDFHMAC(
+                hashes.SHA256(),
+                Mode.CounterMode,
+                32,
+                4,
+                4,
+                CounterLocation.MiddleFixed,
+                b"label",
+                b"context",
+                None,
+                backend=backend,
+                break_location=18,
+            )
+            kdf.derive(b"input key")
+
+    def test_ignored_break_location_before(self, backend):
+        with pytest.raises(
+            ValueError,
+            match=re.escape(
+                "break_location is ignored when location is not"
+                " CounterLocation.MiddleFixed"
+            ),
+        ):
+            KBKDFHMAC(
+                hashes.SHA256(),
+                Mode.CounterMode,
+                32,
+                4,
+                4,
+                CounterLocation.BeforeFixed,
+                b"label",
+                b"context",
+                None,
+                backend=backend,
+                break_location=0,
+            )
+
+    def test_ignored_break_location_after(self, backend):
+        with pytest.raises(
+            ValueError,
+            match=re.escape(
+                "break_location is ignored when location is not"
+                " CounterLocation.MiddleFixed"
+            ),
+        ):
+            KBKDFHMAC(
+                hashes.SHA256(),
+                Mode.CounterMode,
+                32,
+                4,
+                4,
+                CounterLocation.AfterFixed,
+                b"label",
+                b"context",
+                None,
+                backend=backend,
+                break_location=0,
+            )
+
     def test_unsupported_hash(self, backend):
         with raises_unsupported_algorithm(_Reasons.UNSUPPORTED_HASH):
             KBKDFHMAC(
@@ -260,21 +412,6 @@ class TestKBKDFHMAC(object):
                 b"context",
                 None,
                 backend=backend,
-            )
-
-    def test_invalid_backend(self, backend):
-        with raises_unsupported_algorithm(_Reasons.BACKEND_MISSING_INTERFACE):
-            KBKDFHMAC(
-                hashes.SHA256(),
-                Mode.CounterMode,
-                32,
-                4,
-                4,
-                CounterLocation.BeforeFixed,
-                b"label",
-                b"context",
-                None,
-                backend=object(),  # type: ignore[arg-type]
             )
 
     def test_unicode_error_label(self, backend):
@@ -341,7 +478,7 @@ class TestKBKDFHMAC(object):
         assert key == b"\xb7\x01\x05\x98\xf5\x1a\x12L\xc7."
 
 
-class TestKBKDFCMAC(object):
+class TestKBKDFCMAC:
     _KEY_MATERIAL = bytes(32)
     _KEY_MATERIAL2 = _KEY_MATERIAL.replace(b"\x00", b"\x01", 1)
 
@@ -553,10 +690,160 @@ class TestKBKDFCMAC(object):
                 backend=backend,
             )
 
+    def test_missing_break_location(self, backend):
+        with pytest.raises(
+            ValueError, match=re.escape("Please specify a break_location")
+        ):
+            KBKDFCMAC(
+                algorithms.AES,
+                Mode.CounterMode,
+                32,
+                4,
+                4,
+                CounterLocation.MiddleFixed,
+                b"label",
+                b"context",
+                None,
+                backend=backend,
+            )
+
+        with pytest.raises(
+            ValueError, match=re.escape("Please specify a break_location")
+        ):
+            KBKDFCMAC(
+                algorithms.AES,
+                Mode.CounterMode,
+                32,
+                4,
+                4,
+                CounterLocation.MiddleFixed,
+                b"label",
+                b"context",
+                None,
+                backend=backend,
+                break_location=None,
+            )
+
+    def test_keyword_only_break_location(self, backend):
+        with pytest.raises(
+            TypeError, match=r"\d+ positional arguments but \d+ were given\Z"
+        ):
+            KBKDFCMAC(
+                algorithms.AES,
+                Mode.CounterMode,
+                32,
+                4,
+                4,
+                CounterLocation.MiddleFixed,
+                b"label",
+                b"context",
+                None,
+                backend,
+                0,  # break_location
+            )  # type: ignore
+
+    def test_invalid_break_location(self, backend):
+        with pytest.raises(
+            TypeError, match=re.escape("break_location must be an integer")
+        ):
+            KBKDFCMAC(
+                algorithms.AES,
+                Mode.CounterMode,
+                32,
+                4,
+                4,
+                CounterLocation.MiddleFixed,
+                b"label",
+                b"context",
+                None,
+                backend=backend,
+                break_location="0",  # type: ignore[arg-type]
+            )
+
+        with pytest.raises(
+            ValueError,
+            match=re.escape("break_location must be a positive integer"),
+        ):
+            KBKDFCMAC(
+                algorithms.AES,
+                Mode.CounterMode,
+                32,
+                4,
+                4,
+                CounterLocation.MiddleFixed,
+                b"label",
+                b"context",
+                None,
+                backend=backend,
+                break_location=-1,
+            )
+
+        with pytest.raises(
+            ValueError, match=re.escape("break_location offset > len(fixed)")
+        ):
+            kdf = KBKDFCMAC(
+                algorithms.AES,
+                Mode.CounterMode,
+                32,
+                4,
+                4,
+                CounterLocation.MiddleFixed,
+                b"label",
+                b"context",
+                None,
+                backend=backend,
+                break_location=18,
+            )
+            kdf.derive(b"32 bytes long input key material")
+
+    def test_ignored_break_location_before(self, backend):
+        with pytest.raises(
+            ValueError,
+            match=re.escape(
+                "break_location is ignored when location is not"
+                " CounterLocation.MiddleFixed"
+            ),
+        ):
+            KBKDFCMAC(
+                algorithms.AES,
+                Mode.CounterMode,
+                32,
+                4,
+                4,
+                CounterLocation.BeforeFixed,
+                b"label",
+                b"context",
+                None,
+                backend=backend,
+                break_location=0,
+            )
+
+    def test_ignored_break_location_after(self, backend):
+        with pytest.raises(
+            ValueError,
+            match=re.escape(
+                "break_location is ignored when location is not"
+                " CounterLocation.MiddleFixed"
+            ),
+        ):
+            KBKDFCMAC(
+                algorithms.AES,
+                Mode.CounterMode,
+                32,
+                4,
+                4,
+                CounterLocation.AfterFixed,
+                b"label",
+                b"context",
+                None,
+                backend=backend,
+                break_location=0,
+            )
+
     def test_unsupported_algorithm(self, backend):
         with raises_unsupported_algorithm(_Reasons.UNSUPPORTED_CIPHER):
             KBKDFCMAC(
-                object,  # type: ignore[arg-type]
+                object,
                 Mode.CounterMode,
                 32,
                 4,
@@ -594,21 +881,6 @@ class TestKBKDFCMAC(object):
                 b"context",
                 None,
                 backend=backend,
-            )
-
-    def test_invalid_backend(self, backend):
-        with raises_unsupported_algorithm(_Reasons.BACKEND_MISSING_INTERFACE):
-            KBKDFCMAC(
-                algorithms.AES,
-                Mode.CounterMode,
-                32,
-                4,
-                4,
-                CounterLocation.BeforeFixed,
-                b"label",
-                b"context",
-                None,
-                backend=object(),  # type: ignore[arg-type]
             )
 
     def test_unicode_error_label(self, backend):
@@ -687,7 +959,7 @@ class TestKBKDFCMAC(object):
             backend=backend,
         )
         with pytest.raises(ValueError):
-            kdf.derive(b"material")  # type: ignore[arg-type]
+            kdf.derive(b"material")
 
     def test_buffer_protocol(self, backend):
         kdf = KBKDFCMAC(

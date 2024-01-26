@@ -2,29 +2,19 @@
 // 2.0, and the BSD License. See the LICENSE file in the root of this repository
 // for complete details.
 
-use crate::asn1::{big_asn1_uint_to_py, py_uint_to_big_endian_bytes, PyAsn1Error, PyAsn1Result};
+use crate::asn1::{
+    big_byte_slice_to_py_int, encode_der_data, oid_to_py_oid, py_uint_to_big_endian_bytes,
+    PyAsn1Error, PyAsn1Result,
+};
 use crate::x509;
-use crate::x509::certificate;
+use crate::x509::{certificate, extensions, oid};
 use pyo3::ToPyObject;
 use std::convert::TryInto;
 use std::sync::Arc;
 
-lazy_static::lazy_static! {
-    static ref CRL_NUMBER_OID: asn1::ObjectIdentifier<'static> = asn1::ObjectIdentifier::from_string("2.5.29.20").unwrap();
-    static ref DELTA_CRL_INDICATOR_OID: asn1::ObjectIdentifier<'static> = asn1::ObjectIdentifier::from_string("2.5.29.27").unwrap();
-    static ref ISSUER_ALTERNATIVE_NAME_OID: asn1::ObjectIdentifier<'static> = asn1::ObjectIdentifier::from_string("2.5.29.18").unwrap();
-    static ref AUTHORITY_INFORMATION_ACCESS_OID: asn1::ObjectIdentifier<'static> = asn1::ObjectIdentifier::from_string("1.3.6.1.5.5.7.1.1").unwrap();
-    static ref AUTHORITY_KEY_IDENTIFIER_OID: asn1::ObjectIdentifier<'static> = asn1::ObjectIdentifier::from_string("2.5.29.35").unwrap();
-    static ref ISSUING_DISTRIBUTION_POINT_OID: asn1::ObjectIdentifier<'static> = asn1::ObjectIdentifier::from_string("2.5.29.28").unwrap();
-    static ref FRESHEST_CRL_OID: asn1::ObjectIdentifier<'static> = asn1::ObjectIdentifier::from_string("2.5.29.46").unwrap();
-    static ref CRL_REASON_OID: asn1::ObjectIdentifier<'static> = asn1::ObjectIdentifier::from_string("2.5.29.21").unwrap();
-    static ref CERTIFICATE_ISSUER_OID: asn1::ObjectIdentifier<'static> = asn1::ObjectIdentifier::from_string("2.5.29.29").unwrap();
-    static ref INVALIDITY_DATE_OID: asn1::ObjectIdentifier<'static> = asn1::ObjectIdentifier::from_string("2.5.29.24").unwrap();
-}
-
 #[pyo3::prelude::pyfunction]
 fn load_der_x509_crl(
-    _py: pyo3::Python<'_>,
+    py: pyo3::Python<'_>,
     data: &[u8],
 ) -> Result<CertificateRevocationList, PyAsn1Error> {
     let raw = OwnedRawCertificateRevocationList::try_new(
@@ -32,6 +22,16 @@ fn load_der_x509_crl(
         |data| asn1::parse_single(data),
         |_| Ok(pyo3::once_cell::GILOnceCell::new()),
     )?;
+
+    let version = raw.borrow_value().tbs_cert_list.version.unwrap_or(1);
+    if version != 1 {
+        let x509_module = py.import("cryptography.x509")?;
+        return Err(PyAsn1Error::from(pyo3::PyErr::from_instance(
+            x509_module
+                .getattr(crate::intern!(py, "InvalidVersion"))?
+                .call1((format!("{} is not a valid CRL version", version), version))?,
+        )));
+    }
 
     Ok(CertificateRevocationList {
         raw: Arc::new(raw),
@@ -48,7 +48,6 @@ fn load_pem_x509_crl(
         data,
         |p| p.tag == "X509 CRL",
         "Valid PEM but no BEGIN X509 CRL/END X509 delimiters. Are you sure this is a CRL?",
-        "Valid PEM but multiple BEGIN X509 CRL/END X509 delimiters.",
     )?;
     // TODO: Produces an extra copy
     load_der_x509_crl(py, &block.contents)
@@ -73,8 +72,8 @@ struct CertificateRevocationList {
 }
 
 impl CertificateRevocationList {
-    fn public_bytes_der(&self) -> Vec<u8> {
-        asn1::write_single(self.raw.borrow_value())
+    fn public_bytes_der(&self) -> PyAsn1Result<Vec<u8>> {
+        Ok(asn1::write_single(self.raw.borrow_value())?)
     }
 
     fn revoked_cert(&self, py: pyo3::Python<'_>, idx: usize) -> pyo3::PyResult<RevokedCertificate> {
@@ -94,7 +93,7 @@ impl CertificateRevocationList {
             .tbs_cert_list
             .revoked_certificates
             .as_ref()
-            .map_or(0, |v| v.len())
+            .map_or(0, |v| v.unwrap_read().len())
     }
 }
 
@@ -128,7 +127,7 @@ impl pyo3::PyMappingProtocol for CertificateRevocationList {
         self.raw.with(|val| {
             val.revoked_certs.get_or_init(py, || {
                 match &val.value.tbs_cert_list.revoked_certificates {
-                    Some(c) => c.clone().collect(),
+                    Some(c) => c.unwrap_read().clone().collect(),
                     None => vec![],
                 }
             });
@@ -165,18 +164,16 @@ impl CertificateRevocationList {
         algorithm: pyo3::PyObject,
     ) -> pyo3::PyResult<&'p pyo3::PyAny> {
         let hashes_mod = py.import("cryptography.hazmat.primitives.hashes")?;
-        let h = hashes_mod.getattr("Hash")?.call1((algorithm,))?;
-        h.call_method1("update", (self.public_bytes_der().as_slice(),))?;
+        let h = hashes_mod
+            .getattr(crate::intern!(py, "Hash"))?
+            .call1((algorithm,))?;
+        h.call_method1("update", (self.public_bytes_der()?.as_slice(),))?;
         h.call_method0("finalize")
     }
 
     #[getter]
     fn signature_algorithm_oid<'p>(&self, py: pyo3::Python<'p>) -> pyo3::PyResult<&'p pyo3::PyAny> {
-        let x509_module = py.import("cryptography.x509")?;
-        x509_module.call_method1(
-            "ObjectIdentifier",
-            (self.raw.borrow_value().signature_algorithm.oid.to_string(),),
-        )
+        oid_to_py_oid(py, &self.raw.borrow_value().signature_algorithm.oid)
     }
 
     #[getter]
@@ -187,7 +184,10 @@ impl CertificateRevocationList {
         let oid = self.signature_algorithm_oid(py)?;
         let oid_module = py.import("cryptography.hazmat._oid")?;
         let exceptions_module = py.import("cryptography.exceptions")?;
-        match oid_module.getattr("_SIG_OIDS_TO_HASH")?.get_item(oid) {
+        match oid_module
+            .getattr(crate::intern!(py, "_SIG_OIDS_TO_HASH"))?
+            .get_item(oid)
+        {
             Ok(v) => Ok(v),
             Err(_) => Err(pyo3::PyErr::from_instance(exceptions_module.call_method1(
                 "UnsupportedAlgorithm",
@@ -205,45 +205,30 @@ impl CertificateRevocationList {
     }
 
     #[getter]
-    fn tbs_certlist_bytes<'p>(&self, py: pyo3::Python<'p>) -> &'p pyo3::types::PyBytes {
-        let b = asn1::write_single(&self.raw.borrow_value().tbs_cert_list);
-        pyo3::types::PyBytes::new(py, &b)
+    fn tbs_certlist_bytes<'p>(
+        &self,
+        py: pyo3::Python<'p>,
+    ) -> PyAsn1Result<&'p pyo3::types::PyBytes> {
+        let b = asn1::write_single(&self.raw.borrow_value().tbs_cert_list)?;
+        Ok(pyo3::types::PyBytes::new(py, &b))
     }
 
     fn public_bytes<'p>(
         &self,
         py: pyo3::Python<'p>,
-        encoding: &pyo3::PyAny,
-    ) -> pyo3::PyResult<&'p pyo3::types::PyBytes> {
-        let encoding_class = py
-            .import("cryptography.hazmat.primitives.serialization")?
-            .getattr("Encoding")?;
+        encoding: &'p pyo3::PyAny,
+    ) -> PyAsn1Result<&'p pyo3::types::PyBytes> {
+        let result = asn1::write_single(self.raw.borrow_value())?;
 
-        let result = asn1::write_single(self.raw.borrow_value());
-        if encoding == encoding_class.getattr("DER")? {
-            Ok(pyo3::types::PyBytes::new(py, &result))
-        } else if encoding == encoding_class.getattr("PEM")? {
-            let pem = pem::encode_config(
-                &pem::Pem {
-                    tag: "X509 CRL".to_string(),
-                    contents: result,
-                },
-                pem::EncodeConfig {
-                    line_ending: pem::LineEnding::LF,
-                },
-            )
-            .into_bytes();
-            Ok(pyo3::types::PyBytes::new(py, &pem))
-        } else {
-            Err(pyo3::exceptions::PyTypeError::new_err(
-                "encoding must be Encoding.DER or Encoding.PEM",
-            ))
-        }
+        encode_der_data(py, "X509 CRL".to_string(), result, encoding)
     }
 
     #[getter]
     fn issuer<'p>(&self, py: pyo3::Python<'p>) -> pyo3::PyResult<&'p pyo3::PyAny> {
-        x509::parse_name(py, &self.raw.borrow_value().tbs_cert_list.issuer)
+        Ok(x509::parse_name(
+            py,
+            &self.raw.borrow_value().tbs_cert_list.issuer,
+        )?)
     }
 
     #[getter]
@@ -273,39 +258,48 @@ impl CertificateRevocationList {
             py,
             &mut self.cached_extensions,
             &self.raw.borrow_value().tbs_cert_list.crl_extensions,
-            |oid, ext_data| {
-                if oid == &*CRL_NUMBER_OID {
+            |oid, ext_data| match *oid {
+                oid::CRL_NUMBER_OID => {
                     let bignum = asn1::parse_single::<asn1::BigUint<'_>>(ext_data)?;
-                    let pynum = big_asn1_uint_to_py(py, bignum)?;
-                    Ok(Some(x509_module.getattr("CRLNumber")?.call1((pynum,))?))
-                } else if oid == &*DELTA_CRL_INDICATOR_OID {
-                    let bignum = asn1::parse_single::<asn1::BigUint<'_>>(ext_data)?;
-                    let pynum = big_asn1_uint_to_py(py, bignum)?;
+                    let pynum = big_byte_slice_to_py_int(py, bignum.as_bytes())?;
                     Ok(Some(
-                        x509_module.getattr("DeltaCRLIndicator")?.call1((pynum,))?,
+                        x509_module
+                            .getattr(crate::intern!(py, "CRLNumber"))?
+                            .call1((pynum,))?,
                     ))
-                } else if oid == &*ISSUER_ALTERNATIVE_NAME_OID {
+                }
+                oid::DELTA_CRL_INDICATOR_OID => {
+                    let bignum = asn1::parse_single::<asn1::BigUint<'_>>(ext_data)?;
+                    let pynum = big_byte_slice_to_py_int(py, bignum.as_bytes())?;
+                    Ok(Some(
+                        x509_module
+                            .getattr(crate::intern!(py, "DeltaCRLIndicator"))?
+                            .call1((pynum,))?,
+                    ))
+                }
+                oid::ISSUER_ALTERNATIVE_NAME_OID => {
                     let gn_seq = asn1::parse_single::<asn1::SequenceOf<'_, x509::GeneralName<'_>>>(
                         ext_data,
                     )?;
                     let ians = x509::parse_general_names(py, &gn_seq)?;
                     Ok(Some(
                         x509_module
-                            .getattr("IssuerAlternativeName")?
+                            .getattr(crate::intern!(py, "IssuerAlternativeName"))?
                             .call1((ians,))?,
                     ))
-                } else if oid == &*AUTHORITY_INFORMATION_ACCESS_OID {
+                }
+                oid::AUTHORITY_INFORMATION_ACCESS_OID => {
                     let ads = certificate::parse_access_descriptions(py, ext_data)?;
                     Ok(Some(
                         x509_module
-                            .getattr("AuthorityInformationAccess")?
+                            .getattr(crate::intern!(py, "AuthorityInformationAccess"))?
                             .call1((ads,))?,
                     ))
-                } else if oid == &*AUTHORITY_KEY_IDENTIFIER_OID {
-                    Ok(Some(certificate::parse_authority_key_identifier(
-                        py, ext_data,
-                    )?))
-                } else if oid == &*ISSUING_DISTRIBUTION_POINT_OID {
+                }
+                oid::AUTHORITY_KEY_IDENTIFIER_OID => Ok(Some(
+                    certificate::parse_authority_key_identifier(py, ext_data)?,
+                )),
+                oid::ISSUING_DISTRIBUTION_POINT_OID => {
                     let idp = asn1::parse_single::<IssuingDistributionPoint<'_>>(ext_data)?;
                     let (full_name, relative_name) = match idp.distribution_point {
                         Some(data) => certificate::parse_distribution_point_name(py, data)?,
@@ -320,22 +314,28 @@ impl CertificateRevocationList {
                         py.None()
                     };
                     Ok(Some(
-                        x509_module.getattr("IssuingDistributionPoint")?.call1((
-                            full_name,
-                            relative_name,
-                            idp.only_contains_user_certs,
-                            idp.only_contains_ca_certs,
-                            py_reasons,
-                            idp.indirect_crl,
-                            idp.only_contains_attribute_certs,
-                        ))?,
+                        x509_module
+                            .getattr(crate::intern!(py, "IssuingDistributionPoint"))?
+                            .call1((
+                                full_name,
+                                relative_name,
+                                idp.only_contains_user_certs,
+                                idp.only_contains_ca_certs,
+                                py_reasons,
+                                idp.indirect_crl,
+                                idp.only_contains_attribute_certs,
+                            ))?,
                     ))
-                } else if oid == &*FRESHEST_CRL_OID {
-                    let dp = certificate::parse_distribution_points(py, ext_data)?;
-                    Ok(Some(x509_module.getattr("FreshestCRL")?.call1((dp,))?))
-                } else {
-                    Ok(None)
                 }
+                oid::FRESHEST_CRL_OID => {
+                    let dp = certificate::parse_distribution_points(py, ext_data)?;
+                    Ok(Some(
+                        x509_module
+                            .getattr(crate::intern!(py, "FreshestCRL"))?
+                            .call1((dp,))?,
+                    ))
+                }
+                _ => Ok(None),
             },
         )
     }
@@ -347,8 +347,8 @@ impl CertificateRevocationList {
     ) -> pyo3::PyResult<Option<RevokedCertificate>> {
         let serial_bytes = py_uint_to_big_endian_bytes(py, serial)?;
         let owned = OwnedRawRevokedCertificate::try_new(Arc::clone(&self.raw), |v| {
-            let certs = match v.borrow_value().tbs_cert_list.revoked_certificates.clone() {
-                Some(certs) => certs,
+            let certs = match &v.borrow_value().tbs_cert_list.revoked_certificates {
+                Some(certs) => certs.unwrap_read().clone(),
                 None => return Err(()),
             };
 
@@ -376,30 +376,8 @@ impl CertificateRevocationList {
     ) -> pyo3::PyResult<&'p pyo3::PyAny> {
         let backend = py
             .import("cryptography.hazmat.backends.openssl.backend")?
-            .getattr("backend")?;
+            .getattr(crate::intern!(py, "backend"))?;
         backend.call_method1("_crl_is_signature_valid", (slf, public_key))
-    }
-
-    // This getter exists for compatibility with pyOpenSSL and will be removed.
-    // DO NOT RELY ON IT. WE WILL BREAK YOU WHEN WE FEEL LIKE IT.
-    #[getter]
-    fn _x509_crl<'p>(
-        slf: pyo3::PyRef<'_, Self>,
-        py: pyo3::Python<'p>,
-    ) -> Result<&'p pyo3::PyAny, PyAsn1Error> {
-        let cryptography_warning = py.import("cryptography.utils")?.getattr("DeprecatedIn35")?;
-        let warnings = py.import("warnings")?;
-        warnings.call_method1(
-            "warn",
-            (
-                "This version of cryptography contains a temporary pyOpenSSL fallback path. Upgrade pyOpenSSL now.",
-                cryptography_warning,
-            ),
-        )?;
-        let backend = py
-            .import("cryptography.hazmat.backends.openssl.backend")?
-            .getattr("backend")?;
-        Ok(backend.call_method1("_crl2ossl", (slf,))?)
     }
 }
 
@@ -408,7 +386,13 @@ impl pyo3::PyIterProtocol<'_> for CertificateRevocationList {
     fn __iter__(slf: pyo3::PyRef<'p, Self>) -> CRLIterator {
         CRLIterator {
             contents: OwnedCRLIteratorData::try_new(Arc::clone(&slf.raw), |v| {
-                Ok::<_, ()>(v.borrow_value().tbs_cert_list.revoked_certificates.clone())
+                Ok::<_, ()>(
+                    v.borrow_value()
+                        .tbs_cert_list
+                        .revoked_certificates
+                        .as_ref()
+                        .map(|v| v.unwrap_read().clone()),
+                )
             })
             .unwrap(),
         }
@@ -493,6 +477,14 @@ struct RawCertificateRevocationList<'a> {
     signature_value: asn1::BitString<'a>,
 }
 
+type RevokedCertificates<'a> = Option<
+    x509::Asn1ReadableOrWritable<
+        'a,
+        asn1::SequenceOf<'a, RawRevokedCertificate<'a>>,
+        asn1::SequenceOfWriter<'a, RawRevokedCertificate<'a>, Vec<RawRevokedCertificate<'a>>>,
+    >,
+>;
+
 #[derive(asn1::Asn1Read, asn1::Asn1Write, PartialEq, Hash)]
 struct TBSCertList<'a> {
     version: Option<u8>,
@@ -500,7 +492,7 @@ struct TBSCertList<'a> {
     issuer: x509::Name<'a>,
     this_update: x509::Time,
     next_update: Option<x509::Time>,
-    revoked_certificates: Option<asn1::SequenceOf<'a, RawRevokedCertificate<'a>>>,
+    revoked_certificates: RevokedCertificates<'a>,
     #[explicit(0)]
     crl_extensions: Option<x509::Extensions<'a>>,
 }
@@ -530,7 +522,7 @@ struct RevokedCertificate {
 impl RevokedCertificate {
     #[getter]
     fn serial_number<'p>(&self, py: pyo3::Python<'p>) -> pyo3::PyResult<&'p pyo3::PyAny> {
-        big_asn1_uint_to_py(py, self.raw.borrow_value().user_certificate)
+        big_byte_slice_to_py_int(py, self.raw.borrow_value().user_certificate.as_bytes())
     }
 
     #[getter]
@@ -553,28 +545,28 @@ pub(crate) type ReasonFlags<'a> =
     Option<x509::Asn1ReadableOrWritable<'a, asn1::BitString<'a>, asn1::OwnedBitString>>;
 
 #[derive(asn1::Asn1Read, asn1::Asn1Write)]
-struct IssuingDistributionPoint<'a> {
+pub(crate) struct IssuingDistributionPoint<'a> {
     #[explicit(0)]
-    distribution_point: Option<certificate::DistributionPointName<'a>>,
+    pub distribution_point: Option<certificate::DistributionPointName<'a>>,
 
     #[implicit(1)]
     #[default(false)]
-    only_contains_user_certs: bool,
+    pub only_contains_user_certs: bool,
 
     #[implicit(2)]
     #[default(false)]
-    only_contains_ca_certs: bool,
+    pub only_contains_ca_certs: bool,
 
     #[implicit(3)]
-    only_some_reasons: ReasonFlags<'a>,
+    pub only_some_reasons: ReasonFlags<'a>,
 
     #[implicit(4)]
     #[default(false)]
-    indirect_crl: bool,
+    pub indirect_crl: bool,
 
     #[implicit(5)]
     #[default(false)]
-    only_contains_attribute_certs: bool,
+    pub only_contains_attribute_certs: bool,
 }
 
 pub(crate) type CRLReason = asn1::Enumerated;
@@ -601,159 +593,117 @@ pub(crate) fn parse_crl_reason_flags<'p>(
             )))
         }
     };
-    Ok(x509_module.getattr("ReasonFlags")?.getattr(flag_name)?)
+    Ok(x509_module
+        .getattr(crate::intern!(py, "ReasonFlags"))?
+        .getattr(flag_name)?)
 }
 
 pub fn parse_crl_entry_ext<'p>(
     py: pyo3::Python<'p>,
-    oid: asn1::ObjectIdentifier<'_>,
+    oid: asn1::ObjectIdentifier,
     data: &[u8],
 ) -> PyAsn1Result<Option<&'p pyo3::PyAny>> {
     let x509_module = py.import("cryptography.x509")?;
-    if oid == *CRL_REASON_OID {
-        let flags = parse_crl_reason_flags(py, &asn1::parse_single::<CRLReason>(data)?)?;
-        Ok(Some(x509_module.getattr("CRLReason")?.call1((flags,))?))
-    } else if oid == *CERTIFICATE_ISSUER_OID {
-        let gn_seq = asn1::parse_single::<asn1::SequenceOf<'_, x509::GeneralName<'_>>>(data)?;
-        let gns = x509::parse_general_names(py, &gn_seq)?;
-        Ok(Some(
-            x509_module.getattr("CertificateIssuer")?.call1((gns,))?,
-        ))
-    } else if oid == *INVALIDITY_DATE_OID {
-        let time = asn1::parse_single::<asn1::GeneralizedTime>(data)?;
-        let py_dt = x509::chrono_to_py(py, time.as_chrono())?;
-        Ok(Some(
-            x509_module.getattr("InvalidityDate")?.call1((py_dt,))?,
-        ))
-    } else {
-        Ok(None)
+    match oid {
+        oid::CRL_REASON_OID => {
+            let flags = parse_crl_reason_flags(py, &asn1::parse_single::<CRLReason>(data)?)?;
+            Ok(Some(
+                x509_module
+                    .getattr(crate::intern!(py, "CRLReason"))?
+                    .call1((flags,))?,
+            ))
+        }
+        oid::CERTIFICATE_ISSUER_OID => {
+            let gn_seq = asn1::parse_single::<asn1::SequenceOf<'_, x509::GeneralName<'_>>>(data)?;
+            let gns = x509::parse_general_names(py, &gn_seq)?;
+            Ok(Some(
+                x509_module
+                    .getattr(crate::intern!(py, "CertificateIssuer"))?
+                    .call1((gns,))?,
+            ))
+        }
+        oid::INVALIDITY_DATE_OID => {
+            let time = asn1::parse_single::<asn1::GeneralizedTime>(data)?;
+            let py_dt = x509::chrono_to_py(py, time.as_chrono())?;
+            Ok(Some(
+                x509_module
+                    .getattr(crate::intern!(py, "InvalidityDate"))?
+                    .call1((py_dt,))?,
+            ))
+        }
+        _ => Ok(None),
     }
 }
 
 #[pyo3::prelude::pyfunction]
-fn encode_crl_extension<'p>(
-    py: pyo3::Python<'p>,
-    ext: &pyo3::PyAny,
-) -> pyo3::PyResult<&'p pyo3::PyAny> {
-    let oid = asn1::ObjectIdentifier::from_string(
-        ext.getattr("oid")?
-            .getattr("dotted_string")?
-            .extract::<&str>()?,
-    )
-    .unwrap();
-    if oid == *CRL_NUMBER_OID || oid == *DELTA_CRL_INDICATOR_OID {
-        let intval = ext
-            .getattr("value")?
-            .getattr("crl_number")?
-            .downcast::<pyo3::types::PyLong>()?;
-        let bytes = py_uint_to_big_endian_bytes(py, intval)?;
-        let result = asn1::write_single(&asn1::BigUint::new(bytes).unwrap());
-        Ok(pyo3::types::PyBytes::new(py, &result))
-    } else if oid == *ISSUING_DISTRIBUTION_POINT_OID {
-        let py_idp = ext.getattr("value")?;
+fn create_x509_crl(
+    py: pyo3::Python<'_>,
+    builder: &pyo3::PyAny,
+    private_key: &pyo3::PyAny,
+    hash_algorithm: &pyo3::PyAny,
+) -> PyAsn1Result<CertificateRevocationList> {
+    let sigalg = x509::sign::compute_signature_algorithm(py, private_key, hash_algorithm)?;
 
-        let only_some_reasons = if py_idp.getattr("only_some_reasons")?.is_true()? {
-            let py_reasons = py_idp.getattr("only_some_reasons")?;
-            let reasons = certificate::encode_distribution_point_reasons(py, py_reasons)?;
-            Some(x509::Asn1ReadableOrWritable::new_write(reasons))
-        } else {
-            None
-        };
-        let distribution_point = if py_idp.getattr("full_name")?.is_true()? {
-            let gns = x509::common::encode_general_names(py, py_idp.getattr("full_name")?)?;
-            Some(certificate::DistributionPointName::FullName(
-                x509::Asn1ReadableOrWritable::new_write(asn1::SequenceOfWriter::new(gns)),
-            ))
-        } else if py_idp.getattr("relative_name")?.is_true()? {
-            let mut name_entries = vec![];
-            for py_name_entry in py_idp.getattr("relative_name")?.iter()? {
-                name_entries.push(x509::common::encode_name_entry(py, py_name_entry?)?);
-            }
-            Some(certificate::DistributionPointName::NameRelativeToCRLIssuer(
-                x509::Asn1ReadableOrWritable::new_write(asn1::SetOfWriter::new(name_entries)),
-            ))
-        } else {
-            None
-        };
-
-        let idp = IssuingDistributionPoint {
-            distribution_point,
-            indirect_crl: py_idp.getattr("indirect_crl")?.extract()?,
-            only_contains_attribute_certs: py_idp
-                .getattr("only_contains_attribute_certs")?
-                .extract()?,
-            only_contains_ca_certs: py_idp.getattr("only_contains_ca_certs")?.extract()?,
-            only_contains_user_certs: py_idp.getattr("only_contains_user_certs")?.extract()?,
-            only_some_reasons,
-        };
-        let result = asn1::write_single(&idp);
-        Ok(pyo3::types::PyBytes::new(py, &result))
-    } else if oid == *FRESHEST_CRL_OID {
-        let dps = certificate::encode_distribution_points(py, ext.getattr("value")?)?;
-        let result = asn1::write_single(&asn1::SequenceOfWriter::new(dps));
-        Ok(pyo3::types::PyBytes::new(py, &result))
-    } else if oid == *AUTHORITY_INFORMATION_ACCESS_OID {
-        let py_ads = ext.getattr("value")?;
-        let ads = x509::common::encode_access_descriptions(py, py_ads)?;
-        let result = asn1::write_single(&ads);
-        Ok(pyo3::types::PyBytes::new(py, &result))
-    } else if oid == *ISSUER_ALTERNATIVE_NAME_OID {
-        let gns = x509::common::encode_general_names(py, ext.getattr("value")?)?;
-        let result = asn1::write_single(&asn1::SequenceOfWriter::new(gns));
-        Ok(pyo3::types::PyBytes::new(py, &result))
-    } else if oid == *AUTHORITY_KEY_IDENTIFIER_OID {
-        let aki = x509::certificate::encode_authority_key_identifier(py, ext.getattr("value")?)?;
-        let result = asn1::write_single(&aki);
-        Ok(pyo3::types::PyBytes::new(py, &result))
-    } else {
-        Err(pyo3::exceptions::PyNotImplementedError::new_err(format!(
-            "Extension not supported: {}",
-            oid
-        )))
+    let mut revoked_certs = vec![];
+    for py_revoked_cert in builder
+        .getattr(crate::intern!(py, "_revoked_certificates"))?
+        .iter()?
+    {
+        let py_revoked_cert = py_revoked_cert?;
+        let serial_number = py_revoked_cert
+            .getattr(crate::intern!(py, "serial_number"))?
+            .extract()?;
+        let py_revocation_date = py_revoked_cert.getattr(crate::intern!(py, "revocation_date"))?;
+        revoked_certs.push(RawRevokedCertificate {
+            user_certificate: asn1::BigUint::new(py_uint_to_big_endian_bytes(py, serial_number)?)
+                .unwrap(),
+            revocation_date: x509::certificate::time_from_py(py, py_revocation_date)?,
+            crl_entry_extensions: x509::common::encode_extensions(
+                py,
+                py_revoked_cert.getattr(crate::intern!(py, "extensions"))?,
+                extensions::encode_extension,
+            )?,
+        });
     }
-}
 
-#[pyo3::prelude::pyfunction]
-fn encode_crl_entry_extension<'p>(
-    py: pyo3::Python<'p>,
-    ext: &pyo3::PyAny,
-) -> pyo3::PyResult<&'p pyo3::PyAny> {
-    let oid = asn1::ObjectIdentifier::from_string(
-        ext.getattr("oid")?
-            .getattr("dotted_string")?
-            .extract::<&str>()?,
-    )
-    .unwrap();
+    let py_issuer_name = builder.getattr(crate::intern!(py, "_issuer_name"))?;
+    let py_this_update = builder.getattr(crate::intern!(py, "_last_update"))?;
+    let py_next_update = builder.getattr(crate::intern!(py, "_next_update"))?;
+    let tbs_cert_list = TBSCertList {
+        version: Some(1),
+        signature: sigalg.clone(),
+        issuer: x509::common::encode_name(py, py_issuer_name)?,
+        this_update: x509::certificate::time_from_py(py, py_this_update)?,
+        next_update: Some(x509::certificate::time_from_py(py, py_next_update)?),
+        revoked_certificates: if revoked_certs.is_empty() {
+            None
+        } else {
+            Some(x509::Asn1ReadableOrWritable::new_write(
+                asn1::SequenceOfWriter::new(revoked_certs),
+            ))
+        },
+        crl_extensions: x509::common::encode_extensions(
+            py,
+            builder.getattr(crate::intern!(py, "_extensions"))?,
+            extensions::encode_extension,
+        )?,
+    };
 
-    if oid == *CRL_REASON_OID {
-        let value = py
-            .import("cryptography.hazmat.backends.openssl.decode_asn1")?
-            .getattr("_CRL_ENTRY_REASON_ENUM_TO_CODE")?
-            .get_item(ext.getattr("value")?.getattr("reason")?)?
-            .extract::<u32>()?;
-        let result = asn1::write_single(&asn1::Enumerated::new(value));
-        Ok(pyo3::types::PyBytes::new(py, &result))
-    } else if oid == *CERTIFICATE_ISSUER_OID {
-        let gns = x509::common::encode_general_names(py, ext.getattr("value")?)?;
-        let result = asn1::write_single(&asn1::SequenceOfWriter::new(gns));
-        Ok(pyo3::types::PyBytes::new(py, &result))
-    } else if oid == *INVALIDITY_DATE_OID {
-        let chrono_dt = x509::py_to_chrono(ext.getattr("value")?.getattr("invalidity_date")?)?;
-        let result = asn1::write_single(&asn1::GeneralizedTime::new(chrono_dt));
-        Ok(pyo3::types::PyBytes::new(py, &result))
-    } else {
-        Err(pyo3::exceptions::PyNotImplementedError::new_err(format!(
-            "Extension not supported: {}",
-            oid,
-        )))
-    }
+    let tbs_bytes = asn1::write_single(&tbs_cert_list)?;
+    let signature = x509::sign::sign_data(py, private_key, hash_algorithm, &tbs_bytes)?;
+    let data = asn1::write_single(&RawCertificateRevocationList {
+        tbs_cert_list,
+        signature_algorithm: sigalg,
+        signature_value: asn1::BitString::new(signature, 0).unwrap(),
+    })?;
+    // TODO: extra copy as we round-trip through a slice
+    load_der_x509_crl(py, &data)
 }
 
 pub(crate) fn add_to_module(module: &pyo3::prelude::PyModule) -> pyo3::PyResult<()> {
     module.add_wrapped(pyo3::wrap_pyfunction!(load_der_x509_crl))?;
     module.add_wrapped(pyo3::wrap_pyfunction!(load_pem_x509_crl))?;
-    module.add_wrapped(pyo3::wrap_pyfunction!(encode_crl_extension))?;
-    module.add_wrapped(pyo3::wrap_pyfunction!(encode_crl_entry_extension))?;
+    module.add_wrapped(pyo3::wrap_pyfunction!(create_x509_crl))?;
 
     module.add_class::<CertificateRevocationList>()?;
     module.add_class::<RevokedCertificate>()?;

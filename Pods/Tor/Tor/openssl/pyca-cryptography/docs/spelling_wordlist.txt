@@ -10,6 +10,7 @@ bcrypt
 Bleichenbacher
 Blowfish
 boolean
+BoringSSL
 Botan
 Brainpool
 Bullseye
@@ -69,10 +70,12 @@ invariants
 iOS
 iterable
 Kerberos
+Keychain
 Koblitz
 Lange
 logins
 metadata
+Monterey
 Mozilla
 multi
 namespace
@@ -88,11 +91,13 @@ personalization
 RHEL
 parsers
 Parsers
+PEM
 pickleable
 plaintext
 Poly
 pre
 precompute
+precomputed
 preprocessor
 preprocessors
 presentational
@@ -108,6 +113,7 @@ serializer
 Serializers
 SHA
 Solaris
+Sur
 syscall
 Tanja
 testability

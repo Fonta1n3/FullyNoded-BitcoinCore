@@ -83,8 +83,8 @@ has support for implementing key rotation via :class:`MultiFernet`.
         raised. It is safe to use this data immediately as Fernet verifies
         that the data has not been tampered with prior to returning it.
 
-        :param bytes token: The Fernet token. This is the result of calling
-                            :meth:`encrypt`.
+        :param bytes or str token: The Fernet token. This is the result of
+                                   calling :meth:`encrypt`.
         :param int ttl: Optionally, the number of seconds old a message may be
                         for it to be valid. If the message is older than
                         ``ttl`` seconds (from the time it was originally
@@ -101,7 +101,7 @@ has support for implementing key rotation via :class:`MultiFernet`.
                                                   it does not have a valid
                                                   signature.
         :raises TypeError: This exception is raised if ``token`` is not
-                           ``bytes``.
+                           ``bytes`` or ``str``.
 
     .. method:: decrypt_at_time(token, ttl, current_time)
 
@@ -127,14 +127,14 @@ has support for implementing key rotation via :class:`MultiFernet`.
         Returns the timestamp for the token. The caller can then decide if
         the token is about to expire and, for example, issue a new token.
 
-        :param bytes token: The Fernet token. This is the result of calling
-                            :meth:`encrypt`.
+        :param bytes or str token: The Fernet token. This is the result of
+                                   calling :meth:`encrypt`.
         :returns int: The UNIX timestamp of the token.
         :raises cryptography.fernet.InvalidToken: If the ``token``'s signature
                                                   is invalid this exception
                                                   is raised.
         :raises TypeError: This exception is raised if ``token`` is not
-                           ``bytes``.
+                           ``bytes`` or ``str``.
 
 
 .. class:: MultiFernet(fernets)
@@ -201,14 +201,14 @@ has support for implementing key rotation via :class:`MultiFernet`.
            >>> f2.decrypt(rotated)
            b'Secret message!'
 
-        :param bytes msg: The token to re-encrypt.
+        :param bytes or str msg: The token to re-encrypt.
         :returns bytes: A secure message that cannot be read or altered without
            the key. This is URL-safe base64-encoded. This is referred to as a
            "Fernet token".
         :raises cryptography.fernet.InvalidToken: If a ``token`` is in any
            way invalid this exception is raised.
         :raises TypeError: This exception is raised if the ``msg`` is not
-           ``bytes``.
+           ``bytes`` or ``str``.
 
 
 .. class:: InvalidToken
@@ -237,7 +237,7 @@ password through a key derivation function such as
     ...     algorithm=hashes.SHA256(),
     ...     length=32,
     ...     salt=salt,
-    ...     iterations=100000,
+    ...     iterations=390000,
     ... )
     >>> key = base64.urlsafe_b64encode(kdf.derive(password))
     >>> f = Fernet(key)
@@ -251,8 +251,8 @@ In this scheme, the salt has to be stored in a retrievable location in order
 to derive the same key from the password in the future.
 
 The iteration count used should be adjusted to be as high as your server can
-tolerate. A good default is at least 320,000 iterations, which is what `Django
-recommends as of January 2021`_.
+tolerate. A good default is at least 480,000 iterations, which is what `Django
+recommends as of July 2022`_.
 
 Implementation
 --------------
@@ -280,5 +280,5 @@ unsuitable for very large files at this time.
 
 
 .. _`Fernet`: https://github.com/fernet/spec/
-.. _`Django recommends as of January 2021`: https://github.com/django/django/blob/main/django/contrib/auth/hashers.py
+.. _`Django recommends as of July 2022`: https://github.com/django/django/blob/main/django/contrib/auth/hashers.py
 .. _`specification`: https://github.com/fernet/spec/blob/master/Spec.md

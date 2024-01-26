@@ -6,18 +6,19 @@
 import abc
 import typing
 
-from cryptography import utils
 from cryptography.exceptions import (
     AlreadyFinalized,
     AlreadyUpdated,
     NotYetFinalized,
-    UnsupportedAlgorithm,
-    _Reasons,
 )
-from cryptography.hazmat.backends import _get_backend
-from cryptography.hazmat.backends.interfaces import Backend, CipherBackend
 from cryptography.hazmat.primitives._cipheralgorithm import CipherAlgorithm
 from cryptography.hazmat.primitives.ciphers import modes
+
+
+if typing.TYPE_CHECKING:
+    from cryptography.hazmat.backends.openssl.ciphers import (
+        _CipherContext as _BackendCipherContext,
+    )
 
 
 class CipherContext(metaclass=abc.ABCMeta):
@@ -29,7 +30,7 @@ class CipherContext(metaclass=abc.ABCMeta):
         """
 
     @abc.abstractmethod
-    def update_into(self, data: bytes, buf) -> int:
+    def update_into(self, data: bytes, buf: bytes) -> int:
         """
         Processes the provided bytes and writes the resulting data into the
         provided buffer. Returns the number of bytes written.
@@ -42,7 +43,7 @@ class CipherContext(metaclass=abc.ABCMeta):
         """
 
 
-class AEADCipherContext(metaclass=abc.ABCMeta):
+class AEADCipherContext(CipherContext, metaclass=abc.ABCMeta):
     @abc.abstractmethod
     def authenticate_additional_data(self, data: bytes) -> None:
         """
@@ -50,7 +51,7 @@ class AEADCipherContext(metaclass=abc.ABCMeta):
         """
 
 
-class AEADDecryptionContext(metaclass=abc.ABCMeta):
+class AEADDecryptionContext(AEADCipherContext, metaclass=abc.ABCMeta):
     @abc.abstractmethod
     def finalize_with_tag(self, tag: bytes) -> bytes:
         """
@@ -59,7 +60,7 @@ class AEADDecryptionContext(metaclass=abc.ABCMeta):
         """
 
 
-class AEADEncryptionContext(metaclass=abc.ABCMeta):
+class AEADEncryptionContext(AEADCipherContext, metaclass=abc.ABCMeta):
     @abc.abstractproperty
     def tag(self) -> bytes:
         """
@@ -68,29 +69,42 @@ class AEADEncryptionContext(metaclass=abc.ABCMeta):
         """
 
 
-class Cipher(object):
+Mode = typing.TypeVar(
+    "Mode", bound=typing.Optional[modes.Mode], covariant=True
+)
+
+
+class Cipher(typing.Generic[Mode]):
     def __init__(
         self,
         algorithm: CipherAlgorithm,
-        mode: typing.Optional[modes.Mode],
-        backend: typing.Optional[Backend] = None,
-    ):
-        backend = _get_backend(backend)
-        if not isinstance(backend, CipherBackend):
-            raise UnsupportedAlgorithm(
-                "Backend object does not implement CipherBackend.",
-                _Reasons.BACKEND_MISSING_INTERFACE,
-            )
+        mode: Mode,
+        backend: typing.Any = None,
+    ) -> None:
 
         if not isinstance(algorithm, CipherAlgorithm):
             raise TypeError("Expected interface of CipherAlgorithm.")
 
         if mode is not None:
+            # mypy needs this assert to narrow the type from our generic
+            # type. Maybe it won't some time in the future.
+            assert isinstance(mode, modes.Mode)
             mode.validate_for_algorithm(algorithm)
 
         self.algorithm = algorithm
         self.mode = mode
-        self._backend = backend
+
+    @typing.overload
+    def encryptor(
+        self: "Cipher[modes.ModeWithAuthenticationTag]",
+    ) -> AEADEncryptionContext:
+        ...
+
+    @typing.overload
+    def encryptor(
+        self: "_CIPHER_TYPE",
+    ) -> CipherContext:
+        ...
 
     def encryptor(self):
         if isinstance(self.mode, modes.ModeWithAuthenticationTag):
@@ -98,30 +112,62 @@ class Cipher(object):
                 raise ValueError(
                     "Authentication tag must be None when encrypting."
                 )
-        ctx = self._backend.create_symmetric_encryption_ctx(
+        from cryptography.hazmat.backends.openssl.backend import backend
+
+        ctx = backend.create_symmetric_encryption_ctx(
             self.algorithm, self.mode
         )
         return self._wrap_ctx(ctx, encrypt=True)
 
+    @typing.overload
+    def decryptor(
+        self: "Cipher[modes.ModeWithAuthenticationTag]",
+    ) -> AEADDecryptionContext:
+        ...
+
+    @typing.overload
+    def decryptor(
+        self: "_CIPHER_TYPE",
+    ) -> CipherContext:
+        ...
+
     def decryptor(self):
-        ctx = self._backend.create_symmetric_decryption_ctx(
+        from cryptography.hazmat.backends.openssl.backend import backend
+
+        ctx = backend.create_symmetric_decryption_ctx(
             self.algorithm, self.mode
         )
         return self._wrap_ctx(ctx, encrypt=False)
 
-    def _wrap_ctx(self, ctx, encrypt):
+    def _wrap_ctx(
+        self, ctx: "_BackendCipherContext", encrypt: bool
+    ) -> typing.Union[
+        AEADEncryptionContext, AEADDecryptionContext, CipherContext
+    ]:
         if isinstance(self.mode, modes.ModeWithAuthenticationTag):
             if encrypt:
                 return _AEADEncryptionContext(ctx)
             else:
-                return _AEADCipherContext(ctx)
+                return _AEADDecryptionContext(ctx)
         else:
             return _CipherContext(ctx)
 
 
-@utils.register_interface(CipherContext)
-class _CipherContext(object):
-    def __init__(self, ctx):
+_CIPHER_TYPE = Cipher[
+    typing.Union[
+        modes.ModeWithNonce,
+        modes.ModeWithTweak,
+        None,
+        modes.ECB,
+        modes.ModeWithInitializationVector,
+    ]
+]
+
+
+class _CipherContext(CipherContext):
+    _ctx: typing.Optional["_BackendCipherContext"]
+
+    def __init__(self, ctx: "_BackendCipherContext") -> None:
         self._ctx = ctx
 
     def update(self, data: bytes) -> bytes:
@@ -129,7 +175,7 @@ class _CipherContext(object):
             raise AlreadyFinalized("Context was already finalized.")
         return self._ctx.update(data)
 
-    def update_into(self, data: bytes, buf) -> int:
+    def update_into(self, data: bytes, buf: bytes) -> int:
         if self._ctx is None:
             raise AlreadyFinalized("Context was already finalized.")
         return self._ctx.update_into(data, buf)
@@ -142,11 +188,11 @@ class _CipherContext(object):
         return data
 
 
-@utils.register_interface(AEADCipherContext)
-@utils.register_interface(CipherContext)
-@utils.register_interface(AEADDecryptionContext)
-class _AEADCipherContext(object):
-    def __init__(self, ctx):
+class _AEADCipherContext(AEADCipherContext):
+    _ctx: typing.Optional["_BackendCipherContext"]
+    _tag: typing.Optional[bytes]
+
+    def __init__(self, ctx: "_BackendCipherContext") -> None:
         self._ctx = ctx
         self._bytes_processed = 0
         self._aad_bytes_processed = 0
@@ -167,24 +213,20 @@ class _AEADCipherContext(object):
 
     def update(self, data: bytes) -> bytes:
         self._check_limit(len(data))
+        # mypy needs this assert even though _check_limit already checked
+        assert self._ctx is not None
         return self._ctx.update(data)
 
-    def update_into(self, data: bytes, buf) -> int:
+    def update_into(self, data: bytes, buf: bytes) -> int:
         self._check_limit(len(data))
+        # mypy needs this assert even though _check_limit already checked
+        assert self._ctx is not None
         return self._ctx.update_into(data, buf)
 
     def finalize(self) -> bytes:
         if self._ctx is None:
             raise AlreadyFinalized("Context was already finalized.")
         data = self._ctx.finalize()
-        self._tag = self._ctx.tag
-        self._ctx = None
-        return data
-
-    def finalize_with_tag(self, tag: bytes) -> bytes:
-        if self._ctx is None:
-            raise AlreadyFinalized("Context was already finalized.")
-        data = self._ctx.finalize_with_tag(tag)
         self._tag = self._ctx.tag
         self._ctx = None
         return data
@@ -206,8 +248,17 @@ class _AEADCipherContext(object):
         self._ctx.authenticate_additional_data(data)
 
 
-@utils.register_interface(AEADEncryptionContext)
-class _AEADEncryptionContext(_AEADCipherContext):
+class _AEADDecryptionContext(_AEADCipherContext, AEADDecryptionContext):
+    def finalize_with_tag(self, tag: bytes) -> bytes:
+        if self._ctx is None:
+            raise AlreadyFinalized("Context was already finalized.")
+        data = self._ctx.finalize_with_tag(tag)
+        self._tag = self._ctx.tag
+        self._ctx = None
+        return data
+
+
+class _AEADEncryptionContext(_AEADCipherContext, AEADEncryptionContext):
     @property
     def tag(self) -> bytes:
         if self._ctx is not None:

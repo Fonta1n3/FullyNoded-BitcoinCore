@@ -45,7 +45,7 @@ else:
 
 # General information about the project.
 project = u'MIT Kerberos'
-copyright = u'1985-2019, MIT'
+copyright = u'1985-2021, MIT'
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
@@ -98,6 +98,16 @@ pygments_style = 'sphinx'
 
 # -- Options for HTML output ---------------------------------------------------
 
+# When we can rely on Sphinx 1.8 (released Sep 2018) we can just set:
+#   html_css_files = ['kerb.css']
+# But in the meantime, we add this file using either a way that works
+# after 1.8 or a way that works before 4.0.
+def setup(app):
+    if callable(getattr(app, 'add_css_file', None)):
+        app.add_css_file('kerb.css')
+    else:
+        app.add_stylesheet('kerb.css')
+
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
 # html_theme = 'default'
@@ -138,10 +148,6 @@ html_static_path = ['_static']
 # If not '', a 'Last updated on:' timestamp is inserted at every page bottom,
 # using the given strftime format.
 #html_last_updated_fmt = '%b %d, %Y'
-
-# If true, SmartyPants will be used to convert quotes and dashes to
-# typographically correct entities.
-html_use_smartypants = True
 
 # Custom sidebar templates, maps document names to template names.
 #html_sidebars = {}
@@ -272,7 +278,7 @@ else:
     rst_epilog += '''
 .. |krb5conf| replace:: ``/etc/krb5.conf``
 .. |defkeysalts| replace:: ``aes256-cts-hmac-sha1-96:normal aes128-cts-hmac-sha1-96:normal``
-.. |defetypes| replace:: ``aes256-cts-hmac-sha1-96 aes128-cts-hmac-sha1-96 aes256-cts-hmac-sha384-192 aes128-cts-hmac-sha256-128 des3-cbc-sha1 arcfour-hmac-md5 camellia256-cts-cmac camellia128-cts-cmac des-cbc-crc des-cbc-md5 des-cbc-md4``
+.. |defetypes| replace:: ``aes256-cts-hmac-sha1-96 aes128-cts-hmac-sha1-96 aes256-cts-hmac-sha384-192 aes128-cts-hmac-sha256-128 des3-cbc-sha1 arcfour-hmac-md5 camellia256-cts-cmac camellia128-cts-cmac``
 .. |defmkey| replace:: ``aes256-cts-hmac-sha1-96``
 .. |copy| unicode:: U+000A9
 '''

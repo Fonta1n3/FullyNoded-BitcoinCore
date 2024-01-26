@@ -114,7 +114,14 @@ struct krb5_keytypes {
     unsigned int ssf;
 };
 
-#define ETYPE_WEAK 1
+/*
+ * "Weak" means the enctype is believed to be vulnerable to practical attacks,
+ * and will be disabled unless allow_weak_crypto is set to true.  "Deprecated"
+ * means the enctype has been deprecated by the IETF, and affects display and
+ * logging.
+ */
+#define ETYPE_WEAK (1 << 0)
+#define ETYPE_DEPRECATED (1 << 1)
 
 extern const struct krb5_keytypes krb5int_enctypes_list[];
 extern const int krb5int_enctypes_length;
@@ -173,8 +180,6 @@ extern const size_t krb5int_cksumtypes_length;
 /*** Prototypes for enctype table functions ***/
 
 /* Length */
-unsigned int krb5int_old_crypto_length(const struct krb5_keytypes *ktp,
-                                       krb5_cryptotype type);
 unsigned int krb5int_raw_crypto_length(const struct krb5_keytypes *ktp,
                                        krb5_cryptotype type);
 unsigned int krb5int_arcfour_crypto_length(const struct krb5_keytypes *ktp,
@@ -189,10 +194,6 @@ unsigned int krb5int_aes2_crypto_length(const struct krb5_keytypes *ktp,
                                         krb5_cryptotype type);
 
 /* Encrypt */
-krb5_error_code krb5int_old_encrypt(const struct krb5_keytypes *ktp,
-                                    krb5_key key, krb5_keyusage usage,
-                                    const krb5_data *ivec,
-                                    krb5_crypto_iov *data, size_t num_data);
 krb5_error_code krb5int_raw_encrypt(const struct krb5_keytypes *ktp,
                                     krb5_key key, krb5_keyusage usage,
                                     const krb5_data *ivec,
@@ -217,10 +218,6 @@ krb5_error_code krb5int_etm_encrypt(const struct krb5_keytypes *ktp,
                                     krb5_crypto_iov *data, size_t num_data);
 
 /* Decrypt */
-krb5_error_code krb5int_old_decrypt(const struct krb5_keytypes *ktp,
-                                    krb5_key key, krb5_keyusage usage,
-                                    const krb5_data *ivec,
-                                    krb5_crypto_iov *data, size_t num_data);
 krb5_error_code krb5int_raw_decrypt(const struct krb5_keytypes *ktp,
                                     krb5_key key, krb5_keyusage usage,
                                     const krb5_data *ivec,
@@ -306,11 +303,6 @@ krb5_error_code krb5int_unkeyed_checksum(const struct krb5_cksumtypes *ctp,
                                          const krb5_crypto_iov *data,
                                          size_t num_data,
                                          krb5_data *output);
-krb5_error_code krb5int_cbc_checksum(const struct krb5_cksumtypes *ctp,
-                                     krb5_key key, krb5_keyusage usage,
-                                     const krb5_crypto_iov *data,
-                                     size_t num_data,
-                                     krb5_data *output);
 krb5_error_code krb5int_hmacmd5_checksum(const struct krb5_cksumtypes *ctp,
                                          krb5_key key, krb5_keyusage usage,
                                          const krb5_crypto_iov *data,
@@ -324,17 +316,6 @@ krb5_error_code krb5int_dk_cmac_checksum(const struct krb5_cksumtypes *ctp,
                                          krb5_key key, krb5_keyusage usage,
                                          const krb5_crypto_iov *data,
                                          size_t num_data, krb5_data *output);
-krb5_error_code krb5int_confounder_checksum(const struct krb5_cksumtypes *ctp,
-                                            krb5_key key, krb5_keyusage usage,
-                                            const krb5_crypto_iov *data,
-                                            size_t num_data,
-                                            krb5_data *output);
-krb5_error_code krb5int_confounder_verify(const struct krb5_cksumtypes *ctp,
-                                          krb5_key key, krb5_keyusage usage,
-                                          const krb5_crypto_iov *data,
-                                          size_t num_data,
-                                          const krb5_data *input,
-                                          krb5_boolean *valid);
 krb5_error_code krb5int_etm_checksum(const struct krb5_cksumtypes *ctp,
                                      krb5_key key, krb5_keyusage usage,
                                      const krb5_crypto_iov *data,
@@ -380,10 +361,6 @@ krb5_error_code krb5int_cmac_checksum(const struct krb5_enc_provider *enc,
                                       const krb5_crypto_iov *data,
                                       size_t num_data,
                                       krb5_data *output);
-
-/* Compute a CRC-32 checksum.  c is in-out to allow chaining; init to 0. */
-#define CRC32_CKSUM_LENGTH 4
-void mit_crc32(krb5_pointer in, size_t in_length, unsigned long *c);
 
 /* Translate an RFC 3961 key usage to a Microsoft RC4 usage. */
 krb5_keyusage krb5int_arcfour_translate_usage(krb5_keyusage usage);
@@ -448,7 +425,6 @@ void k5_iov_cursor_put(struct iov_cursor *cursor, unsigned char *block);
 /* Modules must implement the k5_sha256() function prototyped in k5-int.h. */
 
 /* Modules must implement the following enc_providers and hash_providers: */
-extern const struct krb5_enc_provider krb5int_enc_des;
 extern const struct krb5_enc_provider krb5int_enc_des3;
 extern const struct krb5_enc_provider krb5int_enc_arcfour;
 extern const struct krb5_enc_provider krb5int_enc_aes128;
@@ -458,7 +434,6 @@ extern const struct krb5_enc_provider krb5int_enc_aes256_ctr;
 extern const struct krb5_enc_provider krb5int_enc_camellia128;
 extern const struct krb5_enc_provider krb5int_enc_camellia256;
 
-extern const struct krb5_hash_provider krb5int_hash_crc32;
 extern const struct krb5_hash_provider krb5int_hash_md4;
 extern const struct krb5_hash_provider krb5int_hash_md5;
 extern const struct krb5_hash_provider krb5int_hash_sha1;
@@ -515,9 +490,9 @@ void krb5int_crypto_impl_cleanup(void);
  * the default PRNG module (prng_fortuna.c), crypto_mod.h must #define or
  * prototype the following symbols:
  *
- *   aes_ctx - Stack-allocatable type for an AES-128 or AES-256 key schedule
- *   krb5int_aes_enc_key(key, keybits, ctxptr) -- initialize a key schedule
- *   krb5int_aes_enc_blk(in, out, ctxptr) -- encrypt a block
+ *   aes_encrypt_ctx - Stack-allocatable type for an AES-256 key schedule
+ *   k5_aes_encrypt_key256(key, ctxptr) -- initialize an AES-256 key schedule
+ *   k5_aes_encrypt(in, out, ctxptr) -- encrypt a block
  *   SHA256_CTX - Stack-allocatable type for a SHA-256 hash state
  *   k5_sha256_init(ctxptr) - Initialize a hash state
  *   k5_sha256_update(ctxptr, data, size) -- Hash some data

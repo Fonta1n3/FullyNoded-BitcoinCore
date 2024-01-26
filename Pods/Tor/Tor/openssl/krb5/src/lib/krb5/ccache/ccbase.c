@@ -355,14 +355,14 @@ krb5_cc_move(krb5_context context, krb5_ccache src, krb5_ccache dst)
     krb5_principal princ = NULL;
 
     TRACE_CC_MOVE(context, src, dst);
-    ret = krb5_cccol_lock(context);
+    ret = k5_cccol_lock(context);
     if (ret) {
         return ret;
     }
 
-    ret = krb5_cc_lock(context, src);
+    ret = k5_cc_lock(context, src);
     if (ret) {
-        krb5_cccol_unlock(context);
+        k5_cccol_unlock(context);
         return ret;
     }
 
@@ -371,22 +371,22 @@ krb5_cc_move(krb5_context context, krb5_ccache src, krb5_ccache dst)
         ret = krb5_cc_initialize(context, dst, princ);
     }
     if (ret) {
-        krb5_cc_unlock(context, src);
-        krb5_cccol_unlock(context);
+        k5_cc_unlock(context, src);
+        k5_cccol_unlock(context);
         return ret;
     }
 
-    ret = krb5_cc_lock(context, dst);
+    ret = k5_cc_lock(context, dst);
     if (!ret) {
         ret = krb5_cc_copy_creds(context, src, dst);
-        krb5_cc_unlock(context, dst);
+        k5_cc_unlock(context, dst);
     }
 
-    krb5_cc_unlock(context, src);
+    k5_cc_unlock(context, src);
     if (!ret) {
         ret = krb5_cc_destroy(context, src);
     }
-    krb5_cccol_unlock(context);
+    k5_cccol_unlock(context);
     if (princ) {
         krb5_free_principal(context, princ);
         princ = NULL;
@@ -497,8 +497,8 @@ k5_cc_mutex_force_unlock(k5_cc_mutex *m)
  * holds on to all pertype global locks as well as typelist lock
  */
 
-krb5_error_code KRB5_CALLCONV
-krb5_cccol_lock(krb5_context context)
+krb5_error_code
+k5_cccol_lock(krb5_context context)
 {
     krb5_error_code ret = 0;
 
@@ -511,7 +511,6 @@ krb5_cccol_lock(krb5_context context)
 #endif
 #ifdef USE_CCAPI_V3
     ret = krb5_stdccv3_context_lock(context);
-#endif
     if (ret) {
         k5_cc_mutex_unlock(context, &krb5int_mcc_mutex);
         k5_cc_mutex_unlock(context, &krb5int_cc_file_mutex);
@@ -519,12 +518,13 @@ krb5_cccol_lock(krb5_context context)
         k5_cc_mutex_unlock(context, &cccol_lock);
         return ret;
     }
+#endif
     k5_mutex_unlock(&cc_typelist_lock);
     return ret;
 }
 
-krb5_error_code KRB5_CALLCONV
-krb5_cccol_unlock(krb5_context context)
+krb5_error_code
+k5_cccol_unlock(krb5_context context)
 {
     krb5_error_code ret = 0;
 

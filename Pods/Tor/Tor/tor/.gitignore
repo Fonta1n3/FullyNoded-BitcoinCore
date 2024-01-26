@@ -43,6 +43,8 @@ core.*
 !core/
 # ccls file that can be per directory.
 *.ccls
+# clangd uses that for LSP caching.
+/.cache
 
 # /
 /Makefile
@@ -67,7 +69,9 @@ core.*
 /stamp-h
 /stamp-h.in
 /stamp-h1
+/tags
 /TAGS
+/target
 /test-driver
 /tor.sh
 /tor.spec
@@ -135,6 +139,8 @@ core.*
 # /scripts
 /scripts/maint/checkOptionDocs.pl
 /scripts/maint/updateVersions.pl
+scripts/maint/geoip/geoip
+scripts/maint/geoip/geoip6
 
 # /src/
 /src/Makefile

@@ -507,7 +507,7 @@ ktest_make_sample_sam_challenge_2_body(krb5_sam_challenge_2_body *p)
     krb5_data_parse(&p->sam_response_prompt, "response_prompt ipse");
     p->sam_pk_for_sad = empty_data();
     p->sam_nonce = 0x543210;
-    p->sam_etype = ENCTYPE_DES_CBC_CRC;
+    p->sam_etype = ENCTYPE_AES256_CTS_HMAC_SHA384_192;
 }
 
 void
@@ -518,7 +518,7 @@ ktest_make_sample_sam_response_2(krb5_sam_response_2 *p)
     p->sam_flags = KRB5_SAM_USE_SAD_AS_KEY; /* KRB5_SAM_* values */
     krb5_data_parse(&p->sam_track_id, "track data");
     krb5_data_parse(&p->sam_enc_nonce_or_sad.ciphertext, "nonce or sad");
-    p->sam_enc_nonce_or_sad.enctype = ENCTYPE_DES_CBC_CRC;
+    p->sam_enc_nonce_or_sad.enctype = ENCTYPE_AES256_CTS_HMAC_SHA384_192;
     p->sam_enc_nonce_or_sad.kvno = 3382;
     p->sam_nonce = 0x543210;
 }
@@ -730,15 +730,6 @@ ktest_make_sample_pk_authenticator(krb5_pk_authenticator *p)
 }
 
 static void
-ktest_make_sample_pk_authenticator_draft9(krb5_pk_authenticator_draft9 *p)
-{
-    ktest_make_sample_principal(&p->kdcName);
-    p->cusec = SAMPLE_USEC;
-    p->ctime = SAMPLE_TIME;
-    p->nonce = SAMPLE_NONCE;
-}
-
-static void
 ktest_make_sample_oid(krb5_data *p)
 {
     krb5_data_parse(p, "\052\206\110\206\367\022\001\002\002");
@@ -788,13 +779,6 @@ ktest_make_sample_pa_pk_as_req(krb5_pa_pk_as_req *p)
     ktest_make_sample_data(&p->kdcPkId);
 }
 
-void
-ktest_make_sample_pa_pk_as_req_draft9(krb5_pa_pk_as_req_draft9 *p)
-{
-    ktest_make_sample_data(&p->signedAuthPack);
-    ktest_make_sample_data(&p->kdcCert);
-}
-
 static void
 ktest_make_sample_dh_rep_info(krb5_dh_rep_info *p)
 {
@@ -819,20 +803,6 @@ ktest_make_sample_pa_pk_as_rep_encKeyPack(krb5_pa_pk_as_rep *p)
 }
 
 void
-ktest_make_sample_pa_pk_as_rep_draft9_dhSignedData(krb5_pa_pk_as_rep_draft9 *p)
-{
-    p->choice = choice_pa_pk_as_rep_draft9_dhSignedData;
-    ktest_make_sample_data(&p->u.dhSignedData);
-}
-
-void
-ktest_make_sample_pa_pk_as_rep_draft9_encKeyPack(krb5_pa_pk_as_rep_draft9 *p)
-{
-    p->choice = choice_pa_pk_as_rep_draft9_encKeyPack;
-    ktest_make_sample_data(&p->u.encKeyPack);
-}
-
-void
 ktest_make_sample_auth_pack(krb5_auth_pack *p)
 {
     ktest_make_sample_pk_authenticator(&p->pkAuthenticator);
@@ -852,14 +822,6 @@ ktest_make_sample_auth_pack(krb5_auth_pack *p)
 }
 
 void
-ktest_make_sample_auth_pack_draft9(krb5_auth_pack_draft9 *p)
-{
-    ktest_make_sample_pk_authenticator_draft9(&p->pkAuthenticator);
-    p->clientPublicValue = ealloc(sizeof(krb5_subject_pk_info));
-    ktest_make_sample_subject_pk_info(p->clientPublicValue);
-}
-
-void
 ktest_make_sample_kdc_dh_key_info(krb5_kdc_dh_key_info *p)
 {
     ktest_make_sample_data(&p->subjectPublicKey);
@@ -875,13 +837,6 @@ ktest_make_sample_reply_key_pack(krb5_reply_key_pack *p)
 }
 
 void
-ktest_make_sample_reply_key_pack_draft9(krb5_reply_key_pack_draft9 *p)
-{
-    ktest_make_sample_keyblock(&p->replyKey);
-    p->nonce = SAMPLE_NONCE;
-}
-
-void
 ktest_make_sample_sp80056a_other_info(krb5_sp80056a_other_info *p)
 {
     ktest_make_sample_algorithm_identifier_no_params(&p->algorithm_identifier);
@@ -893,7 +848,7 @@ ktest_make_sample_sp80056a_other_info(krb5_sp80056a_other_info *p)
 void
 ktest_make_sample_pkinit_supp_pub_info(krb5_pkinit_supp_pub_info *p)
 {
-    p->enctype = ENCTYPE_DES_CBC_CRC;
+    p->enctype = ENCTYPE_AES256_CTS_HMAC_SHA384_192;
     ktest_make_sample_data(&p->as_req);
     ktest_make_sample_data(&p->pk_as_rep);
 }
@@ -1718,12 +1673,6 @@ ktest_empty_pk_authenticator(krb5_pk_authenticator *p)
 }
 
 static void
-ktest_empty_pk_authenticator_draft9(krb5_pk_authenticator_draft9 *p)
-{
-    ktest_destroy_principal(&p->kdcName);
-}
-
-static void
 ktest_empty_subject_pk_info(krb5_subject_pk_info *p)
 {
     ktest_empty_algorithm_identifier(&p->algorithm);
@@ -1754,13 +1703,6 @@ ktest_empty_pa_pk_as_req(krb5_pa_pk_as_req *p)
     ktest_empty_data(&p->kdcPkId);
 }
 
-void
-ktest_empty_pa_pk_as_req_draft9(krb5_pa_pk_as_req_draft9 *p)
-{
-    ktest_empty_data(&p->signedAuthPack);
-    ktest_empty_data(&p->kdcCert);
-}
-
 static void
 ktest_empty_dh_rep_info(krb5_dh_rep_info *p)
 {
@@ -1777,16 +1719,6 @@ ktest_empty_pa_pk_as_rep(krb5_pa_pk_as_rep *p)
     else if (p->choice == choice_pa_pk_as_rep_encKeyPack)
         ktest_empty_data(&p->u.encKeyPack);
     p->choice = choice_pa_pk_as_rep_UNKNOWN;
-}
-
-void
-ktest_empty_pa_pk_as_rep_draft9(krb5_pa_pk_as_rep_draft9 *p)
-{
-    if (p->choice == choice_pa_pk_as_rep_draft9_dhSignedData)
-        ktest_empty_data(&p->u.dhSignedData);
-    else if (p->choice == choice_pa_pk_as_rep_draft9_encKeyPack)
-        ktest_empty_data(&p->u.encKeyPack);
-    p->choice = choice_pa_pk_as_rep_draft9_UNKNOWN;
 }
 
 void
@@ -1821,17 +1753,6 @@ ktest_empty_auth_pack(krb5_auth_pack *p)
 }
 
 void
-ktest_empty_auth_pack_draft9(krb5_auth_pack_draft9 *p)
-{
-    ktest_empty_pk_authenticator_draft9(&p->pkAuthenticator);
-    if (p->clientPublicValue != NULL) {
-        ktest_empty_subject_pk_info(p->clientPublicValue);
-        free(p->clientPublicValue);
-        p->clientPublicValue = NULL;
-    }
-}
-
-void
 ktest_empty_kdc_dh_key_info(krb5_kdc_dh_key_info *p)
 {
     ktest_empty_data(&p->subjectPublicKey);
@@ -1842,12 +1763,6 @@ ktest_empty_reply_key_pack(krb5_reply_key_pack *p)
 {
     ktest_empty_keyblock(&p->replyKey);
     ktest_empty_checksum(&p->asChecksum);
-}
-
-void
-ktest_empty_reply_key_pack_draft9(krb5_reply_key_pack_draft9 *p)
-{
-    ktest_empty_keyblock(&p->replyKey);
 }
 
 void ktest_empty_sp80056a_other_info(krb5_sp80056a_other_info *p)

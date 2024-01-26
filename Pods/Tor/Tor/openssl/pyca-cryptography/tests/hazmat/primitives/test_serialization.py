@@ -10,7 +10,6 @@ import textwrap
 
 import pytest
 
-from cryptography.exceptions import UnsupportedAlgorithm
 from cryptography.hazmat.primitives.asymmetric import (
     dsa,
     ec,
@@ -20,6 +19,7 @@ from cryptography.hazmat.primitives.asymmetric import (
     x25519,
     x448,
 )
+from cryptography.hazmat.primitives.hashes import SHA1
 from cryptography.hazmat.primitives.serialization import (
     BestAvailableEncryption,
     Encoding,
@@ -37,15 +37,17 @@ from cryptography.hazmat.primitives.serialization import (
     load_ssh_public_key,
     ssh,
 )
+from cryptography.hazmat.primitives.serialization.pkcs12 import PBES
 
 
+from .fixtures_rsa import RSA_KEY_2048
 from .test_ec import _skip_curve_unsupported
 from .utils import (
     _check_dsa_private_numbers,
     _check_rsa_private_numbers,
 )
 from ...doubles import DummyKeySerializationEncryption
-from ...utils import load_vectors_from_file
+from ...utils import load_vectors_from_file, raises_unsupported_algorithm
 
 
 def _skip_fips_format(key_path, password, backend):
@@ -67,7 +69,7 @@ def _skip_fips_format(key_path, password, backend):
             )
 
 
-class TestBufferProtocolSerialization(object):
+class TestBufferProtocolSerialization:
     @pytest.mark.parametrize(
         ("key_path", "password"),
         [
@@ -118,7 +120,7 @@ class TestBufferProtocolSerialization(object):
         _check_rsa_private_numbers(key.private_numbers())
 
 
-class TestDERSerialization(object):
+class TestDERSerialization:
     @pytest.mark.parametrize(
         ("key_path", "password"),
         [
@@ -141,6 +143,10 @@ class TestDERSerialization(object):
         assert isinstance(key, rsa.RSAPrivateKey)
         _check_rsa_private_numbers(key.private_numbers())
 
+    @pytest.mark.supported(
+        only_if=lambda backend: backend.dsa_supported(),
+        skip_message="Does not support DSA.",
+    )
     @pytest.mark.parametrize(
         ("key_path", "password"),
         [
@@ -263,6 +269,17 @@ class TestDERSerialization(object):
                 key_data, b"this password will not be used", backend
             )
 
+    def test_invalid_rsa_even_q(self, backend):
+        data = load_vectors_from_file(
+            os.path.join(
+                "asymmetric", "PEM_Serialization", "rsa-bad-1025-q-is-2.pem"
+            ),
+            lambda pemfile: pemfile.read(),
+            mode="rb",
+        )
+        with pytest.raises(ValueError):
+            load_pem_private_key(data, None)
+
     def test_corrupt_der_pkcs8(self, backend):
         # unenc-rsa-pkcs8 with a bunch of data missing.
         key_data = textwrap.dedent(
@@ -341,6 +358,10 @@ class TestDERSerialization(object):
         with pytest.raises(ValueError):
             load_der_public_key(b"invalid data", backend)
 
+    @pytest.mark.supported(
+        only_if=lambda backend: backend.dsa_supported(),
+        skip_message="Does not support DSA.",
+    )
     @pytest.mark.parametrize(
         "key_file",
         [
@@ -382,7 +403,7 @@ class TestDERSerialization(object):
             load_der_parameters(param_data, backend)
 
 
-class TestPEMSerialization(object):
+class TestPEMSerialization:
     @pytest.mark.parametrize(
         ("key_file", "password"),
         [
@@ -422,6 +443,10 @@ class TestPEMSerialization(object):
         assert isinstance(key, rsa.RSAPrivateKey)
         _check_rsa_private_numbers(key.private_numbers())
 
+    @pytest.mark.supported(
+        only_if=lambda backend: backend.dsa_supported(),
+        skip_message="Does not support DSA.",
+    )
     @pytest.mark.parametrize(
         ("key_path", "password"),
         [
@@ -490,6 +515,24 @@ class TestPEMSerialization(object):
         numbers = key.public_numbers()
         assert numbers.e == 65537
 
+    def test_load_priv_key_with_public_key_api_fails(self, backend):
+        # In OpenSSL 3.0.x the PEM_read_bio_PUBKEY function will invoke
+        # the default password callback if you pass an encrypted private
+        # key. This is very, very, very bad as the default callback can
+        # trigger an interactive console prompt, which will hang the
+        # Python process. This test makes sure we don't do that.
+        priv_key_serialized = RSA_KEY_2048.private_key().private_bytes(
+            Encoding.PEM,
+            PrivateFormat.PKCS8,
+            BestAvailableEncryption(b"password"),
+        )
+        with pytest.raises(ValueError):
+            load_pem_public_key(priv_key_serialized)
+
+    @pytest.mark.supported(
+        only_if=lambda backend: backend.dsa_supported(),
+        skip_message="Does not support DSA.",
+    )
     @pytest.mark.parametrize(
         ("key_file"),
         [
@@ -536,7 +579,7 @@ class TestPEMSerialization(object):
                 pemfile.read().encode(), b"123456", backend
             ),
         )
-        assert pkey
+        assert isinstance(pkey, rsa.RSAPrivateKey)
 
         numbers = pkey.private_numbers()
         assert numbers.p == int(
@@ -835,7 +878,7 @@ class TestPEMSerialization(object):
                 pemfile.read().encode(), b"foobar", backend
             ),
         )
-        assert pkey
+        assert isinstance(pkey, rsa.RSAPrivateKey)
 
         numbers = pkey.private_numbers()
 
@@ -894,6 +937,10 @@ class TestPEMSerialization(object):
             16,
         )
 
+    @pytest.mark.supported(
+        only_if=lambda backend: backend.dsa_supported(),
+        skip_message="Does not support DSA.",
+    )
     def test_load_pem_dsa_private_key(self, backend):
         key = load_vectors_from_file(
             os.path.join("asymmetric", "PKCS8", "unenc-dsa-pkcs8.pem"),
@@ -967,11 +1014,11 @@ class TestPEMSerialization(object):
             )
 
 
-class TestRSASSHSerialization(object):
+class TestRSASSHSerialization:
     def test_load_ssh_public_key_unsupported(self, backend):
         ssh_key = b"ecdsa-sha2-junk AAAAE2VjZHNhLXNoYTItbmlzdHAyNTY="
 
-        with pytest.raises(UnsupportedAlgorithm):
+        with raises_unsupported_algorithm(None):
             load_ssh_public_key(ssh_key, backend)
 
     def test_load_ssh_public_key_bad_format(self, backend):
@@ -1079,7 +1126,7 @@ class TestRSASSHSerialization(object):
         assert numbers == expected
 
 
-class TestDSSSSHSerialization(object):
+class TestDSSSSHSerialization:
     def test_load_ssh_public_key_dss_too_short(self, backend):
         ssh_key = b"ssh-dss"
 
@@ -1192,7 +1239,7 @@ class TestDSSSSHSerialization(object):
         assert numbers == expected
 
 
-class TestECDSASSHSerialization(object):
+class TestECDSASSHSerialization:
     def test_load_ssh_public_key_ecdsa_nist_p256(self, backend):
         _skip_curve_unsupported(backend, ec.SECP256R1())
 
@@ -1330,7 +1377,7 @@ class TestECDSASSHSerialization(object):
     only_if=lambda backend: backend.ed25519_supported(),
     skip_message="Requires OpenSSL with Ed25519 support",
 )
-class TestEd25519SSHSerialization(object):
+class TestEd25519SSHSerialization:
     def test_load_ssh_public_key(self, backend):
         ssh_key = (
             b"ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIG2fgpmpYO61qeAxGd0wgRaN/E4"
@@ -1371,7 +1418,7 @@ class TestEd25519SSHSerialization(object):
             load_ssh_public_key(ssh_key, backend)
 
 
-class TestKeySerializationEncryptionTypes(object):
+class TestKeySerializationEncryptionTypes:
     def test_non_bytes_password(self):
         with pytest.raises(ValueError):
             BestAvailableEncryption(object())  # type:ignore[arg-type]
@@ -1385,7 +1432,7 @@ class TestKeySerializationEncryptionTypes(object):
     only_if=lambda backend: backend.ed25519_supported(),
     skip_message="Requires OpenSSL with Ed25519 support",
 )
-class TestEd25519Serialization(object):
+class TestEd25519Serialization:
     def test_load_der_private_key(self, backend):
         data = load_vectors_from_file(
             os.path.join("asymmetric", "Ed25519", "ed25519-pkcs8-enc.der"),
@@ -1473,7 +1520,7 @@ class TestEd25519Serialization(object):
     only_if=lambda backend: backend.x448_supported(),
     skip_message="Requires OpenSSL with X448 support",
 )
-class TestX448Serialization(object):
+class TestX448Serialization:
     def test_load_der_private_key(self, backend):
         data = load_vectors_from_file(
             os.path.join("asymmetric", "X448", "x448-pkcs8-enc.der"),
@@ -1564,7 +1611,7 @@ class TestX448Serialization(object):
     only_if=lambda backend: backend.x25519_supported(),
     skip_message="Requires OpenSSL with X25519 support",
 )
-class TestX25519Serialization(object):
+class TestX25519Serialization:
     def test_load_der_private_key(self, backend):
         data = load_vectors_from_file(
             os.path.join("asymmetric", "X25519", "x25519-pkcs8-enc.der"),
@@ -1655,7 +1702,7 @@ class TestX25519Serialization(object):
     only_if=lambda backend: backend.ed448_supported(),
     skip_message="Requires OpenSSL with Ed448 support",
 )
-class TestEd448Serialization(object):
+class TestEd448Serialization:
     def test_load_der_private_key(self, backend):
         data = load_vectors_from_file(
             os.path.join("asymmetric", "Ed448", "ed448-pkcs8-enc.der"),
@@ -1745,7 +1792,11 @@ class TestEd448Serialization(object):
             )
 
 
-class TestDHSerialization(object):
+@pytest.mark.supported(
+    only_if=lambda backend: backend.dh_supported(),
+    skip_message="DH not supported",
+)
+class TestDHSerialization:
     """Test all options with least-supported key type."""
 
     @pytest.mark.skip_fips(reason="non-FIPS parameters")
@@ -1810,7 +1861,7 @@ class TestDHSerialization(object):
                     private_key.private_bytes(enc, fmt, NoEncryption())
 
 
-class TestOpenSSHSerialization(object):
+class TestOpenSSHSerialization:
     @pytest.mark.parametrize(
         ("key_file", "cert_file"),
         [
@@ -2042,11 +2093,11 @@ class TestOpenSSHSerialization(object):
             lambda f: f.read(),
             mode="rb",
         )
-        with pytest.raises(UnsupportedAlgorithm):
+        with raises_unsupported_algorithm(None):
             load_ssh_private_key(priv_data, b"password", backend)
 
         private_key = ec.generate_private_key(ec.SECP256R1(), backend)
-        with pytest.raises(UnsupportedAlgorithm):
+        with raises_unsupported_algorithm(None):
             private_key.private_bytes(
                 Encoding.PEM,
                 PrivateFormat.OpenSSH,
@@ -2122,12 +2173,12 @@ class TestOpenSSHSerialization(object):
     def test_load_ssh_private_key_errors(self, backend):
         # bad kdf
         data = self.make_file(kdfname=b"unknown", ciphername=b"aes256-ctr")
-        with pytest.raises(UnsupportedAlgorithm):
+        with raises_unsupported_algorithm(None):
             load_ssh_private_key(data, None, backend)
 
         # bad cipher
         data = self.make_file(ciphername=b"unknown", kdfname=b"bcrypt")
-        with pytest.raises(UnsupportedAlgorithm):
+        with raises_unsupported_algorithm(None):
             load_ssh_private_key(data, None, backend)
 
         # bad magic
@@ -2148,7 +2199,7 @@ class TestOpenSSHSerialization(object):
     def test_ssh_errors_bad_values(self, backend):
         # bad curve
         data = self.make_file(pub_type=b"ecdsa-sha2-nistp444")
-        with pytest.raises(UnsupportedAlgorithm):
+        with raises_unsupported_algorithm(None):
             load_ssh_private_key(data, None, backend)
 
         # curve mismatch
@@ -2286,20 +2337,13 @@ class TestOpenSSHSerialization(object):
 
         # bad object type
         with pytest.raises(ValueError):
-            ssh.serialize_ssh_private_key(
+            ssh._serialize_ssh_private_key(
                 object(),  # type:ignore[arg-type]
-                None,
+                b"",
+                NoEncryption(),
             )
 
         private_key = ec.generate_private_key(ec.SECP256R1(), backend)
-
-        # too long password
-        with pytest.raises(ValueError):
-            private_key.private_bytes(
-                Encoding.PEM,
-                PrivateFormat.OpenSSH,
-                BestAvailableEncryption(b"p" * 73),
-            )
 
         # unknown encryption class
         with pytest.raises(ValueError):
@@ -2309,6 +2353,60 @@ class TestOpenSSHSerialization(object):
                 DummyKeySerializationEncryption(),
             )
 
+    @pytest.mark.supported(
+        only_if=lambda backend: ssh._bcrypt_supported,
+        skip_message="Requires that bcrypt exists",
+    )
+    @pytest.mark.parametrize(
+        "password",
+        (
+            b"1234",
+            b"p@ssw0rd",
+            b"x" * 100,
+        ),
+    )
+    @pytest.mark.parametrize(
+        "kdf_rounds",
+        [
+            1,
+            10,
+            30,
+        ],
+    )
+    def test_serialize_ssh_private_key_with_password(
+        self, password, kdf_rounds, backend
+    ):
+        original_key = ec.generate_private_key(ec.SECP256R1(), backend)
+        encoded_key_data = original_key.private_bytes(
+            Encoding.PEM,
+            PrivateFormat.OpenSSH,
+            (
+                PrivateFormat.OpenSSH.encryption_builder()
+                .kdf_rounds(kdf_rounds)
+                .build(password)
+            ),
+        )
+
+        decoded_key = load_ssh_private_key(
+            data=encoded_key_data,
+            password=password,
+            backend=backend,
+        )
+
+        original_public_key = original_key.public_key().public_bytes(
+            Encoding.OpenSSH, PublicFormat.OpenSSH
+        )
+
+        decoded_public_key = decoded_key.public_key().public_bytes(
+            Encoding.OpenSSH, PublicFormat.OpenSSH
+        )
+
+        assert original_public_key == decoded_public_key
+
+    @pytest.mark.supported(
+        only_if=lambda backend: backend.dsa_supported(),
+        skip_message="Does not support DSA.",
+    )
     @pytest.mark.parametrize(
         ("key_path", "supported"),
         [
@@ -2336,3 +2434,50 @@ class TestOpenSSHSerialization(object):
                 key.private_bytes(
                     Encoding.PEM, PrivateFormat.OpenSSH, NoEncryption()
                 )
+
+
+class TestEncryptionBuilder:
+    def test_unsupported_format(self):
+        f = PrivateFormat.PKCS8
+        with pytest.raises(ValueError):
+            f.encryption_builder()
+
+    def test_duplicate_kdf_rounds(self):
+        b = PrivateFormat.OpenSSH.encryption_builder().kdf_rounds(12)
+        with pytest.raises(ValueError):
+            b.kdf_rounds(12)
+
+    def test_invalid_kdf_rounds(self):
+        b = PrivateFormat.OpenSSH.encryption_builder()
+        with pytest.raises(ValueError):
+            b.kdf_rounds(0)
+        with pytest.raises(ValueError):
+            b.kdf_rounds(-1)
+        with pytest.raises(TypeError):
+            b.kdf_rounds("string")  # type: ignore[arg-type]
+
+    def test_invalid_password(self):
+        b = PrivateFormat.OpenSSH.encryption_builder()
+        with pytest.raises(ValueError):
+            b.build(12)  # type: ignore[arg-type]
+        with pytest.raises(ValueError):
+            b.build(b"")
+
+    def test_unsupported_type_for_methods(self):
+        b = PrivateFormat.OpenSSH.encryption_builder()
+        with pytest.raises(TypeError):
+            b.key_cert_algorithm(PBES.PBESv1SHA1And3KeyTripleDESCBC)
+        with pytest.raises(TypeError):
+            b.hmac_hash(SHA1())
+
+    def test_duplicate_hmac_hash(self):
+        b = PrivateFormat.PKCS12.encryption_builder().hmac_hash(SHA1())
+        with pytest.raises(ValueError):
+            b.hmac_hash(SHA1())
+
+    def test_duplicate_key_cert_algorithm(self):
+        b = PrivateFormat.PKCS12.encryption_builder().key_cert_algorithm(
+            PBES.PBESv1SHA1And3KeyTripleDESCBC
+        )
+        with pytest.raises(ValueError):
+            b.key_cert_algorithm(PBES.PBESv1SHA1And3KeyTripleDESCBC)

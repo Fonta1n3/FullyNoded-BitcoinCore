@@ -1,19 +1,22 @@
 name: Upload Coverage
-description: Upload coverage to codecov
-
-inputs:
-  name:
-    description: "Job name"
-    required: true
+description: Upload coverage files
 
 runs:
   using: "composite"
 
   steps:
     - run: |
-        curl -o codecov.sh -f https://codecov.io/bash || \
-          curl -o codecov.sh -f https://codecov.io/bash || \
-          curl -o codecov.sh -f https://codecov.io/bash
-
-        bash codecov.sh -n "${{ inputs.name }}"
+        COVERAGE_UUID=$(python3 -c "import uuid; print(uuid.uuid4())")
+        echo "COVERAGE_UUID=${COVERAGE_UUID}" >> $GITHUB_OUTPUT
+        if [ -f .coverage ]; then
+          mv .coverage .coverage.${COVERAGE_UUID}
+        fi
+      id: coverage-uuid
       shell: bash
+    - uses: actions/upload-artifact@v3.1.0
+      with:
+        name: coverage-data
+        path: |
+          .coverage.*
+          *.lcov
+        if-no-files-found: ignore

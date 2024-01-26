@@ -253,22 +253,6 @@ local.properties
 
 /src/kadmin/server/kadmind
 
-/src/kadmin/testing/admin_*
-/src/kadmin/testing/init-*
-/src/kadmin/testing/kadmin_*
-/src/kadmin/testing/krb5-test-root/
-
-/src/kadmin/testing/scripts/compare_dump.pl
-/src/kadmin/testing/scripts/env-setup.sh
-/src/kadmin/testing/scripts/env-setup.stamp
-/src/kadmin/testing/scripts/make-host-keytab.pl
-/src/kadmin/testing/scripts/qualname.pl
-/src/kadmin/testing/scripts/simple_dump.pl
-/src/kadmin/testing/scripts/verify_xrunner_report.pl
-
-/src/kadmin/testing/util/kadm5_clnt_tcl
-/src/kadmin/testing/util/kadm5_srv_tcl
-
 /src/kdc/kdc5_err.[ch]
 /src/kdc/krb5kdc
 /src/kdc/rtest
@@ -297,8 +281,6 @@ local.properties
 /src/lib/crypto/crypto_tests/t_cksum5
 /src/lib/crypto/crypto_tests/t_cksums
 /src/lib/crypto/crypto_tests/t_cmac
-/src/lib/crypto/crypto_tests/t_combine
-/src/lib/crypto/crypto_tests/t_crc
 /src/lib/crypto/crypto_tests/t_cts
 /src/lib/crypto/crypto_tests/t_decrypt
 /src/lib/crypto/crypto_tests/t_derive
@@ -333,10 +315,6 @@ local.properties
 
 /src/lib/kadm5/chpass_util_strings.[ch]
 /src/lib/kadm5/kadm_err.[ch]
-
-/src/lib/kadm5/unit-test/*.log
-/src/lib/kadm5/unit-test/*.sum
-/src/lib/kadm5/unit-test/*-test
 
 /src/lib/kdb/adb_err.[ch]
 
@@ -389,6 +367,10 @@ local.properties
 /src/lib/krb5/os/t_std_conf
 /src/lib/krb5/os/t_trace
 
+/src/lib/krb5/rcache/t_memrcache
+/src/lib/krb5/rcache/t_rcfile2
+/src/lib/krb5/rcache/testrcache
+
 /src/lib/krb5/unicode/.links
 /src/lib/krb5/unicode/ucdata.[ch]
 /src/lib/krb5/unicode/ucgendat.c
@@ -398,10 +380,7 @@ local.properties
 
 /src/lib/rpc/types.stamp
 
-/src/lib/rpc/unit-test/*.log
-/src/lib/rpc/unit-test/*.sum
 /src/lib/rpc/unit-test/client
-/src/lib/rpc/unit-test/dbg.log
 /src/lib/rpc/unit-test/server
 
 /src/man/*.sub
@@ -413,6 +392,8 @@ local.properties
 /src/plugins/kdb/ldap/ldap_util/kdb5_ldap_util
 
 /src/plugins/preauth/pkinit/pkinit_kdf_test
+
+/src/plugins/preauth/spake/t_vectors
 
 /src/po/*.mo
 
@@ -436,9 +417,12 @@ local.properties
 /src/tests/localauth
 /src/tests/plugorder
 /src/tests/rdreq
+/src/tests/replay
 /src/tests/responder
 /src/tests/s2p
 /src/tests/s4u2proxy
+/src/tests/s4u2self
+/src/tests/t_inetd
 /src/tests/unlockiter
 
 /src/tests/asn.1/expected_encode.out
@@ -452,23 +436,18 @@ local.properties
 
 /src/tests/create/kdb5_mkdums
 
-/src/tests/dejagnu/dbg.log
-/src/tests/dejagnu/krb.log
-/src/tests/dejagnu/krb.sum
-/src/tests/dejagnu/runenv.vals
-/src/tests/dejagnu/site.exp
-/src/tests/dejagnu/t_inetd
-/src/tests/dejagnu/tmpdir/
-
 /src/tests/gss-threads/gss-client
 /src/tests/gss-threads/gss-server
 
 /src/tests/gssapi/ccinit
 /src/tests/gssapi/ccrefresh
+/src/tests/gssapi/reload
 /src/tests/gssapi/t_accname
 /src/tests/gssapi/t_add_cred
+/src/tests/gssapi/t_bindings
 /src/tests/gssapi/t_ccselect
 /src/tests/gssapi/t_ciflags
+/src/tests/gssapi/t_context
 /src/tests/gssapi/t_credstore
 /src/tests/gssapi/t_enctypes
 /src/tests/gssapi/t_err
@@ -508,10 +487,6 @@ local.properties
 /src/tests/mkeystash_compat/kdc.conf
 /src/tests/mkeystash_compat/krb5.conf
 
-/src/tests/resolve/addrinfo-test
-/src/tests/resolve/fake-addrinfo-test
-/src/tests/resolve/resolve
-
 /src/tests/verify/kdb5_verify
 
 /src/util/et/compile_et
@@ -543,7 +518,6 @@ local.properties
 /src/util/profile/modtest.conf
 /src/util/profile/prof_err.[ch]
 /src/util/profile/profile.h
-/src/util/profile/profile_tcl
 /src/util/profile/test?.ini
 /src/util/profile/test_include_dir/
 /src/util/profile/test_load

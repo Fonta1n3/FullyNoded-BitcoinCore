@@ -114,11 +114,19 @@ gssint_mechglue_init(void)
 	add_error_table(&et_ggss_error_table);
 
 	err = k5_mutex_finish_init(&g_mechSetLock);
+	if (err)
+		return err;
 	err = k5_mutex_finish_init(&g_mechListLock);
+	if (err)
+		return err;
 
 #ifdef _GSS_STATIC_LINK
 	err = gss_krb5int_lib_init();
+	if (err)
+		return err;
 	err = gss_spnegoint_lib_init();
+	if (err)
+		return err;
 #endif
 
 	err = gssint_mecherrmap_init();
@@ -167,6 +175,9 @@ gss_OID *oid;
 {
 	OM_uint32 major;
 	gss_mech_info aMech;
+
+	if (minor_status != NULL)
+	    *minor_status = 0;
 
 	if (minor_status == NULL || oid == NULL)
 		return (GSS_S_CALL_INACCESSIBLE_WRITE);
@@ -473,11 +484,18 @@ loadConfigFiles()
 	glob_t globbuf;
 	time_t highest = 0, now;
 	char **path;
+	const char *val;
 
 	/* Don't glob and stat more than once per second. */
 	if (time(&now) == (time_t)-1 || now == g_confLastCall)
 		return;
 	g_confLastCall = now;
+
+	val = secure_getenv("GSS_MECH_CONFIG");
+	if (val != NULL) {
+		load_if_changed(val, g_confFileModTime, &g_confFileModTime);
+		return;
+	}
 
 	load_if_changed(MECH_CONF, g_confFileModTime, &highest);
 
@@ -760,6 +778,10 @@ build_dynamicMech(void *dl, const gss_OID mech_type)
 	GSS_ADD_DYNAMIC_METHOD(dl, mech, gssspi_import_sec_context_by_mech);
 	GSS_ADD_DYNAMIC_METHOD(dl, mech, gssspi_import_name_by_mech);
 	GSS_ADD_DYNAMIC_METHOD(dl, mech, gssspi_import_cred_by_mech);
+	/* draft-zhu-negoex */
+	GSS_ADD_DYNAMIC_METHOD_NOLOOP(dl, mech, gssspi_query_meta_data);
+	GSS_ADD_DYNAMIC_METHOD_NOLOOP(dl, mech, gssspi_exchange_meta_data);
+	GSS_ADD_DYNAMIC_METHOD_NOLOOP(dl, mech, gssspi_query_mechanism_info);
 
 	assert(mech_type != GSS_C_NO_OID);
 
@@ -1148,6 +1170,7 @@ gssint_get_mechanism(gss_const_OID oid)
 
 	if (krb5int_open_plugin(aMech->uLibName, &dl, &errinfo) != 0 ||
 	    errinfo.code != 0) {
+		k5_clear_error(&errinfo);
 		k5_mutex_unlock(&g_mechListLock);
 		return ((gss_mechanism)NULL);
 	}
@@ -1158,6 +1181,7 @@ gssint_get_mechanism(gss_const_OID oid)
 		aMech->mech = (*sym)(aMech->mech_type);
 	} else {
 		/* Try dynamic dispatch table */
+		k5_clear_error(&errinfo);
 		aMech->mech = build_dynamicMech(dl, aMech->mech_type);
 		aMech->freeMech = 1;
 	}

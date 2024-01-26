@@ -73,7 +73,7 @@ master_doc = "index"
 
 # General information about the project.
 project = "Cryptography"
-copyright = "2013-2021, Individual Contributors"
+copyright = "2013-2022, Individual Contributors"
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
@@ -197,14 +197,14 @@ linkcheck_retries = 10
 linkcheck_timeout = 5
 
 linkcheck_ignore = [
-    # Small DH key results in a TLS failure on modern OpenSSL
-    r"https://info.isl.ntt.co.jp/crypt/eng/camellia/",
     # Inconsistent small DH params they seem incapable of fixing
     r"https://www.secg.org/sec1-v2.pdf",
-    # Incomplete cert chain
+    # Cert is issued from an untrusted root
     r"https://e-trust.gosuslugi.ru",
-    # Expired cert (1 week at time of writing)
-    r"https://www.cosic.esat.kuleuven.be",
+    # Incomplete cert chain
+    r"https://www.oscca.gov.cn",
+    # Cloudflare returns 403s for all non-browser requests
+    r"https://speakerdeck.com",
 ]
 
 autosectionlabel_prefix_document = True

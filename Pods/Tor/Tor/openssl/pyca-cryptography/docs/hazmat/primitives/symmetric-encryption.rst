@@ -14,14 +14,18 @@ message but an attacker can create bogus messages and force the application to
 decrypt them. In many contexts, a lack of authentication on encrypted messages
 can result in a loss of secrecy as well.
 
-For this reason it is **strongly** recommended to combine encryption with a
-message authentication code, such as :doc:`HMAC </hazmat/primitives/mac/hmac>`,
-in an "encrypt-then-MAC" formulation as `described by Colin Percival`_.
-``cryptography`` includes a recipe named :doc:`/fernet` that does this for you.
-**To minimize the risk of security issues you should evaluate Fernet to see if
-it fits your needs before implementing anything using this module.**
+For this reason in nearly all contexts it is necessary to combine encryption
+with a message authentication code, such as
+:doc:`HMAC </hazmat/primitives/mac/hmac>`, in an "encrypt-then-MAC"
+formulation as `described by Colin Percival`_. ``cryptography`` includes a
+recipe named :doc:`/fernet` that does this for you. **To minimize the risk of
+security issues you should evaluate Fernet to see if it fits your needs before
+implementing anything using this module.** If :doc:`/fernet` is not
+appropriate for your use-case then you may still benefit from
+:doc:`/hazmat/primitives/aead` which combines encryption and authentication
+securely.
 
-.. class:: Cipher(algorithm, mode, backend=None)
+.. class:: Cipher(algorithm, mode)
 
     Cipher objects combine an algorithm such as
     :class:`~cryptography.hazmat.primitives.ciphers.algorithms.AES` with a
@@ -50,13 +54,9 @@ it fits your needs before implementing anything using this module.**
     :param mode: A :class:`~cryptography.hazmat.primitives.ciphers.modes.Mode`
         instance such as those described
         :ref:`below <symmetric-encryption-modes>`.
-    :param backend: An optional
-        :class:`~cryptography.hazmat.backends.interfaces.CipherBackend`
-        instance.
 
     :raises cryptography.exceptions.UnsupportedAlgorithm: This is raised if the
-        provided ``backend`` does not implement
-        :class:`~cryptography.hazmat.backends.interfaces.CipherBackend`
+        provided ``algorithm`` is unsupported.
 
     .. method:: encryptor()
 
@@ -64,8 +64,8 @@ it fits your needs before implementing anything using this module.**
             :class:`~cryptography.hazmat.primitives.ciphers.CipherContext`
             instance.
 
-        If the backend doesn't support the requested combination of ``cipher``
-        and ``mode`` an :class:`~cryptography.exceptions.UnsupportedAlgorithm`
+        If the requested combination of ``algorithm`` and ``mode`` is
+        unsupported an :class:`~cryptography.exceptions.UnsupportedAlgorithm`
         exception will be raised.
 
     .. method:: decryptor()
@@ -74,8 +74,8 @@ it fits your needs before implementing anything using this module.**
             :class:`~cryptography.hazmat.primitives.ciphers.CipherContext`
             instance.
 
-        If the backend doesn't support the requested combination of ``cipher``
-        and ``mode`` an :class:`~cryptography.exceptions.UnsupportedAlgorithm`
+        If the requested combination of ``algorithm`` and ``mode`` is
+        unsupported an :class:`~cryptography.exceptions.UnsupportedAlgorithm`
         exception will be raised.
 
 .. _symmetric-encryption-algorithms:
@@ -95,6 +95,28 @@ Algorithms
         ``192``, or ``256`` :term:`bits` long.
     :type key: :term:`bytes-like`
 
+.. class:: AES128(key)
+
+    .. versionadded:: 38.0.0
+
+    An AES class that only accepts 128 bit keys. This is identical to the
+    standard ``AES`` class except that it will only accept a single key length.
+
+    :param key: The secret key. This must be kept secret. ``128``
+        :term:`bits` long.
+    :type key: :term:`bytes-like`
+
+.. class:: AES256(key)
+
+    .. versionadded:: 38.0.0
+
+    An AES class that only accepts 256 bit keys. This is identical to the
+    standard ``AES`` class except that it will only accept a single key length.
+
+    :param key: The secret key. This must be kept secret. ``256``
+        :term:`bits` long.
+    :type key: :term:`bytes-like`
+
 .. class:: Camellia(key)
 
     Camellia is a block cipher approved for use by `CRYPTREC`_ and ISO/IEC.
@@ -105,7 +127,7 @@ Algorithms
         ``192``, or ``256`` :term:`bits` long.
     :type key: :term:`bytes-like`
 
-.. class:: ChaCha20(key)
+.. class:: ChaCha20(key, nonce)
 
     .. versionadded:: 2.1
 
@@ -130,7 +152,9 @@ Algorithms
         nonce with the same key compromises the security of every message
         encrypted with that key. The nonce does not need to be kept secret
         and may be included with the ciphertext. This must be ``128``
-        :term:`bits` in length.
+        :term:`bits` in length. The 128-bit value is a concatenation of 4-byte
+        little-endian counter and the 12-byte nonce (as described in
+        :rfc:`7539`).
     :type nonce: :term:`bytes-like`
 
         .. note::
@@ -596,8 +620,6 @@ Interfaces
             into. This buffer should be ``len(data) + n - 1`` bytes where ``n``
             is the block size (in bytes) of the cipher and mode combination.
         :return int: Number of bytes written.
-        :raises NotImplementedError: This is raised if the version of ``cffi``
-            used is too old (this can happen on older PyPy releases).
         :raises ValueError: This is raised if the supplied buffer is too small.
 
         .. doctest::
@@ -740,9 +762,6 @@ Interfaces used by the symmetric cipher modes described in
 
         This should be the standard shorthand name for the mode, for example
         Cipher-Block Chaining mode is "CBC".
-
-        The name may be used by a backend to influence the operation of a
-        cipher in conjunction with the algorithm's name.
 
     .. method:: validate_for_algorithm(algorithm)
 

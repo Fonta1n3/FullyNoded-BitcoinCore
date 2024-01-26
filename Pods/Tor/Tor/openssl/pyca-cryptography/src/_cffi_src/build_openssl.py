@@ -9,11 +9,7 @@ from distutils import dist
 from distutils.ccompiler import get_default_compiler
 from distutils.command.config import config
 
-from _cffi_src.utils import (
-    build_ffi_for_binding,
-    compiler_type,
-    extra_link_args,
-)
+from _cffi_src.utils import build_ffi_for_binding, compiler_type
 
 
 def _get_openssl_libraries(platform):
@@ -74,7 +70,7 @@ def _extra_compile_args(platform):
 
 
 ffi = build_ffi_for_binding(
-    module_name="_openssl",
+    module_name="cryptography.hazmat.bindings._openssl",
     module_prefix="_cffi_src.openssl.",
     modules=[
         # This goes first so we can define some cryptography-wide symbols.
@@ -85,12 +81,10 @@ ffi = build_ffi_for_binding(
         "bignum",
         "bio",
         "cmac",
-        "conf",
         "crypto",
         "dh",
         "dsa",
         "ec",
-        "ecdh",
         "ecdsa",
         "engine",
         "err",
@@ -99,7 +93,6 @@ ffi = build_ffi_for_binding(
         "hmac",
         "nid",
         "objects",
-        "ocsp",
         "opensslv",
         "osrandom_engine",
         "pem",
@@ -116,5 +109,4 @@ ffi = build_ffi_for_binding(
     ],
     libraries=_get_openssl_libraries(sys.platform),
     extra_compile_args=_extra_compile_args(sys.platform),
-    extra_link_args=extra_link_args(compiler_type()),
 )

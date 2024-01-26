@@ -87,7 +87,7 @@ OM_uint32 gssint_get_mech_type_oid(gss_OID OID, gss_buffer_t token);
  * access mechanism specific versions of the gssapi routines through
  * the routines in the glue module (gssd_mech_glue.c)
  *
- * This contants all of the functions defined in gssapi.h except for
+ * This contains all of the functions defined in gssapi.h except for
  * gss_release_buffer() and gss_release_oid_set(), which I am
  * assuming, for now, to be equal across mechanisms.
  */
@@ -702,14 +702,45 @@ typedef struct gss_config {
 	    int				/* iov_count */
 	);
 
+	/* NegoEx extensions added in 1.18 */
+
+	OM_uint32	(KRB5_CALLCONV *gssspi_query_meta_data)
+	(
+	    OM_uint32 *,		/* minor_status */
+	    gss_const_OID,		/* mech_oid */
+	    gss_cred_id_t,		/* cred_handle */
+	    gss_ctx_id_t *,		/* context_handle */
+	    const gss_name_t,		/* targ_name */
+	    OM_uint32,			/* req_flags */
+	    gss_buffer_t		/* meta_data */
+	/* */);
+
+	OM_uint32	(KRB5_CALLCONV *gssspi_exchange_meta_data)
+	(
+	    OM_uint32 *,		/* minor_status */
+	    gss_const_OID,		/* mech_oid */
+	    gss_cred_id_t,		/* cred_handle */
+	    gss_ctx_id_t *,		/* context_handle */
+	    const gss_name_t,		/* targ_name */
+	    OM_uint32,			/* req_flags */
+	    gss_const_buffer_t		/* meta_data */
+	/* */);
+
+	OM_uint32	(KRB5_CALLCONV *gssspi_query_mechanism_info)
+	(
+	    OM_uint32 *,		/* minor_status */
+	    gss_const_OID,		/* mech_oid */
+	    unsigned char[16]		/* auth_scheme */
+	/* */);
+
 } *gss_mechanism;
 
 /*
  * In the user space we use a wrapper structure to encompass the
  * mechanism entry points.  The wrapper contain the mechanism
  * entry points and other data which is only relevant to the gss-api
- * layer.  In the kernel we use only the gss_config strucutre because
- * the kernal does not cantain any of the extra gss-api specific data.
+ * layer.  In the kernel we use only the gss_config structure because
+ * the kernel does not cantain any of the extra gss-api specific data.
  */
 typedef struct gss_mech_config {
 	char *kmodName;			/* kernel module name */
@@ -767,6 +798,12 @@ OM_uint32 gssint_create_copy_buffer(
 	const gss_buffer_t,	/* src buffer */
 	gss_buffer_t *,		/* destination buffer */
 	int			/* NULL terminate buffer ? */
+);
+
+OM_uint32 gssint_create_union_context(
+	OM_uint32 *minor,	/* minor_status */
+	gss_const_OID,		/* mech_oid */
+	gss_union_ctx_id_t *	/* ctx_out */
 );
 
 OM_uint32 gssint_copy_oid_set(

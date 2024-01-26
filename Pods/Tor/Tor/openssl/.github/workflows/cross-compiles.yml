@@ -1,5 +1,11 @@
----
-name: Cross Compile for 1.1.1
+# Copyright 2021-2023 The OpenSSL Project Authors. All Rights Reserved.
+#
+# Licensed under the Apache License 2.0 (the "License").  You may not use
+# this file except in compliance with the License.  You can obtain a copy
+# in the file LICENSE in the source distribution or at
+# https://www.openssl.org/source/license.html
+
+name: Cross Compile
 
 on: [pull_request, push]
 
@@ -18,12 +24,30 @@ jobs:
         #   libs: the Debian package for the necessary link/runtime libraries.
         #   target: the OpenSSL configuration target to use, this is passed
         #           directly to the config command line.
+        #   fips:   set to "no" to disable building FIPS, leave unset to
+        #           build the FIPS provider.
         #   tests: omit this to run all the tests using QEMU, set it to "none"
-        #          to never run the tests, otherwise it's value is passed to
-        #          the "make test" command to allow selectiving disabling of
+        #          to never run the tests, otherwise its value is passed to
+        #          the "make test" command to allow selective disabling of
         #          tests.
+        #   qemucpu: optional; string that describes CPU properties.
+        #            The string will be used to set the QEMU_CPU variable.
+        #   opensslcapsname: optional; string that describes the postfix of the
+        #                    OpenSSL environment variable that defines CPU
+        #                    capabilities. E.g. "foo" will result in an
+        #                    environment variable with the name OPENSSL_foo.
+        #   opensslcaps: optional; if opensslcapsname (see above) is set, then
+        #                this string will be used as content for the OpenSSL
+        #                capabilities variable.
+        #   ppa:   Launchpad PPA repository to download packages from.
         platform: [
           {
+            arch: i386-pc-msdosdjgpp,
+            libs: libc-djgpp-dev libwatt-djgpp-dev djgpp-utils,
+            target: no-threads 386 DJGPP,
+            tests: none,
+            ppa: jwt27/djgpp-toolchain
+          }, {
             arch: aarch64-linux-gnu,
             libs: libc6-dev-arm64-cross,
             target: linux-aarch64
@@ -45,21 +69,25 @@ jobs:
             arch: hppa-linux-gnu,
             libs: libc6-dev-hppa-cross,
             target: -static linux-generic32,
+            fips: no,
             tests: -test_includes -test_store -test_x509_store
           }, {
             arch: m68k-linux-gnu,
             libs: libc6-dev-m68k-cross,
-            target: -static -m68040 linux-generic32,
+            target: -static -m68040 linux-latomic -Wno-stringop-overflow,
+            fips: no,
             tests: -test_includes -test_store -test_x509_store
           }, {
             arch: mips-linux-gnu,
             libs: libc6-dev-mips-cross,
             target: -static linux-mips32,
+            fips: no,
             tests: -test_includes -test_store -test_x509_store
           }, {
             arch: mips64-linux-gnuabi64,
             libs: libc6-dev-mips64-cross,
             target: -static linux64-mips64,
+            fips: no
           }, {
             arch: mipsel-linux-gnu,
             libs: libc6-dev-mipsel-cross,
@@ -68,7 +96,10 @@ jobs:
           }, {
             arch: powerpc64le-linux-gnu,
             libs: libc6-dev-ppc64el-cross,
-            target: linux-ppc64le
+            # The default compiler for this platform on Ubuntu 20.04 seems
+            # buggy and causes test failures. Dropping the optimisation level
+            # resolves it.
+            target: -O2 linux-ppc64le
           }, {
             arch: riscv64-linux-gnu,
             libs: libc6-dev-riscv64-cross,
@@ -76,11 +107,11 @@ jobs:
           }, {
             arch: s390x-linux-gnu,
             libs: libc6-dev-s390x-cross,
-            target: linux64-s390x
+            target: linux64-s390x -Wno-stringop-overflow
           }, {
             arch: sh4-linux-gnu,
             libs: libc6-dev-sh4-cross,
-            target: no-async linux-generic32,
+            target: no-async linux-latomic,
             tests: -test_includes -test_store -test_x509_store
           },
 
@@ -95,7 +126,7 @@ jobs:
           }, {
             arch: m68k-linux-gnu,
             libs: libc6-dev-m68k-cross,
-            target: -mcfv4e linux-generic32,
+            target: -mcfv4e linux-latomic -Wno-stringop-overflow no-quic,
             tests: none
           }, {
             arch: mips-linux-gnu,
@@ -117,19 +148,32 @@ jobs:
             tests: none
           }
         ]
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     steps:
+    - name: install package repository
+      if: matrix.platform.ppa != ''
+      run: |
+        sudo add-apt-repository ppa:${{ matrix.platform.ppa }}
     - name: install packages
       run: |
         sudo apt-get update
         sudo apt-get -yq --force-yes install \
             gcc-${{ matrix.platform.arch }} \
             ${{ matrix.platform.libs }}
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
+    - name: checkout fuzz/corpora submodule
+      run: git submodule update --init --depth 1 fuzz/corpora
 
-    - name: config
+    - name: config with FIPS
+      if: matrix.platform.fips != 'no'
       run: |
-        ./Configure --strict-warnings \
+        ./config --banner=Configured --strict-warnings enable-fips \
+                 --cross-compile-prefix=${{ matrix.platform.arch }}- \
+                 ${{ matrix.platform.target }}
+    - name: config without FIPS
+      if: matrix.platform.fips == 'no'
+      run: |
+        ./config --banner=Configured --strict-warnings \
                  --cross-compile-prefix=${{ matrix.platform.arch }}- \
                  ${{ matrix.platform.target }}
     - name: config dump
@@ -142,14 +186,27 @@ jobs:
       if: github.event_name == 'push' && matrix.platform.tests != 'none'
       run: sudo apt-get -yq --force-yes install qemu-user
 
+    - name: Set QEMU environment
+      if: github.event_name == 'push' && matrix.platform.qemucpu != ''
+      run: echo "QEMU_CPU=${{ matrix.platform.qemucpu }}" >> $GITHUB_ENV
+
+    - name: Set OpenSSL caps environment
+      if: github.event_name == 'push' && matrix.platform.opensslcapsname != ''
+      run: echo "OPENSSL_${{ matrix.platform.opensslcapsname }}=\
+                 ${{ matrix.platform.opensslcaps }}" >> $GITHUB_ENV
+
+    - name: get cpu info
+      run: cat /proc/cpuinfo
+
     - name: make all tests
       if: github.event_name == 'push' && matrix.platform.tests == ''
       run: |
-        make test \
+        make test HARNESS_JOBS=${HARNESS_JOBS:-4} \
+                  TESTS="-test_afalg" \
                   QEMU_LD_PREFIX=/usr/${{ matrix.platform.arch }}
     - name: make some tests
       if: github.event_name == 'push' && matrix.platform.tests != 'none' && matrix.platform.tests != ''
       run: |
-        make test \
-                  TESTS="${{ matrix.platform.tests }}" \
+        make test HARNESS_JOBS=${HARNESS_JOBS:-4} \
+                  TESTS="${{ matrix.platform.tests }} -test_afalg" \
                   QEMU_LD_PREFIX=/usr/${{ matrix.platform.arch }}

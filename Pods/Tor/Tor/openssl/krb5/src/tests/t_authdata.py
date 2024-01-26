@@ -57,7 +57,7 @@ if not os.path.exists(os.path.join(plugins, 'preauth', 'pkinit.so')):
     skipped('anonymous ticket authdata tests', 'PKINIT not built')
 else:
     # Set up a realm with PKINIT support and get anonymous tickets.
-    certs = os.path.join(srctop, 'tests', 'dejagnu', 'pkinit-certs')
+    certs = os.path.join(srctop, 'tests', 'pkinit-certs')
     ca_pem = os.path.join(certs, 'ca.pem')
     kdc_pem = os.path.join(certs, 'kdc.pem')
     privkey_pem = os.path.join(certs, 'privkey.pem')
@@ -158,6 +158,8 @@ realm.run(['./adata', realm.host_princ], expected_msg='+97: [indcl]')
 mark('auth indicator enforcement')
 realm.addprinc('restricted')
 realm.run([kadminl, 'setstr', 'restricted', 'require_auth', 'superstrong'])
+realm.kinit(realm.user_princ, password('user'), ['-S', 'restricted'],
+            expected_code=1, expected_msg='KDC policy rejects request')
 realm.run([kvno, 'restricted'], expected_code=1,
           expected_msg='KDC policy rejects request')
 realm.run([kadminl, 'setstr', 'restricted', 'require_auth', 'indcl'])
@@ -193,7 +195,11 @@ realm2.stop()
 testprincs = {'krbtgt/KRBTEST.COM': {'keys': 'aes128-cts'},
               'krbtgt/FOREIGN': {'keys': 'aes128-cts'},
               'user': {'keys': 'aes128-cts', 'flags': '+preauth'},
-              'service/1': {'keys': 'aes128-cts', 'flags': '+preauth'},
+              'user2': {'keys': 'aes128-cts', 'flags': '+preauth'},
+              'rservice': {'keys': 'aes128-cts',
+                           'strings': 'require_auth:strong'},
+              'service/1': {'keys': 'aes128-cts',
+                            'flags': '+ok_to_auth_as_delegate'},
               'service/2': {'keys': 'aes128-cts'},
               'noauthdata': {'keys': 'aes128-cts',
                              'flags': '+no_auth_data_required'}}
@@ -206,6 +212,7 @@ usercache = 'FILE:' + os.path.join(realm.testdir, 'usercache')
 realm.extract_keytab(realm.krbtgt_princ, realm.keytab)
 realm.extract_keytab('krbtgt/FOREIGN', realm.keytab)
 realm.extract_keytab(realm.user_princ, realm.keytab)
+realm.extract_keytab('ruser', realm.keytab)
 realm.extract_keytab('service/1', realm.keytab)
 realm.extract_keytab('service/2', realm.keytab)
 realm.extract_keytab('noauthdata', realm.keytab)
@@ -219,6 +226,11 @@ out = realm.run(['./adata', '-p', realm.user_princ, 'service/1'])
 if '97:' in out:
     fail('auth-indicator present in S4U2Self response')
 
+# Get another S4U2Self ticket with requested authdata.
+realm.run(['./s4u2self', 'user', 'service/1', '-', '-2', 'self_ad'])
+realm.run(['./adata', '-p', realm.user_princ, 'service/1', '-2', 'self_ad'],
+          expected_msg=' -2: self_ad')
+
 # S4U2Proxy (indicators should come from evidence ticket, not TGT)
 mark('S4U2Proxy (auth indicators from evidence ticket expected)')
 realm.kinit(realm.user_princ, None, ['-k', '-f', '-X', 'indicators=indcl',
@@ -227,6 +239,30 @@ realm.run(['./s4u2proxy', usercache, 'service/2'])
 out = realm.run(['./adata', '-p', realm.user_princ, 'service/2'])
 if '+97: [indcl]' not in out or '[inds1]' in out:
     fail('correct auth-indicator not seen for S4U2Proxy req')
+
+# Get another S4U2Proxy ticket including request-authdata.
+realm.run(['./s4u2proxy', usercache, 'service/2', '-2', 'proxy_ad'])
+realm.run(['./adata', '-p', realm.user_princ, 'service/2', '-2', 'proxy_ad'],
+          expected_msg=' -2: proxy_ad')
+
+# Get an S4U2Proxy ticket using an evidence ticket obtained by S4U2Self,
+# with request authdata in both steps.
+realm.run(['./s4u2self', 'user2', 'service/1', usercache, '-2', 'self_ad'])
+realm.run(['./s4u2proxy', usercache, 'service/2', '-2', 'proxy_ad'])
+out = realm.run(['./adata', '-p', 'user2', 'service/2', '-2', 'proxy_ad'])
+if ' -2: self_ad' not in out or ' -2: proxy_ad' not in out:
+    fail('expected authdata not seen in S4U2Proxy ticket')
+
+# Test alteration of auth indicators by KDB module (AS and TGS).
+realm.kinit(realm.user_princ, None, ['-k', '-X', 'indicators=dummy dbincr1'])
+realm.run(['./adata', realm.krbtgt_princ], expected_msg='+97: [dbincr2]')
+realm.run(['./adata', 'service/1'], expected_msg='+97: [dbincr3]')
+realm.kinit(realm.user_princ, None,
+            ['-k', '-X', 'indicators=strong', '-S', 'rservice'])
+# Test enforcement of altered indicators during AS request.
+realm.kinit(realm.user_princ, None,
+            ['-k', '-X', 'indicators=strong dbincr1', '-S', 'rservice'],
+            expected_code=1)
 
 # Test that KDB module authdata is included in an AS request, by
 # default or with an explicit PAC request.
@@ -256,6 +292,70 @@ mark('TGS-REQ KDB authdata service suppression')
 out = realm.run(['./adata', 'noauthdata'])
 if '-456: db-authdata-test' in out:
     fail('DB authdata not suppressed by +no_auth_data_required')
+
+mark('S4U2Proxy with a foreign client')
+
+a_princs = {'krbtgt/A': {'keys': 'aes128-cts'},
+            'krbtgt/B': {'keys': 'aes128-cts'},
+            'impersonator': {'keys': 'aes128-cts'},
+            'resource': {'keys': 'aes128-cts'}}
+a_kconf = {'realms': {'$realm': {'database_module': 'test'}},
+           'dbmodules': {'test': {'db_library': 'test',
+                                  'delegation': {'impersonator' : 'resource'},
+                                  'princs': a_princs,
+                                  'alias': {'service/rb.b': '@B'}}}}
+
+b_princs = {'krbtgt/B': {'keys': 'aes128-cts'},
+            'krbtgt/A': {'keys': 'aes128-cts'},
+            'user': {'keys': 'aes128-cts', 'flags': '+preauth'},
+            'rb': {'keys': 'aes128-cts'}}
+b_kconf = {'realms': {'$realm': {'database_module': 'test'}},
+           'dbmodules': {'test': {'db_library': 'test',
+                                  'princs': b_princs,
+                                  'rbcd': {'rb@B': 'impersonator@A'},
+                                  'alias': {'service/rb.b': 'rb',
+                                            'impersonator@A': '@A'}}}}
+
+ra, rb = cross_realms(2, xtgts=(),
+                          args=({'realm': 'A', 'kdc_conf': a_kconf},
+                                {'realm': 'B', 'kdc_conf': b_kconf}),
+                          create_kdb=False)
+
+ra.start_kdc()
+rb.start_kdc()
+
+ra.extract_keytab('impersonator@A', ra.keytab)
+rb.extract_keytab('user@B', rb.keytab)
+
+usercache = 'FILE:' + os.path.join(rb.testdir, 'usercache')
+rb.kinit(rb.user_princ, None, ['-k', '-f', '-c', usercache])
+rb.run([kvno, '-C', 'impersonator@A', '-c', usercache])
+
+ra.kinit('impersonator@A', None, ['-f', '-k', '-t', ra.keytab])
+ra.run(['./s4u2proxy', usercache, 'resource@A'])
+
+mark('Cross realm S4U authdata tests')
+
+ra.kinit('impersonator@A', None, ['-k', '-t', ra.keytab])
+ra.run(['./s4u2self', rb.user_princ, 'impersonator@A', usercache, '-2',
+        'cross_s4u_self_ad'])
+out = ra.run(['./adata', '-c', usercache, '-p', rb.user_princ,
+              'impersonator@A', '-2', 'cross_s4u_self_ad'])
+if out.count(' -2: cross_s4u_self_ad') != 1:
+    fail('expected one cross_s4u_self_ad, got: %s' % count)
+
+ra.run(['./s4u2proxy', usercache, 'service/rb.b', '-2',
+        'cross_s4u_proxy_ad'])
+rb.extract_keytab('service/rb.b', ra.keytab)
+out = ra.run(['./adata', '-p', rb.user_princ, 'service/rb.b', '-2',
+              'cross_s4u_proxy_ad'])
+if out.count(' -2: cross_s4u_self_ad') != 1:
+    fail('expected one cross_s4u_self_ad, got: %s' % count)
+if out.count(' -2: cross_s4u_proxy_ad') != 1:
+    fail('expected one cross_s4u_proxy_ad, got: %s' % count)
+
+ra.stop()
+rb.stop()
 
 # Additional KDB module authdata behavior we don't currently test:
 # * KDB module authdata is suppressed in TGS requests if the TGT

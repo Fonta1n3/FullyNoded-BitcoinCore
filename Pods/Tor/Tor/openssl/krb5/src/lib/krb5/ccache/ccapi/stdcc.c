@@ -92,7 +92,6 @@ krb5_cc_ops krb5_cc_stdcc_ops = {
     krb5_stdccv3_ptcursor_next,
     krb5_stdccv3_ptcursor_free,
     NULL, /* move */
-    krb5_stdccv3_last_change_time, /* lastchange */
     NULL, /* wasdefault */
     krb5_stdccv3_lock,
     krb5_stdccv3_unlock,
@@ -113,7 +112,6 @@ krb5_cc_ops krb5_cc_stdcc_ops = {
     krb5_stdcc_remove,
     krb5_stdcc_set_flags,
     krb5_stdcc_get_flags,
-    NULL,
     NULL,
     NULL,
     NULL,
@@ -589,7 +587,6 @@ krb5_stdccv3_next_cred (krb5_context context,
         err = stdccv3_setup (context, ccapi_data);
     }
 
-    /* Note: CCAPI v3 ccaches can contain both v4 and v5 creds */
     while (!err) {
         err = cc_credentials_iterator_next (iterator, &credentials);
 
@@ -628,7 +625,7 @@ krb5_stdccv3_retrieve (krb5_context context,
 /*
  *  end seq
  *
- * just free up the storage assoicated with the cursor (if we can)
+ * just free up the storage associated with the cursor (if we can)
  */
 krb5_error_code KRB5_CALLCONV
 krb5_stdccv3_end_seq_get (krb5_context context,
@@ -836,7 +833,6 @@ krb5_stdccv3_remove (krb5_context context,
                                                  &iterator);
     }
 
-    /* Note: CCAPI v3 ccaches can contain both v4 and v5 creds */
     while (!err && !found) {
         cc_credentials_t credentials = NULL;
 
@@ -1003,29 +999,6 @@ krb5_stdccv3_ptcursor_free(
     return 0;
 }
 
-krb5_error_code KRB5_CALLCONV krb5_stdccv3_last_change_time
-(krb5_context context, krb5_ccache id,
- krb5_timestamp *change_time)
-{
-    krb5_error_code err = 0;
-    stdccCacheDataPtr ccapi_data = id->data;
-    cc_time_t ccapi_change_time = 0;
-
-    *change_time = 0;
-
-    if (!err) {
-        err = stdccv3_setup(context, ccapi_data);
-    }
-    if (!err) {
-        err = cc_ccache_get_change_time (ccapi_data->NamedCache, &ccapi_change_time);
-    }
-    if (!err) {
-        *change_time = ccapi_change_time;
-    }
-
-    return cc_err_xlate (err);
-}
-
 krb5_error_code KRB5_CALLCONV krb5_stdccv3_lock
 (krb5_context context, krb5_ccache id)
 {
@@ -1106,7 +1079,7 @@ static krb5_error_code stdcc_setup(krb5_context context,
 {
     int     err;
 
-    /* make sure the API has been intialized */
+    /* make sure the API has been initialized */
     if (gCntrlBlock == NULL) {
 #ifdef CC_API_VER2
         err = cc_initialize(&gCntrlBlock, CC_API_VER_2, NULL, NULL);
@@ -1420,7 +1393,7 @@ krb5_error_code KRB5_CALLCONV krb5_stdcc_next_cred
 
 
 /*
- * retreive
+ * retrieve
  *
  * - try to find a matching credential in the cache
  */
@@ -1439,7 +1412,7 @@ krb5_stdcc_retrieve(context, id, whichfields, mcreds, creds)
 /*
  *  end seq
  *
- * just free up the storage assoicated with the cursor (if we could)
+ * just free up the storage associated with the cursor (if we could)
  */
 krb5_error_code KRB5_CALLCONV krb5_stdcc_end_seq_get
 (krb5_context context, krb5_ccache id, krb5_cc_cursor *cursor)
@@ -1542,7 +1515,7 @@ krb5_stdcc_destroy (krb5_context context, krb5_ccache id)
     free(id);
 
     /* If the cache does not exist when we tried to destroy it,
-       that's fine.  That means someone else destryoed it since
+       that's fine.  That means someone else destroyed it since
        we resolved it. */
     if (retval == KRB5_FCC_NOFILE)
         return 0;

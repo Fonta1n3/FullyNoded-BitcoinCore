@@ -2,6 +2,7 @@
 # 2.0, and the BSD License. See the LICENSE file in the root of this repository
 # for complete details.
 
+import typing
 
 from cryptography.hazmat.backends.openssl.utils import _evp_pkey_derive
 from cryptography.hazmat.primitives import serialization
@@ -10,12 +11,15 @@ from cryptography.hazmat.primitives.asymmetric.x25519 import (
     X25519PublicKey,
 )
 
+if typing.TYPE_CHECKING:
+    from cryptography.hazmat.backends.openssl.backend import Backend
+
 
 _X25519_KEY_SIZE = 32
 
 
 class _X25519PublicKey(X25519PublicKey):
-    def __init__(self, backend, evp_pkey):
+    def __init__(self, backend: "Backend", evp_pkey):
         self._backend = backend
         self._evp_pkey = evp_pkey
 
@@ -56,7 +60,7 @@ class _X25519PublicKey(X25519PublicKey):
 
 
 class _X25519PrivateKey(X25519PrivateKey):
-    def __init__(self, backend, evp_pkey):
+    def __init__(self, backend: "Backend", evp_pkey):
         self._backend = backend
         self._evp_pkey = evp_pkey
 
@@ -87,7 +91,7 @@ class _X25519PrivateKey(X25519PrivateKey):
     ) -> bytes:
         if (
             encoding is serialization.Encoding.Raw
-            or format is serialization.PublicFormat.Raw
+            or format is serialization.PrivateFormat.Raw
         ):
             if (
                 format is not serialization.PrivateFormat.Raw
@@ -108,8 +112,8 @@ class _X25519PrivateKey(X25519PrivateKey):
         )
 
     def _raw_private_bytes(self) -> bytes:
-        # When we drop support for CRYPTOGRAPHY_OPENSSL_LESS_THAN_111 we can
-        # switch this to EVP_PKEY_new_raw_private_key
+        # If/when LibreSSL adds support for EVP_PKEY_get_raw_private_key we
+        # can switch to it (Cryptography_HAS_RAW_KEY)
         # The trick we use here is serializing to a PKCS8 key and just
         # using the last 32 bytes, which is the key itself.
         bio = self._backend._create_mem_bio_gc()

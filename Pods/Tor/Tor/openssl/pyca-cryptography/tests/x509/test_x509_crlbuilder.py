@@ -25,7 +25,7 @@ from ..hazmat.primitives.fixtures_rsa import RSA_KEY_2048, RSA_KEY_512
 from ..hazmat.primitives.test_ec import _skip_curve_unsupported
 
 
-class TestCertificateRevocationListBuilder(object):
+class TestCertificateRevocationListBuilder:
     def test_issuer_name_invalid(self):
         builder = x509.CertificateRevocationListBuilder()
         with pytest.raises(TypeError):
@@ -366,7 +366,7 @@ class TestCertificateRevocationListBuilder(object):
             )
             .last_update(last_update)
             .next_update(next_update)
-            .add_extension(x509.OCSPNoCheck(), False)
+            .add_extension(DummyExtension(), False)
         )
         with pytest.raises(NotImplementedError):
             builder.sign(private_key, hashes.SHA256(), backend)
@@ -468,7 +468,7 @@ class TestCertificateRevocationListBuilder(object):
             .next_update(next_update)
         )
 
-        with pytest.raises(ValueError):
+        with pytest.raises(TypeError):
             builder.sign(
                 private_key,
                 object(),  # type:ignore[arg-type]
@@ -500,7 +500,7 @@ class TestCertificateRevocationListBuilder(object):
             .next_update(next_update)
         )
 
-        with pytest.raises(ValueError):
+        with pytest.raises(TypeError):
             builder.sign(
                 private_key,
                 object(),  # type:ignore[arg-type]

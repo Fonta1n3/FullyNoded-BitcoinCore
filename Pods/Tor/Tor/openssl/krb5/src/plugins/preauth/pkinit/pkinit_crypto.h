@@ -46,7 +46,6 @@
  */
 enum cms_msg_types {
     CMS_SIGN_CLIENT,
-    CMS_SIGN_DRAFT9,
     CMS_SIGN_SERVER,
     CMS_ENVEL_SERVER
 };
@@ -357,7 +356,7 @@ krb5_error_code server_check_dh
 	krb5_data *dh_params,				/* IN
 		    ???? */
 	int minbits);					/* IN
-		    the mininum number of key bits acceptable */
+		    the minimum number of key bits acceptable */
 
 /*
  * this function completes the KDC's DH protocol. The KDC generates

@@ -91,7 +91,6 @@
 extern time_t get_date(char *); /* kadmin/cli/getdate.o */
 
 char *yes = "yes\n"; /* \n to compare against result of fgets */
-krb5_key_salt_tuple def_kslist = {ENCTYPE_DES_CBC_CRC, KRB5_KDB_SALTTYPE_NORMAL};
 
 krb5_data tgt_princ_entries[] = {
     {0, KRB5_TGS_NAME_SIZE, KRB5_TGS_NAME},
@@ -308,29 +307,6 @@ create_fixed_special(krb5_context context, struct realm_info *rinfo,
 
 }
 
-/* Create a special principal using one specified component and the
- * canonicalized local hostname. */
-static krb5_error_code
-create_hostbased_special(krb5_context context, struct realm_info *rinfo,
-                         krb5_keyblock *mkey, const char *comp1)
-{
-    krb5_error_code ret;
-    krb5_principal princ = NULL;
-
-    ret = krb5_sname_to_principal(context, NULL, comp1, KRB5_NT_SRV_HST,
-                                  &princ);
-    if (ret)
-        goto cleanup;
-    ret = krb5_set_principal_realm(context, princ, global_params.realm);
-    if (ret)
-        goto cleanup;
-    ret = kdb_ldap_create_principal(context, princ, TGT_KEY, rinfo, mkey);
-
-cleanup:
-    krb5_free_principal(context, princ);
-    return ret;
-}
-
 /* Create all special principals for the realm. */
 static krb5_error_code
 create_special_princs(krb5_context context, krb5_principal master_princ,
@@ -361,20 +337,10 @@ create_special_princs(krb5_context context, krb5_principal master_princ,
     if (ret)
         return ret;
 
-    /* Create kadmin/admin and kadmin/<hostname>. */
+    /* Create kadmin/admin. */
     rblock.max_life = ADMIN_LIFETIME;
     rblock.flags = KRB5_KDB_DISALLOW_TGT_BASED;
     ret = create_fixed_special(context, &rblock, mkey, "kadmin", "admin");
-    if (ret)
-        return ret;
-    ret = create_hostbased_special(context, &rblock, mkey, "kadmin");
-    if (ret)
-        return ret;
-
-    /* Create kiprop/<hostname>. */
-    rblock.max_life = global_params.max_life;
-    rblock.flags = 0;
-    ret = create_hostbased_special(context, &rblock, mkey, "kiprop");
     if (ret)
         return ret;
 
@@ -1338,7 +1304,7 @@ kdb_ldap_create_principal(krb5_context context, krb5_principal princ,
                                                      now, &db_create_princ)))
         goto cleanup;
 
-    entry.attributes = pblock->flags;
+    entry.attributes = pblock->flags | KRB5_KDB_LOCKDOWN_KEYS;
     entry.max_life = pblock->max_life;
     entry.max_renewable_life = pblock->max_rlife;
     entry.expiration = pblock->expiration;

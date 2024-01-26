@@ -73,7 +73,17 @@ static int max_tcp_or_rpc_data_connections = 45;
 static int
 setreuseaddr(int sock, int value)
 {
-    return setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &value, sizeof(value));
+    int st;
+
+    st = setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &value, sizeof(value));
+    if (st)
+        return st;
+#ifdef SO_REUSEPORT
+    st = setsockopt(sock, SOL_SOCKET, SO_REUSEPORT, &value, sizeof(value));
+    if (st)
+        return st;
+#endif
+    return 0;
 }
 
 #if defined(IPV6_V6ONLY)
@@ -352,7 +362,7 @@ loop_add_address(const char *address, int port, enum bind_type type,
  *
  * - addresses
  *      A string for the addresses.  Pass NULL to use the wildcard address.
- *      Supported delimeters can be found in ADDRESSES_DELIM.  Addresses are
+ *      Supported delimiters can be found in ADDRESSES_DELIM.  Addresses are
  *      parsed with k5_parse_host_name().
  * - default_port
  *      What port the socket should be set to if not specified in addresses.

@@ -2,28 +2,30 @@
 # 2.0, and the BSD License. See the LICENSE file in the root of this repository
 # for complete details.
 
+import typing
 
-from cryptography import utils
 from cryptography.exceptions import InvalidTag, UnsupportedAlgorithm, _Reasons
 from cryptography.hazmat.primitives import ciphers
-from cryptography.hazmat.primitives.ciphers import modes
+from cryptography.hazmat.primitives.ciphers import algorithms, modes
 
 
-@utils.register_interface(ciphers.CipherContext)
-@utils.register_interface(ciphers.AEADCipherContext)
-@utils.register_interface(ciphers.AEADEncryptionContext)
-@utils.register_interface(ciphers.AEADDecryptionContext)
-class _CipherContext(object):
+if typing.TYPE_CHECKING:
+    from cryptography.hazmat.backends.openssl.backend import Backend
+
+
+class _CipherContext:
     _ENCRYPT = 1
     _DECRYPT = 0
-    _MAX_CHUNK_SIZE = 2 ** 30 - 1
+    _MAX_CHUNK_SIZE = 2**30 - 1
 
-    def __init__(self, backend, cipher, mode, operation):
+    def __init__(
+        self, backend: "Backend", cipher, mode, operation: int
+    ) -> None:
         self._backend = backend
         self._cipher = cipher
         self._mode = mode
         self._operation = operation
-        self._tag = None
+        self._tag: typing.Optional[bytes] = None
 
         if isinstance(self._cipher, ciphers.BlockCipherAlgorithm):
             self._block_size_bytes = self._cipher.block_size // 8
@@ -66,7 +68,7 @@ class _CipherContext(object):
             iv_nonce = self._backend._ffi.from_buffer(mode.tweak)
         elif isinstance(mode, modes.ModeWithNonce):
             iv_nonce = self._backend._ffi.from_buffer(mode.nonce)
-        elif isinstance(cipher, modes.ModeWithNonce):
+        elif isinstance(cipher, algorithms.ChaCha20):
             iv_nonce = self._backend._ffi.from_buffer(cipher.nonce)
         else:
             iv_nonce = self._backend._ffi.NULL
@@ -144,7 +146,7 @@ class _CipherContext(object):
         n = self.update_into(data, buf)
         return bytes(buf[:n])
 
-    def update_into(self, data: bytes, buf) -> int:
+    def update_into(self, data: bytes, buf: bytes) -> int:
         total_data_len = len(data)
         if len(buf) < (total_data_len + self._block_size_bytes - 1):
             raise ValueError(
@@ -198,17 +200,23 @@ class _CipherContext(object):
             if not errors and isinstance(self._mode, modes.GCM):
                 raise InvalidTag
 
+            lib = self._backend._lib
             self._backend.openssl_assert(
                 errors[0]._lib_reason_match(
-                    self._backend._lib.ERR_LIB_EVP,
-                    self._backend._lib.EVP_R_DATA_NOT_MULTIPLE_OF_BLOCK_LENGTH,
+                    lib.ERR_LIB_EVP,
+                    lib.EVP_R_DATA_NOT_MULTIPLE_OF_BLOCK_LENGTH,
                 )
                 or (
-                    self._backend._lib.Cryptography_HAS_PROVIDERS
+                    lib.Cryptography_HAS_PROVIDERS
                     and errors[0]._lib_reason_match(
-                        self._backend._lib.ERR_LIB_PROV,
-                        self._backend._lib.PROV_R_WRONG_FINAL_BLOCK_LENGTH,
+                        lib.ERR_LIB_PROV,
+                        lib.PROV_R_WRONG_FINAL_BLOCK_LENGTH,
                     )
+                )
+                or (
+                    lib.CRYPTOGRAPHY_IS_BORINGSSL
+                    and errors[0].reason
+                    == lib.CIPHER_R_DATA_NOT_MULTIPLE_OF_BLOCK_LENGTH
                 ),
                 errors=errors,
             )
@@ -269,4 +277,6 @@ class _CipherContext(object):
         )
         self._backend.openssl_assert(res != 0)
 
-    tag = utils.read_only_property("_tag")
+    @property
+    def tag(self) -> typing.Optional[bytes]:
+        return self._tag
