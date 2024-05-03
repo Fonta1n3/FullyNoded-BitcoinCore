@@ -667,3 +667,5 @@ class CreateFullyNodedWalletViewController: UIViewController, UINavigationContro
         }
     }
 }
+
+

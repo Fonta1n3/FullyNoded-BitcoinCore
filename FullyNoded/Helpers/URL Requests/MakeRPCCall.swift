@@ -109,7 +109,7 @@ class MakeRPCCall {
             request.addValue("Basic \(base64LoginString)", forHTTPHeaderField: "Authorization")
             request.setValue("text/plain", forHTTPHeaderField: "Content-Type")
             
-            let dict:[String:Any] = ["jsonrpc":"1.0","id":id,"method":method.stringValue,"params":method.paramDict]
+            let dict:[String:Any] = ["jsonrpc": "1.0","id": id,"method": method.stringValue,"params": method.paramDict]
             
             guard let jsonData = try? JSONSerialization.data(withJSONObject: dict, options: .prettyPrinted) else {
 #if DEBUG

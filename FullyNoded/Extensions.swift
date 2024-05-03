@@ -273,7 +273,6 @@ public extension Data {
     
     static func decodeUrlSafeBase64(_ value: String) throws -> Data {
         var stringtoDecode = value.condenseWhitespace()
-        
         stringtoDecode = value.replacingOccurrences(of: "-", with: "+")
         stringtoDecode = stringtoDecode.replacingOccurrences(of: "_", with: "/")
         
@@ -458,6 +457,8 @@ public extension Double {
         
         if self == 0 {
             btcBalance = "0.00 000 000"
+        } else if self == 1 {
+            btcBalance = "1.00 000 000"
         } else {
             var decimalLocation = 0
             var btcBalanceArray:[String] = []
