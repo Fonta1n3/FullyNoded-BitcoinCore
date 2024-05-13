@@ -524,8 +524,6 @@ class ActiveWalletViewController: UIViewController {
                 } else if Int(gain) < 0 {
                     gain = gain * -1.0
                     gainText = " / loss of \(gain.fiatString) / \(Int((gain / originValueFiat) * 100.0))%"
-                } else {
-                    print("no diff")
                 }
             }
         }
@@ -556,7 +554,7 @@ class ActiveWalletViewController: UIViewController {
             var amountText = ""
             
             if isBtc {
-                amountText = amountBtc.btc
+                amountText = amountBtc
                 currencySymbolImageView.image = .init(systemName: "bitcoinsign")
                 
             } else if isSats {
@@ -577,7 +575,7 @@ class ActiveWalletViewController: UIViewController {
             var amountText = ""
             
             if isBtc {
-                amountText = amountBtc.btc
+                amountText = amountBtc
                 currencySymbolImageView.image = .init(systemName: "bitcoinsign")
                 
             } else if isSats {

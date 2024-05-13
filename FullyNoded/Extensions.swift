@@ -110,9 +110,6 @@ public extension String {
         return symbol
     }
     
-    var btc: String {
-        return self
-    }
     
     var sats: String {
         var sats = self
@@ -457,7 +454,7 @@ public extension Double {
         
         if self == 0 {
             btcBalance = "0.00 000 000"
-        } else if self == 1 {
+        } else if self == 1 || self == -1.0 {
             btcBalance = "1.00 000 000"
         } else {
             var decimalLocation = 0

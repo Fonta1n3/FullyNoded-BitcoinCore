@@ -91,7 +91,6 @@ class OnchainUtils {
                 completion((false, message))
                 return
             }
-            
             guard blockchainInfo.pruned else {
                 OnchainUtils.rescanNow(from: 0) { (started, message) in
                     completion((started, message))
@@ -99,7 +98,6 @@ class OnchainUtils {
                 
                 return
             }
-            
             OnchainUtils.rescanNow(from: blockchainInfo.pruneheight) { (started, message) in
                 completion((started, message))
             }

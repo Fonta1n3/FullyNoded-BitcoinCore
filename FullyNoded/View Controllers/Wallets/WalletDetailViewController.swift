@@ -74,7 +74,7 @@ class WalletDetailViewController: UIViewController, UITextFieldDelegate, UITable
             
             let alert = UIAlertController(title: tit, message: mess, preferredStyle: .alert)
             
-            alert.addAction(UIAlertAction(title: "Rescan", style: .default, handler: { action in
+            alert.addAction(UIAlertAction(title: "Rescan now", style: .default, handler: { action in
                 OnchainUtils.rescan() { (started, message) in
                     guard started else {
                         showAlert(vc: self, title: "", message: message ?? "error rescanning")
@@ -84,13 +84,10 @@ class WalletDetailViewController: UIViewController, UITextFieldDelegate, UITable
                     showAlert(vc: self, title: "", message: "Rescan started, refresh the active wallet view to see rescan completion status.")
                 }
             }))
-            
             alert.addAction(UIAlertAction(title: "Cancel", style: .cancel, handler: { action in }))
             self.present(alert, animated: true, completion: nil)
         }
     }
-    
-    
     
     private func exportJson() {
         DispatchQueue.main.async { [weak self] in
