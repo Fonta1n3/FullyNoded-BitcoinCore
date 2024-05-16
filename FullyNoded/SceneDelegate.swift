@@ -41,16 +41,16 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         
     }
     
-    private func isiOSAppOnMac() -> Bool {
-        if #available(iOS 14.0, *) {
-          return ProcessInfo.processInfo.isiOSAppOnMac
-        }
-        return false
-      }
+//    private func isiOSAppOnMac() -> Bool {
+//        if #available(iOS 14.0, *) {
+//          return ProcessInfo.processInfo.isiOSAppOnMac
+//        }
+//        return false
+//      }
 
     func sceneWillEnterForeground(_ scene: UIScene) {
         self.blacked.removeFromSuperview()
-        guard !isBooting else { isBooting = !isBooting; return }
+        guard !isBooting else { isBooting = !isBooting; print("not booting?"); return }
                 
         guard KeyChain.getData("UnlockPassword") != nil else {
             DispatchQueue.background(delay: 0.2, completion:  {
@@ -65,7 +65,7 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
             return
         }
         
-        if !isiOSAppOnMac() {
+        //if !isiOSAppOnMac() {
             let storyboard = UIStoryboard(name: "Main", bundle: nil)
             
             guard let loginVC = storyboard.instantiateViewController(identifier: "LogIn") as? LogInViewController,
@@ -88,7 +88,7 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
                     self.isBooting = false
                 }
             }
-        }
+        //}
     }
 
     func sceneDidEnterBackground(_ scene: UIScene) {
@@ -98,10 +98,11 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         MakeRPCCall.sharedInstance.connected = false
         
         if mgr?.state != .stopped && mgr?.state != TorClient.TorState.none  {
-            if !isiOSAppOnMac() {
+            //if !isiOSAppOnMac() {
+                print("tor getting killed")
                 mgr?.state = .refreshing
                 mgr?.resign()
-            }            
+            //}
         }
         
         if let window = self.window {

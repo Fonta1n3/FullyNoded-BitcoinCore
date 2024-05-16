@@ -451,11 +451,12 @@ public extension Double {
     
     var btcBalanceWithSpaces: String {
         var btcBalance = abs(self.rounded(toPlaces: 8)).avoidNotation
+        if !btcBalance.contains(".") {
+            btcBalance += ".0"
+        }
         
-        if self == 0 {
+        if self == 0.0 {
             btcBalance = "0.00 000 000"
-        } else if self == 1 || self == -1.0 {
-            btcBalance = "1.00 000 000"
         } else {
             var decimalLocation = 0
             var btcBalanceArray:[String] = []
