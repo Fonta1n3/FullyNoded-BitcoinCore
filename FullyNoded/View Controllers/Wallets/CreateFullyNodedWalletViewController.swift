@@ -492,7 +492,21 @@ class CreateFullyNodedWalletViewController: UIViewController, UINavigationContro
                     guard let self = self else { return }
                     
                     self.descriptor = descriptor
-                    goImportDesc()
+                    
+                    if descStr.isCosigner {
+                        self.ccXfp = descStr.fingerprint
+                        self.xpub = descStr.accountXpub
+                        self.deriv = descStr.derivation
+                        self.cosigner = descStr
+                        DispatchQueue.main.async { [weak self] in
+                            guard let self = self else { return }
+                            
+                            self.performSegue(withIdentifier: "segueToCreateMultiSig", sender: self)
+                        }
+                    } else {
+                        goImportDesc()
+                    }
+                    
                 }))
             }
             

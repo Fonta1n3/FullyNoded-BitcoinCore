@@ -27,6 +27,19 @@ import Foundation
  "wallet_type": "standard", "use_encryption": false, "seed_version": 17}
  */
 
+// MARK: Passport
+/*
+ {
+   "p2sh_deriv": "m/45'",
+   "p2sh": "xpubxxx",
+   "p2wsh_p2sh_deriv": "m/48'/0'/0'/1'",
+   "p2wsh_p2sh": "Ypubxxx",
+   "p2wsh_deriv": "m/48'/0'/0'/2'",
+   "p2wsh": "Zpubxxx",
+   "xfp": "AB88DE89"
+ }
+ */
+
 public struct WalletImport: CustomStringConvertible {
     
     let bip49:String?
@@ -69,6 +82,17 @@ public struct WalletImport: CustomStringConvertible {
             bip49 = nil
             bip44 = nil
             bip48 = nil
+            bip86 = nil
+            
+        } else if let xfp = dictionary["xfp"] as? String,
+                    let p2wsh_deriv = dictionary["p2wsh_deriv"] as? String,
+                    let p2wsh = dictionary["p2wsh"] as? String,
+                  let p2wshXpub = XpubConverter.convert(extendedKey: p2wsh) {
+            
+            bip48 = "wsh([\(xfp)/48h/0h/0h/2h]\(p2wshXpub)/0/*)"
+            bip49 = nil
+            bip44 = nil
+            bip84 = nil
             bip86 = nil
             
         } else {

@@ -1,4 +1,5 @@
 {
+  "originHash" : "6fa72cdb60d198303de0508437cc1f2218bf709f57ac7fabd795ea53776f6baf",
   "pins" : [
     {
       "identity" : "urkit",
@@ -10,5 +11,5 @@
       }
     }
   ],
-  "version" : 2
+  "version" : 3
 }
