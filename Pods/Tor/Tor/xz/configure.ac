@@ -1,12 +1,11 @@
 #                                               -*- Autoconf -*-
-# Process this file with autoconf to produce a configure script.
+# SPDX-License-Identifier: 0BSD
 
 ###############################################################################
 #
-# Author: Lasse Collin
+# Process this file with autoconf to produce a configure script.
 #
-# This file has been put into the public domain.
-# You can do whatever you want with this file.
+# Author: Lasse Collin
 #
 ###############################################################################
 
@@ -18,7 +17,7 @@
 AC_PREREQ([2.69])
 
 AC_INIT([XZ Utils], m4_esyscmd([/bin/sh build-aux/version.sh]),
-	[xz@tukaani.org], [xz], [https://xz.tukaani.org/xz-utils/])
+	[xz@tukaani.org], [xz], [https://tukaani.org/xz/])
 AC_CONFIG_SRCDIR([src/liblzma/common/common.h])
 AC_CONFIG_AUX_DIR([build-aux])
 AC_CONFIG_MACRO_DIR([m4])
@@ -79,8 +78,8 @@ fi
 # Filters #
 ###########
 
-m4_define([SUPPORTED_FILTERS], [lzma1,lzma2,delta,x86,powerpc,ia64,arm,armthumb,arm64,sparc])dnl
-m4_define([SIMPLE_FILTERS], [x86,powerpc,ia64,arm,armthumb,arm64,sparc])
+m4_define([SUPPORTED_FILTERS], [lzma1,lzma2,delta,x86,powerpc,ia64,arm,armthumb,arm64,sparc,riscv])dnl
+m4_define([SIMPLE_FILTERS], [x86,powerpc,ia64,arm,armthumb,arm64,sparc,riscv])
 m4_define([LZ_FILTERS], [lzma1,lzma2])
 
 m4_foreach([NAME], [SUPPORTED_FILTERS],
@@ -310,7 +309,7 @@ case $enable_microlzma in
 		;;
 	*)
 		AC_MSG_RESULT([])
-		AC_MSG_ERROR([--enable-microlzma accepts only `yes' or `no'.])
+		AC_MSG_ERROR([--enable-microlzma accepts only 'yes' or 'no'.])
 		;;
 esac
 AM_CONDITIONAL(COND_MICROLZMA, test "x$enable_microlzma" = xyes)
@@ -364,7 +363,7 @@ case $enable_assembler in
 		;;
 	*)
 		AC_MSG_RESULT([])
-		AC_MSG_ERROR([--enable-assembler accepts only `yes', `no', or `x86' (32-bit).])
+		AC_MSG_ERROR([--enable-assembler accepts only 'yes', 'no', or 'x86' (32-bit).])
 		;;
 esac
 AM_CONDITIONAL(COND_ASM_X86, test "x$enable_assembler" = xx86)
@@ -380,6 +379,16 @@ AC_ARG_ENABLE([clmul-crc], AS_HELP_STRING([--disable-clmul-crc],
 	[], [enable_clmul_crc=yes])
 
 
+############################
+# ARM64 CRC32 Instructions #
+############################
+
+AC_ARG_ENABLE([arm64-crc32], AS_HELP_STRING([--disable-arm64-crc32],
+		[Do not use ARM64 CRC32 instructions even if support for it
+		is detected.]),
+	[], [enable_arm64_crc32=yes])
+
+
 #####################
 # Size optimization #
 #####################
@@ -393,7 +402,7 @@ if test "x$enable_small" = xyes; then
 	AC_DEFINE([HAVE_SMALL], [1], [Define to 1 if optimizing for size.])
 elif test "x$enable_small" != xno; then
 	AC_MSG_RESULT([])
-	AC_MSG_ERROR([--enable-small accepts only `yes' or `no'])
+	AC_MSG_ERROR([--enable-small accepts only 'yes' or 'no'])
 fi
 AC_MSG_RESULT([$enable_small])
 AM_CONDITIONAL(COND_SMALL, test "x$enable_small" = xyes)
@@ -405,8 +414,8 @@ AM_CONDITIONAL(COND_SMALL, test "x$enable_small" = xyes)
 
 AC_MSG_CHECKING([if threading support is wanted])
 AC_ARG_ENABLE([threads], AS_HELP_STRING([--enable-threads=METHOD],
-		[Supported METHODS are `yes', `no', `posix', `win95', and
-		`vista'. The default is `yes'. Using `no' together with
+		[Supported METHODS are 'yes', 'no', 'posix', 'win95', and
+		'vista'. The default is 'yes'. Using 'no' together with
 		--enable-small makes liblzma thread unsafe.]),
 	[], [enable_threads=yes])
 
@@ -433,7 +442,7 @@ case $enable_threads in
 		;;
 	*)
 		AC_MSG_RESULT([])
-		AC_MSG_ERROR([--enable-threads only accepts `yes', `no', `posix', `win95', or `vista'])
+		AC_MSG_ERROR([--enable-threads only accepts 'yes', 'no', 'posix', 'win95', or 'vista'])
 		;;
 esac
 
@@ -507,9 +516,17 @@ AM_CONDITIONAL([COND_SCRIPTS], [test x$enable_scripts != xno])
 
 AC_ARG_ENABLE([doc], [AS_HELP_STRING([--disable-doc],
 		[do not install documentation files to docdir
-		(man pages will still be installed)])],
+		(man pages are still installed and,
+		if --enable-doxygen is used,
+		liblzma API documentation is installed too)])],
 	[], [enable_doc=yes])
 AM_CONDITIONAL([COND_DOC], [test x$enable_doc != xno])
+
+AC_ARG_ENABLE([doxygen], [AS_HELP_STRING([--enable-doxygen],
+		[generate HTML version of the liblzma API documentation
+		using Doxygen and install the result to docdir])],
+	[], [enable_doxygen=no])
+AM_CONDITIONAL([COND_DOXYGEN], [test x$enable_doxygen != xno])
 
 
 ##############
@@ -519,20 +536,24 @@ AM_CONDITIONAL([COND_DOC], [test x$enable_doc != xno])
 AC_MSG_CHECKING([if sandboxing should be used])
 AC_ARG_ENABLE([sandbox], [AS_HELP_STRING([--enable-sandbox=METHOD],
 		[Sandboxing METHOD can be
-		`auto', `no', `capsicum', or `pledge'.
-		The default is `auto' which enables sandboxing if
+		'auto', 'no', 'capsicum', 'pledge', or 'landlock'.
+		The default is 'auto' which enables sandboxing if
 		a supported sandboxing method is found.])],
 	[], [enable_sandbox=auto])
-case $enable_sandbox in
-	auto)
+case $enable_xzdec-$enable_xz-$enable_sandbox in
+	no-no-*)
+		enable_sandbox=no
+		AC_MSG_RESULT([no, --disable-xz and --disable-xzdec was used])
+		;;
+	*-*-auto)
 		AC_MSG_RESULT([maybe (autodetect)])
 		;;
-	no | capsicum | pledge)
+	*-*-no | *-*-capsicum | *-*-pledge | *-*-landlock)
 		AC_MSG_RESULT([$enable_sandbox])
 		;;
 	*)
 		AC_MSG_RESULT([])
-		AC_MSG_ERROR([--enable-sandbox only accepts `auto', `no', `capsicum', or `pledge'.])
+		AC_MSG_ERROR([--enable-sandbox only accepts 'auto', 'no', 'capsicum', 'pledge', or 'landlock'.])
 		;;
 esac
 
@@ -622,21 +643,10 @@ AS_CASE([$enable_threads],
 		AC_DEFINE([MYTHREAD_POSIX], [1],
 			[Define to 1 when using POSIX threads (pthreads).])
 
-		# These are nice to have but not mandatory.
-		#
-		# FIXME: xz uses clock_gettime if it is available and can do
-		# it even when threading is disabled. Moving this outside
-		# of pthread detection may be undesirable because then
-		# liblzma may get linked against librt even when librt isn't
-		# needed by liblzma.
+		# This is nice to have but not mandatory.
 		OLD_CFLAGS=$CFLAGS
 		CFLAGS="$CFLAGS $PTHREAD_CFLAGS"
-		AC_SEARCH_LIBS([clock_gettime], [rt])
-		AC_CHECK_FUNCS([clock_gettime pthread_condattr_setclock])
-		AC_CHECK_DECL([CLOCK_MONOTONIC], [AC_DEFINE(
-			[HAVE_CLOCK_MONOTONIC], [1], [Define to 1 if
-			`CLOCK_MONOTONIC' is declared in <time.h>.])], [],
-			[[#include <time.h>]])
+		AC_CHECK_FUNCS([pthread_condattr_setclock])
 		CFLAGS=$OLD_CFLAGS
 	],
 	[win95], [
@@ -707,61 +717,80 @@ fi
 # --with-pic and --without-pic though. As long as neither --with-pic nor
 # --without-pic is used then we can use #ifdef PIC to detect if the file is
 # being built for a shared library.
-if test "x$enable_symbol_versions" = xno ; then
+AS_IF([test "x$enable_symbol_versions" = xno], [
 	enable_symbol_versions=no
 	AC_MSG_RESULT([no])
-elif test "x$enable_shared" = xno ; then
+], [test "x$enable_shared" = xno], [
 	enable_symbol_versions=no
 	AC_MSG_RESULT([no (not building a shared library)])
-else
-	case "$host_cpu-$host_os" in
-		microblaze*)
-			# GCC 12 on MicroBlaze doesn't support __symver__
-			# attribute. It's simplest and safest to use the
-			# generic version on that platform since then only
-			# the linker script is needed. The RHEL/CentOS 7
-			# compatibility symbols don't matter on MicroBlaze.
-			enable_symbol_versions=generic
-			;;
-		*-linux*)
-			case "$pic_mode-$enable_static" in
-				default-*)
-					# Use symvers if PIC is defined.
-					have_symbol_versions_linux=2
-					;;
-				*-no)
-					# Not building static library.
-					# Use symvers unconditionally.
-					have_symbol_versions_linux=1
-					;;
-				*)
-					AC_MSG_RESULT([])
-					AC_MSG_ERROR([
+], [
+	# "yes" means that symbol version are to be used but we need to
+	# autodetect which variant to use.
+	if test "x$enable_symbol_versions" = xyes ; then
+		case "$host_cpu-$host_os" in
+			microblaze*)
+				# GCC 12 on MicroBlaze doesn't support
+				# __symver__ attribute. It's simplest and
+				# safest to use the generic version on that
+				# platform since then only the linker script
+				# is needed. The RHEL/CentOS 7 compatibility
+				# symbols don't matter on MicroBlaze.
+				enable_symbol_versions=generic
+				;;
+			*-linux*)
+				# NVIDIA HPC Compiler doesn't support symbol
+				# versioning but the linker script can still
+				# be used.
+				AC_EGREP_CPP([use_generic_symbol_versioning],
+					[#ifdef __NVCOMPILER
+					use_generic_symbol_versioning
+					#endif],
+					[enable_symbol_versions=generic],
+					[enable_symbol_versions=linux])
+				;;
+			*)
+				enable_symbol_versions=generic
+				;;
+		esac
+	fi
+
+	if test "x$enable_symbol_versions" = xlinux ; then
+		case "$pic_mode-$enable_static" in
+			default-*)
+				# Use symvers if PIC is defined.
+				have_symbol_versions_linux=2
+				;;
+			*-no)
+				# Not building static library.
+				# Use symvers unconditionally.
+				have_symbol_versions_linux=1
+				;;
+			*)
+				AC_MSG_RESULT([])
+				AC_MSG_ERROR([
     On GNU/Linux, building both shared and static library at the same time
     is not supported if --with-pic or --without-pic is used.
     Use either --disable-shared or --disable-static to build one type
     of library at a time. If both types are needed, build one at a time,
     possibly picking only src/liblzma/.libs/liblzma.a from the static build.])
-					;;
-			esac
-			enable_symbol_versions=linux
-			AC_DEFINE_UNQUOTED([HAVE_SYMBOL_VERSIONS_LINUX],
-				[$have_symbol_versions_linux],
-				[Define to 1 to if GNU/Linux-specific details
-				are unconditionally wanted for symbol
-				versioning. Define to 2 to if these are wanted
-				only if also PIC is defined (allows building
-				both shared and static liblzma at the same
-				time with Libtool if neither --with-pic nor
-				--without-pic is used). This define must be
-				used together with liblzma_linux.map.])
-			;;
-		*)
-			enable_symbol_versions=generic
-			;;
-	esac
+				;;
+		esac
+		AC_DEFINE_UNQUOTED([HAVE_SYMBOL_VERSIONS_LINUX],
+			[$have_symbol_versions_linux],
+			[Define to 1 to if GNU/Linux-specific details
+			are unconditionally wanted for symbol
+			versioning. Define to 2 to if these are wanted
+			only if also PIC is defined (allows building
+			both shared and static liblzma at the same
+			time with Libtool if neither --with-pic nor
+			--without-pic is used). This define must be
+			used together with liblzma_linux.map.])
+	elif test "x$enable_symbol_versions" != xgeneric ; then
+		AC_MSG_RESULT([])
+		AC_MSG_ERROR([unknown symbol versioning variant '$enable_symbol_versions'])
+	fi
 	AC_MSG_RESULT([yes ($enable_symbol_versions)])
-fi
+])
 
 AM_CONDITIONAL([COND_SYMVERS_LINUX],
 	[test "x$enable_symbol_versions" = xlinux])
@@ -789,12 +818,6 @@ AM_GNU_GETTEXT([external])
 
 echo
 echo "System headers and functions:"
-
-# There is currently no workarounds in this package if some of
-# these headers are missing.
-AC_CHECK_HEADERS([fcntl.h limits.h sys/time.h],
-	[],
-	[AC_MSG_ERROR([Required header file(s) are missing.])])
 
 # immintrin.h allows the use of the intrinsic functions if they are available.
 # cpuid.h may be used for detecting x86 processor features at runtime.
@@ -858,7 +881,6 @@ AC_COMPILE_IFELSE([AC_LANG_SOURCE([[
 ])
 CFLAGS="$OLD_CFLAGS"
 
-
 # The Win95 threading lacks a thread-safe one-time initialization function.
 # The one-time initialization is needed for crc32_small.c and crc64_small.c
 # create the CRC tables. So if small mode is enabled, the threading mode is
@@ -873,12 +895,29 @@ if test "x$enable_small$enable_threads$have_func_attribute_constructor" \
     __attribute__((__constructor__))])
 fi
 
+
 ###############################################################################
 # Checks for library functions.
 ###############################################################################
 
 # Gnulib replacements as needed
 gl_GETOPT
+
+# If clock_gettime() is available, liblzma with pthreads may use it, and
+# xz may use it even when threading support is disabled. In XZ Utils 5.4.x
+# and older, configure checked for clock_gettime() only when using pthreads.
+# This way non-threaded builds of liblzma didn't get a useless dependency on
+# librt which further had a dependency on libpthread. Avoiding these was
+# useful when a small build was needed, for example, for initramfs use.
+#
+# The above reasoning is thoroughly obsolete: On GNU/Linux, librt hasn't
+# been needed for clock_gettime() since glibc 2.17 (2012-12-25).
+# Solaris 10 needs librt but Solaris 11 doesn't anymore.
+AC_SEARCH_LIBS([clock_gettime], [rt])
+AC_CHECK_FUNCS([clock_gettime])
+AC_CHECK_DECL([CLOCK_MONOTONIC], [AC_DEFINE([HAVE_CLOCK_MONOTONIC], [1],
+	[Define to 1 if 'CLOCK_MONOTONIC' is declared in <time.h>.])], [],
+	[[#include <time.h>]])
 
 # Find the best function to set timestamps.
 AC_CHECK_FUNCS([futimens futimes futimesat utimes _futime utime], [break])
@@ -999,21 +1038,121 @@ __m128i my_clmul(__m128i a)
 			[Define to 1 if _mm_set_epi64x and
 			_mm_clmulepi64_si128 are usable.
 			See configure.ac for details.])
-		AC_MSG_RESULT([yes])
+		enable_clmul_crc=yes
 	], [
-		AC_MSG_RESULT([no])
+		enable_clmul_crc=no
 	])
+	AC_MSG_RESULT([$enable_clmul_crc])
 ])
 
+# ARM64 C Language Extensions define CRC32 functions in arm_acle.h.
+# These are supported by at least GCC and Clang which both need
+# __attribute__((__target__("+crc"))), unless the needed compiler flags
+# are used to support the CRC instruction.
+AC_MSG_CHECKING([if ARM64 CRC32 instruction is usable])
+AS_IF([test "x$enable_arm64_crc32" = xno], [
+	AC_MSG_RESULT([no, --disable-arm64-crc32 was used])
+], [
+	# Set -Werror here because some versions of Clang (14 and older)
+	# do not report the unsupported __attribute__((__target__("+crc")))
+	# or __crc32d() as an error, only as a warning. This does not need
+	# to be done with CMake because tests will attempt to link and the
+	# error will be reported then.
+	OLD_CFLAGS="$CFLAGS"
+	CFLAGS="$CFLAGS -Werror"
+
+	AC_COMPILE_IFELSE([AC_LANG_SOURCE([[
+#include <arm_acle.h>
+#include <stdint.h>
+
+#if (defined(__GNUC__) || defined(__clang__)) && !defined(__EDG__)
+__attribute__((__target__("+crc")))
+#endif
+uint32_t my_crc(uint32_t a, uint64_t b)
+{
+	return __crc32d(a, b);
+}
+	]])], [
+		AC_DEFINE([HAVE_ARM64_CRC32], [1],
+			[Define to 1 if ARM64 CRC32 instruction is supported.
+			See configure.ac for details.])
+		enable_arm64_crc32=yes
+	], [
+		enable_arm64_crc32=no
+	])
+	AC_MSG_RESULT([$enable_arm64_crc32])
+
+	CFLAGS="$OLD_CFLAGS"
+])
+
+# Check for ARM64 CRC32 instruction runtime detection.
+# getauxval() is supported on Linux, elf_aux_info() on FreeBSD, and
+# sysctlbyname("hw.optional.armv8_crc32", ...) is supported on Darwin
+# (macOS, iOS, etc.). Note that sysctlbyname() is supported on FreeBSD,
+# NetBSD, and possibly others too but the string is specific to Apple OSes.
+# The C code is responsible for checking defined(__APPLE__) before using
+# sysctlbyname("hw.optional.armv8_crc32", ...).
+AS_IF([test "x$enable_arm64_crc32" = xyes], [
+	AC_CHECK_FUNCS([getauxval elf_aux_info sysctlbyname], [break])
+])
+
+
 # Check for sandbox support. If one is found, set enable_sandbox=found.
+#
+# About -fsanitize: Of our three sandbox methods, only Landlock is
+# incompatible with -fsanitize. FreeBSD 13.2 with Capsicum was tested with
+# -fsanitize=address,undefined and had no issues. OpenBSD (as of version
+# 7.4) has minimal support for process instrumentation. OpenBSD does not
+# distribute the additional libraries needed (libasan, libubsan, etc.) with
+# GCC or Clang needed for runtime sanitization support and instead only
+# support -fsanitize-minimal-runtime for minimal undefined behavior
+# sanitization. This minimal support is compatible with our use of the
+# Pledge sandbox. So only Landlock will result in a build that cannot
+# compress or decompress a single file to standard out.
 AS_CASE([$enable_sandbox],
 	[auto | capsicum], [
-		AX_CHECK_CAPSICUM([enable_sandbox=found], [:])
+		AC_CHECK_FUNCS([cap_rights_limit], [enable_sandbox=found])
 	]
 )
 AS_CASE([$enable_sandbox],
 	[auto | pledge], [
-		AC_CHECK_FUNCS([pledge], [enable_sandbox=found ; break])
+		AC_CHECK_FUNCS([pledge], [enable_sandbox=found])
+	]
+)
+AS_CASE([$enable_sandbox],
+	[auto | landlock], [
+		AC_MSG_CHECKING([if Linux Landlock is usable])
+
+		# A compile check is done here because some systems have
+		# linux/landlock.h, but do not have the syscalls defined
+		# in order to actually use Linux Landlock.
+		AC_COMPILE_IFELSE([AC_LANG_SOURCE([[
+			#include <linux/landlock.h>
+			#include <sys/syscall.h>
+			#include <sys/prctl.h>
+
+			void my_sandbox(void)
+			{
+				(void)prctl(PR_SET_NO_NEW_PRIVS, 1, 0, 0, 0);
+				(void)SYS_landlock_create_ruleset;
+				(void)SYS_landlock_restrict_self;
+				(void)LANDLOCK_CREATE_RULESET_VERSION;
+				return;
+			}
+		]])], [
+			enable_sandbox=found
+
+			AS_CASE([$CFLAGS], [*-fsanitize=*], [AC_MSG_ERROR([
+    CFLAGS contains '-fsanitize=' which is incompatible with the Landlock
+    sandboxing. Use --disable-sandbox when using '-fsanitize'.])])
+
+			AC_DEFINE([HAVE_LINUX_LANDLOCK], [1],
+				[Define to 1 if Linux Landlock is supported.
+				See configure.ac for details.])
+			AC_MSG_RESULT([yes])
+		], [
+			AC_MSG_RESULT([no])
+		])
 	]
 )
 
@@ -1063,7 +1202,6 @@ AS_IF([test "$GCC" = yes], [
 			-Wall \
 			-Wextra \
 			-Wvla \
-			-Wc99-c11-compat \
 			-Wformat=2 \
 			-Winit-self \
 			-Wmissing-include-dirs \
