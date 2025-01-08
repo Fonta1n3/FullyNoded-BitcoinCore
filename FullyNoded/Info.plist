@@ -92,7 +92,7 @@
 			<string>com.fontaine.fullynoded</string>
 			<key>CFBundleURLSchemes</key>
 			<array>
-				<string>btcstandup</string>
+				<string>fnbtccore</string>
 			</array>
 		</dict>
 		<dict>

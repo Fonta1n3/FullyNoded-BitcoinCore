@@ -60,11 +60,11 @@
                                                                 <stackView opaque="NO" contentMode="scaleToFill" spacing="3" translatesAutoresizingMaskIntoConstraints="NO" id="4ej-ZQ-mFW">
                                                                     <rect key="frame" x="0.0" y="0.0" width="202" height="29"/>
                                                                     <subviews>
-                                                                        <imageView clipsSubviews="YES" userInteractionEnabled="NO" tag="2" contentMode="center" horizontalHuggingPriority="251" verticalHuggingPriority="251" ambiguous="YES" image="bitcoinsign" catalog="system" translatesAutoresizingMaskIntoConstraints="NO" id="mGv-to-6bK">
+                                                                        <imageView clipsSubviews="YES" userInteractionEnabled="NO" tag="2" contentMode="center" horizontalHuggingPriority="251" verticalHuggingPriority="251" image="bitcoinsign" catalog="system" translatesAutoresizingMaskIntoConstraints="NO" id="mGv-to-6bK">
                                                                             <rect key="frame" x="0.0" y="-3.5527136788005009e-15" width="14" height="29.666666666666671"/>
                                                                             <color key="tintColor" systemColor="labelColor"/>
                                                                         </imageView>
-                                                                        <label opaque="NO" userInteractionEnabled="NO" tag="1" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" ambiguous="YES" text="0.00000000" textAlignment="center" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="Mpg-F1-sQ5">
+                                                                        <label opaque="NO" userInteractionEnabled="NO" tag="1" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="0.00000000" textAlignment="center" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="Mpg-F1-sQ5">
                                                                             <rect key="frame" x="17" y="0.0" width="185" height="29"/>
                                                                             <constraints>
                                                                                 <constraint firstAttribute="height" constant="29" id="02B-jU-zja"/>
@@ -3072,7 +3072,7 @@ Fully Noded does its best to support as many hardware and software wallet option
             </objects>
             <point key="canvasLocation" x="-9270.9923664122125" y="366.90140845070425"/>
         </scene>
-        <!--Settings v1.1.1-->
+        <!--Settings v1.1.3-->
         <scene sceneID="Ajv-p7-tUm">
             <objects>
                 <viewController extendedLayoutIncludesOpaqueBars="YES" id="AS8-ke-Yxh" customClass="SettingsViewController" customModule="FullyNoded" customModuleProvider="target" sceneMemberID="viewController">
@@ -3163,7 +3163,7 @@ Fully Noded does its best to support as many hardware and software wallet option
                         </constraints>
                     </view>
                     <tabBarItem key="tabBarItem" title="" image="Settings" id="n34-O3-Fyo"/>
-                    <navigationItem key="navigationItem" title="Settings v1.1.1" id="YNb-Gd-Hqq"/>
+                    <navigationItem key="navigationItem" title="Settings v1.1.3" id="YNb-Gd-Hqq"/>
                     <connections>
                         <outlet property="settingsTable" destination="hcp-eG-lok" id="xPg-8r-KBs"/>
                         <segue destination="bKH-sI-MiM" kind="show" identifier="goLogIn" id="qed-hl-jG5"/>
