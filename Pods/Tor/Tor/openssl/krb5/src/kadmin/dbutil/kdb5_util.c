@@ -74,7 +74,7 @@ int exit_status = 0;
 krb5_context util_context;
 kadm5_config_params global_params;
 
-void usage()
+void usage(void)
 {
     fprintf(stderr,
             _("Usage: kdb5_util [-r realm] [-d dbname] "
@@ -85,10 +85,10 @@ void usage()
               "\tcreate  [-s]\n"
               "\tdestroy [-f]\n"
               "\tstash   [-f keyfile]\n"
-              "\tdump    [-old|-ov|-b6|-b7|-r13|-r18] [-verbose]\n"
+              "\tdump    [-b7|-r13|-r18] [-verbose]\n"
               "\t        [-mkey_convert] [-new_mkey_file mkey_file]\n"
               "\t        [-rev] [-recurse] [filename [princs...]]\n"
-              "\tload    [-old|-ov|-b6|-b7|-r13|-r18] [-verbose] [-update] "
+              "\tload    [-b7|-r13|-r18] [-hash] [-verbose] [-update] "
               "filename\n"
               "\tark     [-e etype_list] principal\n"
               "\tadd_mkey [-e etype] [-s]\n"
@@ -143,8 +143,8 @@ struct _cmd_table {
     {NULL, NULL, 0},
 };
 
-static struct _cmd_table *cmd_lookup(name)
-    char *name;
+static struct _cmd_table *
+cmd_lookup(char *name)
 {
     struct _cmd_table *cmd = cmd_table;
     while (cmd->name) {
@@ -162,8 +162,9 @@ static struct _cmd_table *cmd_lookup(name)
 char **db5util_db_args = NULL;
 int    db5util_db_args_size = 0;
 
-static void extended_com_err_fn (const char *myprog, errcode_t code,
-                                 const char *fmt, va_list args)
+static void
+extended_com_err_fn(const char *myprog, errcode_t code, const char *fmt,
+                    va_list args)
 {
     const char *emsg;
     if (code) {
@@ -177,7 +178,8 @@ static void extended_com_err_fn (const char *myprog, errcode_t code,
     fprintf (stderr, "\n");
 }
 
-int add_db_arg(char *arg)
+int
+add_db_arg(char *arg)
 {
     char **temp;
     db5util_db_args_size++;
@@ -191,9 +193,8 @@ int add_db_arg(char *arg)
     return 1;
 }
 
-int main(argc, argv)
-    int argc;
-    char *argv[];
+int
+main(int argc, char *argv[])
 {
     struct _cmd_table *cmd = NULL;
     char *koptarg, **cmd_argv;
@@ -222,7 +223,7 @@ int main(argc, argv)
         exit(1);
     }
     memset(cmd_argv, 0, sizeof(char *)*argc);
-    cmd_argc = 1;
+    cmd_argc = 0;
 
     argv++; argc--;
     while (*argv) {
@@ -288,11 +289,6 @@ int main(argc, argv)
             manual_mkey = TRUE;
             global_params.mkey_from_kbd = 1;
             global_params.mask |= KADM5_CONFIG_MKEY_FROM_KBD;
-        } else if (cmd_lookup(*argv) != NULL) {
-            if (cmd_argv[0] == NULL)
-                cmd_argv[0] = *argv;
-            else
-                usage();
         } else {
             cmd_argv[cmd_argc++] = *argv;
         }
@@ -300,6 +296,9 @@ int main(argc, argv)
     }
 
     if (cmd_argv[0] == NULL)
+        usage();
+    cmd = cmd_lookup(cmd_argv[0]);
+    if (cmd == NULL)
         usage();
 
     if( !util_context->default_realm )
@@ -318,7 +317,7 @@ int main(argc, argv)
                                      &global_params, &global_params);
     if (retval) {
         com_err(progname, retval,
-                _("while retreiving configuration parameters"));
+                _("while retrieving configuration parameters"));
         exit(1);
     }
 
@@ -335,12 +334,11 @@ int main(argc, argv)
                 "while setting up enctype %d", master_keyblock.enctype);
     }
 
-    cmd = cmd_lookup(cmd_argv[0]);
     if (cmd->opendb && open_db_and_mkey())
         return exit_status;
 
     if (global_params.iprop_enabled == TRUE)
-        ulog_set_role(util_context, IPROP_MASTER);
+        ulog_set_role(util_context, IPROP_PRIMARY);
     else
         ulog_set_role(util_context, IPROP_NULL);
 
@@ -368,7 +366,8 @@ int main(argc, argv)
  * cannot be fetched (the master key stash file may not exist when the
  * program is run).
  */
-static int open_db_and_mkey()
+static int
+open_db_and_mkey(void)
 {
     krb5_error_code retval;
     krb5_data scratch, pwd, seed;
@@ -490,7 +489,7 @@ static int open_db_and_mkey()
 #endif
 
 int
-quit()
+quit(void)
 {
     krb5_error_code retval;
     static krb5_boolean finished = 0;
@@ -511,9 +510,7 @@ quit()
 }
 
 static void
-add_random_key(argc, argv)
-    int argc;
-    char **argv;
+add_random_key(int argc, char **argv)
 {
     krb5_error_code ret;
     krb5_principal princ;

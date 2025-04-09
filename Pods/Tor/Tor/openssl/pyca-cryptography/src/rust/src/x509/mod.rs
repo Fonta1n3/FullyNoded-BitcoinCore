@@ -6,10 +6,13 @@ pub(crate) mod certificate;
 pub(crate) mod common;
 pub(crate) mod crl;
 pub(crate) mod csr;
-mod ocsp;
+pub(crate) mod extensions;
+pub(crate) mod ocsp;
 pub(crate) mod ocsp_req;
 pub(crate) mod ocsp_resp;
+pub(crate) mod oid;
 pub(crate) mod sct;
+pub(crate) mod sign;
 
 pub(crate) use certificate::Certificate;
 pub(crate) use common::{

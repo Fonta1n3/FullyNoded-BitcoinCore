@@ -1,17 +1,18 @@
 #!/bin/sh
+# SPDX-License-Identifier: 0BSD
 
 ###############################################################################
 #
 # Author: Lasse Collin
 #
-# This file has been put into the public domain.
-# You can do whatever you want with this file.
-#
 ###############################################################################
 
-# If both xz and xzdec were not build, skip this test.
-XZ=../src/xz/xz
-XZDEC=../src/xzdec/xzdec
+# Optional argument:
+# $1 = directory of the xz executable
+
+# If both xz and xzdec were not built, skip this test.
+XZ=${1:-../src/xz}/xz
+XZDEC=${2:-../src/xzdec}/xzdec
 test -x "$XZ" || XZ=
 test -x "$XZDEC" || XZDEC=
 if test -z "$XZ$XZDEC"; then
@@ -23,7 +24,9 @@ fi
 # This isn't perfect as if only some decompressors are disabled
 # then some good files might not decompress and the test fails
 # for a (kind of) wrong reason.
-if grep 'define HAVE_DECODERS' ../config.h > /dev/null ; then
+if test ! -f ../config.h ; then
+	:
+elif grep 'define HAVE_DECODERS' ../config.h > /dev/null ; then
 	:
 else
 	echo "Decompression support is disabled, skipping this test."
@@ -35,7 +38,8 @@ fi
 EXIT_STATUS=0
 have_feature()
 {
-	grep "define HAVE_$1" ../config.h > /dev/null && return 0
+	test -f ../config.h || return 0
+	grep "define HAVE_$1 1" ../config.h > /dev/null && return 0
 	printf '%s: Skipping because HAVE_%s is not enabled\n' "$2" "$1"
 	EXIT_STATUS=77
 	return 1
@@ -49,8 +53,10 @@ have_feature()
 # If these integrity check types were disabled at build time,
 # allow the tests to pass still.
 NO_WARN=
-grep 'define HAVE_CHECK_CRC64' ../config.h > /dev/null || NO_WARN=-qQ
-grep 'define HAVE_CHECK_SHA256' ../config.h > /dev/null || NO_WARN=-qQ
+if test -f ../config.h ; then
+	grep 'define HAVE_CHECK_CRC64' ../config.h > /dev/null || NO_WARN=-qQ
+	grep 'define HAVE_CHECK_SHA256' ../config.h > /dev/null || NO_WARN=-qQ
+fi
 
 for I in "$srcdir"/files/good-*.xz
 do
@@ -78,6 +84,11 @@ do
 	case $I in
 		*/good-1-arm64-lzma2-*.xz)
 			have_feature DECODER_ARM64 "$I" || continue
+			;;
+	esac
+	case $I in
+		*/good-1-riscv-lzma2-*.xz)
+			have_feature DECODER_RISCV "$I" || continue
 			;;
 	esac
 
@@ -174,7 +185,7 @@ done
 # .lz #
 #######
 
-if grep 'define HAVE_LZIP_DECODER' ../config.h > /dev/null ; then
+if have_feature LZIP_DECODER ".lz files" ; then
 	for I in "$srcdir"/files/good-*.lz
 	do
 		if test -z "$XZ" || "$XZ" -dc "$I" > /dev/null; then

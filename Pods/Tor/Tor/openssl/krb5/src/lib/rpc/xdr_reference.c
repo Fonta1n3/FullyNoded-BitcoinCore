@@ -47,15 +47,13 @@ static char sccsid[] = "@(#)xdr_reference.c 1.11 87/08/11 SMI";
 #include <gssrpc/types.h>
 #include <gssrpc/xdr.h>
 
-#define LASTUNSIGNED	((u_int)0-1)
-
 /*
  * XDR an indirect pointer
  * xdr_reference is for recursively translating a structure that is
  * referenced by a pointer inside the structure that is currently being
  * translated.  pp references a pointer to storage. If *pp is null
  * the  necessary storage is allocated.
- * size is the sizeof the referneced structure.
+ * size is the sizeof the referenced structure.
  * proc is the routine to handle the referenced structure.
  */
 bool_t
@@ -88,7 +86,7 @@ xdr_reference(
 			break;
 	}
 
-	stat = (*proc)(xdrs, loc, LASTUNSIGNED);
+	stat = (*proc)(xdrs, loc);
 
 	if (xdrs->x_op == XDR_FREE) {
 		mem_free(loc, size);

@@ -3,24 +3,19 @@
 # for complete details.
 
 
-import struct
 import typing
 
 from cryptography import utils
 from cryptography.exceptions import (
     AlreadyFinalized,
     InvalidKey,
-    UnsupportedAlgorithm,
-    _Reasons,
 )
-from cryptography.hazmat.backends import _get_backend
-from cryptography.hazmat.backends.interfaces import Backend, HashBackend
 from cryptography.hazmat.primitives import constant_time, hashes
 from cryptography.hazmat.primitives.kdf import KeyDerivationFunction
 
 
-def _int_to_u32be(n):
-    return struct.pack(">I", n)
+def _int_to_u32be(n: int) -> bytes:
+    return n.to_bytes(length=4, byteorder="big")
 
 
 class X963KDF(KeyDerivationFunction):
@@ -29,11 +24,9 @@ class X963KDF(KeyDerivationFunction):
         algorithm: hashes.HashAlgorithm,
         length: int,
         sharedinfo: typing.Optional[bytes],
-        backend: typing.Optional[Backend] = None,
+        backend: typing.Any = None,
     ):
-        backend = _get_backend(backend)
-
-        max_len = algorithm.digest_size * (2 ** 32 - 1)
+        max_len = algorithm.digest_size * (2**32 - 1)
         if length > max_len:
             raise ValueError(
                 "Cannot derive keys larger than {} bits.".format(max_len)
@@ -44,13 +37,6 @@ class X963KDF(KeyDerivationFunction):
         self._algorithm = algorithm
         self._length = length
         self._sharedinfo = sharedinfo
-
-        if not isinstance(backend, HashBackend):
-            raise UnsupportedAlgorithm(
-                "Backend object does not implement HashBackend.",
-                _Reasons.BACKEND_MISSING_INTERFACE,
-            )
-        self._backend = backend
         self._used = False
 
     def derive(self, key_material: bytes) -> bytes:
@@ -63,7 +49,7 @@ class X963KDF(KeyDerivationFunction):
         counter = 1
 
         while self._length > outlen:
-            h = hashes.Hash(self._algorithm, self._backend)
+            h = hashes.Hash(self._algorithm)
             h.update(key_material)
             h.update(_int_to_u32be(counter))
             if self._sharedinfo is not None:

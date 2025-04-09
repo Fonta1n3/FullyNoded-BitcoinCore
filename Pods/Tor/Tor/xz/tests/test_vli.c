@@ -1,12 +1,11 @@
+// SPDX-License-Identifier: 0BSD
+
 ///////////////////////////////////////////////////////////////////////////////
 //
 /// \file       test_vli.c
 /// \brief      Tests liblzma vli functions
 //
 //  Author:     Jia Tan
-//
-//  This file has been put into the public domain.
-//  You can do whatever you want with this file.
 //
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -90,7 +89,7 @@ encode_single_call_mode(lzma_vli input, const uint8_t *expected,
 
 // Helper function for test_lzma_vli_encode
 // Encodes an input VLI one byte at a time with the multi call
-// method. Then compares agaist a pre-computed value
+// method. Then compares against a pre-computed value
 static void
 encode_multi_call_mode(lzma_vli input, const uint8_t *expected,
 		uint32_t expected_len)

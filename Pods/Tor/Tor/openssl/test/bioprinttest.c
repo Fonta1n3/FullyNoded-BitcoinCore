@@ -1,7 +1,7 @@
 /*
- * Copyright 2016-2020 The OpenSSL Project Authors. All Rights Reserved.
+ * Copyright 2016-2024 The OpenSSL Project Authors. All Rights Reserved.
  *
- * Licensed under the OpenSSL license (the "License").  You may not use
+ * Licensed under the Apache License 2.0 (the "License").  You may not use
  * this file except in compliance with the License.  You can obtain a copy
  * in the file LICENSE in the source distribution or at
  * https://www.openssl.org/source/license.html
@@ -12,11 +12,10 @@
 #include <stdio.h>
 #include <string.h>
 #include <openssl/bio.h>
+#include "internal/nelem.h"
 #include "internal/numbers.h"
 #include "testutil.h"
 #include "testutil/output.h"
-
-#define nelem(x) (int)(sizeof(x) / sizeof((x)[0]))
 
 static int justprint = 0;
 
@@ -192,7 +191,7 @@ static int dofptest(int test, int sub, double val, const char *width, int prec)
     char format[80], result[80];
     int ret = 1, i;
 
-    for (i = 0; i < nelem(fspecs); i++) {
+    for (i = 0; i < (int)OSSL_NELEM(fspecs); i++) {
         const char *fspec = fspecs[i];
 
         if (prec >= 0)
@@ -253,15 +252,43 @@ static int test_big(void)
     return 1;
 }
 
+typedef enum OPTION_choice {
+    OPT_ERR = -1,
+    OPT_EOF = 0,
+    OPT_PRINT,
+    OPT_TEST_ENUM
+} OPTION_CHOICE;
+
+const OPTIONS *test_get_options(void)
+{
+    static const OPTIONS options[] = {
+        OPT_TEST_OPTIONS_DEFAULT_USAGE,
+        { "expected", OPT_PRINT, '-', "Output values" },
+        { NULL }
+    };
+    return options;
+}
 
 int setup_tests(void)
 {
-    justprint = test_has_option("-expected");
+    OPTION_CHOICE o;
+
+    while ((o = opt_next()) != OPT_EOF) {
+        switch (o) {
+        case OPT_PRINT:
+            justprint = 1;
+            break;
+        case OPT_TEST_CASES:
+            break;
+        default:
+            return 0;
+        }
+    }
 
     ADD_TEST(test_big);
-    ADD_ALL_TESTS(test_fp, nelem(pw_params));
-    ADD_ALL_TESTS(test_zu, nelem(zu_data));
-    ADD_ALL_TESTS(test_j, nelem(jf_data));
+    ADD_ALL_TESTS(test_fp, OSSL_NELEM(pw_params));
+    ADD_ALL_TESTS(test_zu, OSSL_NELEM(zu_data));
+    ADD_ALL_TESTS(test_j, OSSL_NELEM(jf_data));
     return 1;
 }
 
@@ -269,8 +296,18 @@ int setup_tests(void)
  * Replace testutil output routines.  We do this to eliminate possible sources
  * of BIO error
  */
+BIO *bio_out = NULL;
+BIO *bio_err = NULL;
+
+static int tap_level = 0;
+
 void test_open_streams(void)
 {
+}
+
+void test_adjust_streams_tap_level(int level)
+{
+    tap_level = level;
 }
 
 void test_close_streams(void)
@@ -284,12 +321,12 @@ void test_close_streams(void)
  */
 int test_vprintf_stdout(const char *fmt, va_list ap)
 {
-    return vfprintf(stdout, fmt, ap);
+    return fprintf(stdout, "%*s# ", tap_level, "") + vfprintf(stdout, fmt, ap);
 }
 
 int test_vprintf_stderr(const char *fmt, va_list ap)
 {
-    return vfprintf(stderr, fmt, ap);
+    return fprintf(stderr, "%*s# ", tap_level, "") + vfprintf(stderr, fmt, ap);
 }
 
 int test_flush_stdout(void)
@@ -301,3 +338,24 @@ int test_flush_stderr(void)
 {
     return fflush(stderr);
 }
+
+int test_vprintf_tapout(const char *fmt, va_list ap)
+{
+    return fprintf(stdout, "%*s", tap_level, "") + vfprintf(stdout, fmt, ap);
+}
+
+int test_vprintf_taperr(const char *fmt, va_list ap)
+{
+    return fprintf(stderr, "%*s", tap_level, "") + vfprintf(stderr, fmt, ap);
+}
+
+int test_flush_tapout(void)
+{
+    return fflush(stdout);
+}
+
+int test_flush_taperr(void)
+{
+    return fflush(stderr);
+}
+

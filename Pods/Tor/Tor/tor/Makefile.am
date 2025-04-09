@@ -114,6 +114,10 @@ TOR_CRYPTO_LIBS = \
 	$(LIBKECCAK_TINY) \
 	$(LIBDONNA)
 
+if BUILD_MODULE_POW
+TOR_CRYPTO_LIBS += $(EQUIX_LIBS)
+endif
+
 # Variants of the above for linking the testing variant of tor (for coverage
 # and tests)
 if UNITTESTS_ENABLED
@@ -121,7 +125,8 @@ TOR_CRYPTO_TESTING_LIBS = \
 	src/lib/libtor-tls-testing.a \
 	src/lib/libtor-crypt-ops-testing.a \
 	$(LIBKECCAK_TINY) \
-	$(LIBDONNA)
+	$(LIBDONNA) \
+	$(EQUIX_LIBS)
 endif
 
 # All static libraries used to link tor.
@@ -185,7 +190,6 @@ EXTRA_DIST+= \
 	CODE_OF_CONDUCT							\
 	INSTALL								\
 	LICENSE								\
-	Makefile.nmake							\
 	README.md								\
 	ReleaseNotes							\
 	scripts/build/combine_libs					\
@@ -292,7 +296,7 @@ check-local:					\
 	shellcheck
 
 # test-network requires a copy of Chutney in $CHUTNEY_PATH.
-# Chutney can be cloned from https://git.torproject.org/chutney.git .
+# Chutney can be cloned from https://gitlab.torproject.org/tpo/core/chutney.git .
 .PHONY: need-chutney-path
 need-chutney-path:
 	@if test ! -d "$$CHUTNEY_PATH"; then \
@@ -305,7 +309,7 @@ need-chutney-path:
 			echo; \
 			echo "To run these tests," \
 			  "git clone" \
-			  "https://git.torproject.org/chutney.git ;" \
+			  "https://gitlab.torproject.org/tpo/core/chutney.git ;" \
 			  "export CHUTNEY_PATH=\`pwd\`/chutney"; \
 			exit 1; \
 		fi \
@@ -376,10 +380,9 @@ test-network-clean:
 #
 # Run the IPv4 tests in $(ipv4_flavors), unconditionally
 #   - tor relays and directory authorities require IPv4.
-# Run the IPv6 tests in $(ipv6_flavors), if IPv6 is available
-#   - only run IPv6 tests if we can ping6 or ping -6 ::1 (localhost)
-#     we try the syntax for BSD ping6, Linux ping6, and Linux ping -6,
-#     because they're incompatible
+# Run the IPv6 tests in $(ipv6_flavors), unconditionally
+#   - clients don't technically require IPv6, but it's not worth
+#     supporting running this test suite on such systems.
 #   - some IPv6 tests may fail without an IPv6 DNS server
 #     (see #16971 and #17011)
 # Run the mixed tests in $(mixed_flavors), if a tor-stable binary is available
@@ -396,25 +399,9 @@ test-network-run: need-chutney-path test-driver $(TESTING_TOR_BINARY) src/tools/
 		echo "Running IPv4 flavors: $(ipv4_flavors)."; \
 		flavors="$$flavors $(ipv4_flavors)"; \
 	fi; \
-	test_network_ipv6=false; \
-	if test -n "$(ipv6_flavors)" || \
-	   test -n "$(ipv6_mixed_flavors)"; then \
-		if ping6 -q -c 1 -o   ::1 >/dev/null 2>&1 || \
-		   ping6 -q -c 1 -W 1 ::1 >/dev/null 2>&1 || \
-		   ping  -6 -c 1 -W 1 ::1 >/dev/null 2>&1; then \
-			test_network_ipv6=true; \
-		fi; \
-	fi; \
 	if test -n "$(ipv6_flavors)"; then \
-		if test "$$test_network_ipv6" = "true"; then \
-			echo "ping6 ::1 or ping ::1 succeeded, running IPv6" \
-			  "flavors: $(ipv6_flavors)."; \
-			flavors="$$flavors $(ipv6_flavors)"; \
-		else \
-			echo "ping6 ::1 and ping ::1 failed, skipping IPv6" \
-			  "flavors: $(ipv6_flavors)."; \
-			skip_flavors="$$skip_flavors $(ipv6_flavors)"; \
-		fi; \
+		echo "Running IPv6 flavors: $(ipv6_flavors)."; \
+		flavors="$$flavors $(ipv6_flavors)"; \
 	fi; \
 	test_network_mixed=false; \
 	if test -n "$(mixed_flavors)" || \
@@ -435,8 +422,7 @@ test-network-run: need-chutney-path test-driver $(TESTING_TOR_BINARY) src/tools/
 		fi; \
 	fi; \
 	if test -n "$(ipv6_mixed_flavors)"; then \
-		if test "$$test_network_ipv6" = "true" && \
-		   test "$$test_network_mixed" = "true"; then \
+		if test "$$test_network_mixed" = "true"; then \
 			echo "Running IPv6 mixed flavors:" \
 			  "$(ipv6_mixed_flavors)."; \
 			flavors="$$flavors $(ipv6_mixed_flavors)"; \
@@ -475,7 +461,7 @@ test-network-results:
 need-stem-path:
 	@if test ! -d "$$STEM_SOURCE_DIR"; then \
 		echo '$$STEM_SOURCE_DIR was not set.'; echo; \
-		echo "To run these tests, git clone https://git.torproject.org/stem.git/ ; export STEM_SOURCE_DIR=\`pwd\`/stem"; \
+		echo "To run these tests, git clone https://gitlab.torproject.org/tpo/network-health/stem ; export STEM_SOURCE_DIR=\`pwd\`/stem"; \
 		exit 1; \
 	fi
 

@@ -38,7 +38,12 @@ def raises_unsupported_algorithm(reason):
     assert exc_info.value._reason is reason
 
 
-def load_vectors_from_file(filename, loader, mode="r"):
+T = typing.TypeVar("T")
+
+
+def load_vectors_from_file(
+    filename, loader: typing.Callable[..., T], mode="r"
+) -> T:
     with cryptography_vectors.open_vector_file(filename, mode) as vector_file:
         return loader(vector_file)
 
@@ -369,14 +374,16 @@ def load_fips_dsa_key_pair_vectors(vector_data):
     return vectors
 
 
+FIPS_SHA_REGEX = re.compile(
+    r"\[mod = L=...., N=..., SHA-(?P<sha>1|224|256|384|512)\]"
+)
+
+
 def load_fips_dsa_sig_vectors(vector_data):
     """
     Loads data out of the FIPS DSA SigVer vector files.
     """
     vectors = []
-    sha_regex = re.compile(
-        r"\[mod = L=...., N=..., SHA-(?P<sha>1|224|256|384|512)\]"
-    )
 
     for line in vector_data:
         line = line.strip()
@@ -384,7 +391,7 @@ def load_fips_dsa_sig_vectors(vector_data):
         if not line or line.startswith("#"):
             continue
 
-        sha_match = sha_regex.match(line)
+        sha_match = FIPS_SHA_REGEX.match(line)
         if sha_match:
             digest_algorithm = "SHA-{}".format(sha_match.group("sha"))
 
@@ -483,21 +490,22 @@ def load_fips_ecdsa_key_pair_vectors(vector_data):
     return vectors
 
 
+CURVE_REGEX = re.compile(
+    r"\[(?P<curve>[PKB]-[0-9]{3}),SHA-(?P<sha>1|224|256|384|512)\]"
+)
+
+
 def load_fips_ecdsa_signing_vectors(vector_data):
     """
     Loads data out of the FIPS ECDSA SigGen vector files.
     """
     vectors = []
 
-    curve_rx = re.compile(
-        r"\[(?P<curve>[PKB]-[0-9]{3}),SHA-(?P<sha>1|224|256|384|512)\]"
-    )
-
-    data = None
+    data: typing.Optional[typing.Dict[str, object]] = None
     for line in vector_data:
         line = line.strip()
 
-        curve_match = curve_rx.match(line)
+        curve_match = CURVE_REGEX.match(line)
         if curve_match:
             curve_name = _ECDSA_CURVE_NAMES[curve_match.group("curve")]
             digest_name = "SHA-{}".format(curve_match.group("sha"))
@@ -533,12 +541,13 @@ def load_fips_ecdsa_signing_vectors(vector_data):
     return vectors
 
 
+KASVS_RESULT_REGEX = re.compile(r"([FP]) \(([0-9]+) -")
+
+
 def load_kasvs_dh_vectors(vector_data):
     """
     Loads data out of the KASVS key exchange vector data
     """
-
-    result_rx = re.compile(r"([FP]) \(([0-9]+) -")
 
     vectors = []
     data: typing.Dict[str, typing.Any] = {"fail_z": False, "fail_agree": False}
@@ -568,7 +577,7 @@ def load_kasvs_dh_vectors(vector_data):
             data["y2"] = int(line.split("=")[1], 16)
         elif line.startswith("Result = "):
             result_str = line.split("=")[1].strip()
-            match = result_rx.match(result_str)
+            match = KASVS_RESULT_REGEX.match(result_str)
             assert match is not None
 
             if match.group(1) == "F":
@@ -602,8 +611,6 @@ def load_kasvs_ecdh_vectors(vector_data):
         "P-384": "secp384r1",
         "P-521": "secp521r1",
     }
-
-    result_rx = re.compile(r"([FP]) \(([0-9]+) -")
 
     tags = []
     sets = {}
@@ -678,7 +685,7 @@ def load_kasvs_ecdh_vectors(vector_data):
             data["DKM"] = int(line.split("=")[1], 16)
         elif line.startswith("Result = "):
             result_str = line.split("=")[1].strip()
-            match = result_rx.match(result_str)
+            match = KASVS_RESULT_REGEX.match(result_str)
             assert match is not None
 
             if match.group(1) == "F":
@@ -777,7 +784,7 @@ def load_nist_kbkdf_vectors(vector_data):
             test_data = {}
             test_data.update(tag)
             vectors.append(test_data)
-        elif line.startswith("L"):
+        elif line.startswith(("L", "DataBeforeCtrLen", "DataAfterCtrLen")):
             name, value = [c.strip() for c in line.split("=")]
             test_data[name.lower()] = int(value)
         else:
@@ -879,7 +886,7 @@ def load_nist_ccm_vectors(vector_data):
     return data
 
 
-class WycheproofTest(object):
+class WycheproofTest:
     def __init__(self, testfiledata, testgroup, testcase):
         self.testfiledata = testfiledata
         self.testgroup = testgroup

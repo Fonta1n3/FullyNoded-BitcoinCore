@@ -3,7 +3,6 @@
 # for complete details.
 
 import getpass
-import glob
 import io
 import os
 import subprocess
@@ -64,7 +63,7 @@ def download_artifacts_github_actions(session, token, run_url):
         )
         with zipfile.ZipFile(io.BytesIO(response.content)) as z:
             for name in z.namelist():
-                if not name.endswith(".whl"):
+                if not name.endswith(".whl") and not name.endswith(".tar.gz"):
                     continue
                 p = z.open(name)
                 out_path = os.path.join(
@@ -78,13 +77,13 @@ def download_artifacts_github_actions(session, token, run_url):
     return paths
 
 
-def fetch_github_actions_wheels(token, version):
+def fetch_github_actions_artifacts(token, version):
     session = requests.Session()
 
     response = session.get(
         (
-            "https://api.github.com/repos/pyca/cryptography/actions/workflows/"
-            "wheel-builder.yml/runs?event=push"
+            f"https://api.github.com/repos/pyca/cryptography/actions"
+            f"/workflows/wheel-builder.yml/runs?event=push&branch={version}"
         ),
         headers={
             "Content-Type": "application/json",
@@ -103,31 +102,24 @@ def release(version):
     """
     ``version`` should be a string like '0.4' or '1.0'.
     """
+    print(
+        f"Create a new GH PAT at: "
+        f"https://github.com/settings/tokens/new?"
+        f"description={version}&scopes=repo"
+    )
     github_token = getpass.getpass("Github person access token: ")
 
     # Tag and push the tag (this will trigger the wheel builder in Actions)
     run("git", "tag", "-s", version, "-m", "{0} release".format(version))
     run("git", "push", "--tags")
 
-    # Generate and upload vector packages
-    run("python", "setup.py", "sdist", "bdist_wheel", cwd="vectors/")
-    packages = glob.glob(
-        "vectors/dist/cryptography_vectors-{0}*".format(version)
-    )
-    run("twine", "upload", "-s", *packages)
-
-    # Generate sdist for upload
-    run("python", "setup.py", "sdist")
-    sdist = glob.glob("dist/cryptography-{0}*".format(version))
-
     # Wait for Actions to complete and download the wheels
-    github_actions_wheel_paths = fetch_github_actions_wheels(
+    github_actions_artifact_paths = fetch_github_actions_artifacts(
         github_token, version
     )
 
-    # Upload sdist and wheels
-    run("twine", "upload", "-s", *sdist)
-    run("twine", "upload", *github_actions_wheel_paths)
+    # Upload wheels and sdist
+    run("twine", "upload", *github_actions_artifact_paths)
 
 
 if __name__ == "__main__":

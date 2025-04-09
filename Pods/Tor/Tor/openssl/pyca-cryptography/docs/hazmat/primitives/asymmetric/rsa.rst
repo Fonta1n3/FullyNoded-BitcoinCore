@@ -14,7 +14,7 @@ Unlike symmetric cryptography, where the key is typically just a random series
 of bytes, RSA keys have a complex internal structure with `specific
 mathematical properties`_.
 
-.. function:: generate_private_key(public_exponent, key_size, backend=None)
+.. function:: generate_private_key(public_exponent, key_size)
 
     .. versionadded:: 0.5
 
@@ -22,7 +22,7 @@ mathematical properties`_.
 
         Tightened restrictions on ``public_exponent``.
 
-    Generates a new RSA private key using the provided ``backend``.
+    Generates a new RSA private key.
     ``key_size`` describes how many :term:`bits` long the key should be. Larger
     keys provide more security; currently ``1024`` and below are considered
     breakable while ``2048`` or ``4096`` are reasonable default key sizes for
@@ -45,17 +45,9 @@ mathematical properties`_.
     :param int key_size: The length of the modulus in :term:`bits`. For keys
         generated in 2015 it is strongly recommended to be
         `at least 2048`_ (See page 41). It must not be less than 512.
-        Some backends may have additional limitations.
-
-    :param backend: An optional backend which implements
-        :class:`~cryptography.hazmat.backends.interfaces.RSABackend`.
 
     :return: An instance of
         :class:`~cryptography.hazmat.primitives.asymmetric.rsa.RSAPrivateKey`.
-
-    :raises cryptography.exceptions.UnsupportedAlgorithm: This is raised if
-        the provided ``backend`` does not implement
-        :class:`~cryptography.hazmat.backends.interfaces.RSABackend`
 
 Key loading
 ~~~~~~~~~~~
@@ -303,12 +295,27 @@ Padding
         supported MGF is :class:`MGF1`.
 
     :param int salt_length: The length of the salt. It is recommended that this
-        be set to ``PSS.MAX_LENGTH``.
+        be set to ``PSS.DIGEST_LENGTH`` or ``PSS.MAX_LENGTH``.
 
     .. attribute:: MAX_LENGTH
 
         Pass this attribute to ``salt_length`` to get the maximum salt length
         available.
+
+    .. attribute:: DIGEST_LENGTH
+
+        .. versionadded:: 37.0
+
+        Pass this attribute to ``salt_length`` to set the salt length to the
+        byte length of the digest passed when calling ``sign``. Note that this
+        is **not** the length of the digest passed to ``MGF1``.
+
+    .. attribute:: AUTO
+
+        .. versionadded:: 37.0
+
+        Pass this attribute to ``salt_length`` to automatically determine the
+        salt length when verifying. Raises ``ValueError`` if used when signing.
 
 .. class:: OAEP(mgf, algorithm, label)
 
@@ -402,10 +409,7 @@ is unavailable.
 
         The public exponent.
 
-    .. method:: public_key(backend=None)
-
-        :param backend: An optional instance of
-            :class:`~cryptography.hazmat.backends.interfaces.RSABackend`.
+    .. method:: public_key()
 
         :returns: A new instance of
             :class:`~cryptography.hazmat.primitives.asymmetric.rsa.RSAPublicKey`.
@@ -469,10 +473,21 @@ is unavailable.
         A `Chinese remainder theorem`_ coefficient used to speed up RSA
         operations. Calculated as: q\ :sup:`-1` mod p
 
-    .. method:: private_key(backend=None)
+    .. method:: private_key(*, unsafe_skip_rsa_key_validation=False)
 
-        :param backend: An optional instance of
-            :class:`~cryptography.hazmat.backends.interfaces.RSABackend`.
+        :param unsafe_skip_rsa_key_validation:
+
+            .. versionadded:: 39.0.0
+
+            A keyword-only argument that defaults to ``False``. If ``True``
+            RSA private keys will not be validated. This significantly speeds up
+            loading the keys, but is is :term:`unsafe` unless you are certain
+            the key is valid. User supplied keys should never be loaded with
+            this parameter set to ``True``. If you do load an invalid key this
+            way and attempt to use it OpenSSL may hang, crash, or otherwise
+            misbehave.
+
+        :type unsafe_skip_rsa_key_validation: bool
 
         :returns: An instance of
             :class:`~cryptography.hazmat.primitives.asymmetric.rsa.RSAPrivateKey`.
@@ -539,6 +554,11 @@ Key interfaces
     .. method:: decrypt(ciphertext, padding)
 
         .. versionadded:: 0.4
+
+        .. warning::
+
+            Our implementation of PKCS1 v1.5 decryption is not constant time. See
+            :doc:`/limitations` for details.
 
         Decrypt data that was encrypted with the public key.
 

@@ -130,15 +130,10 @@ json_rcache(krb5_context context, krb5_rcache rcache, k5_json_value *val_out)
 {
     krb5_error_code ret;
     k5_json_string str = NULL;
-    char *name;
 
     if (rcache == NULL)
         return k5_json_null_create_val(val_out);
-    if (asprintf(&name, "%s:%s", krb5_rc_get_type(context, rcache),
-                 krb5_rc_get_name(context, rcache)) < 0)
-        return ENOMEM;
-    ret = k5_json_string_create(name, &str);
-    free(name);
+    ret = k5_json_string_create(k5_rc_get_name(context, rcache), &str);
     *val_out = str;
     return ret;
 }
@@ -452,8 +447,10 @@ krb5_gss_export_cred(OM_uint32 *minor_status, gss_cred_id_t cred_handle,
 
     /* Validate and lock cred_handle. */
     status = krb5_gss_validate_cred_1(minor_status, cred_handle, context);
-    if (status != GSS_S_COMPLETE)
+    if (status != GSS_S_COMPLETE) {
+        krb5_free_context(context);
         return status;
+    }
     cred = (krb5_gss_cred_id_t)cred_handle;
 
     if (json_kgcred(context, cred, &jcred))

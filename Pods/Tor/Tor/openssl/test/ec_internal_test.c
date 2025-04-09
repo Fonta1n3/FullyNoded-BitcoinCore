@@ -1,5 +1,5 @@
 /*
- * Copyright 2019-2022 The OpenSSL Project Authors. All Rights Reserved.
+ * Copyright 2019-2024 The OpenSSL Project Authors. All Rights Reserved.
  *
  * Licensed under the Apache License 2.0 (the "License").  You may not use
  * this file except in compliance with the License.  You can obtain a copy
@@ -7,10 +7,16 @@
  * https://www.openssl.org/source/license.html
  */
 
+/*
+ * Low level APIs are deprecated for public use, but still ok for internal use.
+ */
+#include "internal/deprecated.h"
+
 #include "internal/nelem.h"
 #include "testutil.h"
 #include <openssl/ec.h>
 #include "ec_local.h"
+#include <crypto/bn.h>
 #include <openssl/objects.h>
 
 static size_t crv_len = 0;
@@ -33,8 +39,8 @@ static int group_field_tests(const EC_GROUP *group, BN_CTX *ctx)
         || !TEST_true(group->meth->field_inv(group, b, BN_value_one(), ctx))
         || !TEST_true(BN_is_one(b))
         /* (1/a)*a = 1 */
-        || !TEST_true(BN_pseudo_rand(a, BN_num_bits(group->field) - 1,
-                                     BN_RAND_TOP_ONE, BN_RAND_BOTTOM_ANY))
+        || !TEST_true(BN_rand(a, BN_num_bits(group->field) - 1,
+                              BN_RAND_TOP_ONE, BN_RAND_BOTTOM_ANY))
         || !TEST_true(group->meth->field_inv(group, b, a, ctx))
         || (group->meth->field_encode &&
             !TEST_true(group->meth->field_encode(group, a, a, ctx)))
@@ -150,6 +156,56 @@ static int field_tests_ecp_mont(void)
 }
 
 #ifndef OPENSSL_NO_EC2M
+/* Test that decoding of invalid GF2m field parameters fails. */
+static int ec2m_field_sanity(void)
+{
+    int ret = 0;
+    BN_CTX *ctx = BN_CTX_new();
+    BIGNUM *p, *a, *b;
+    EC_GROUP *group1 = NULL, *group2 = NULL, *group3 = NULL;
+
+    TEST_info("Testing GF2m hardening\n");
+
+    BN_CTX_start(ctx);
+    p = BN_CTX_get(ctx);
+    a = BN_CTX_get(ctx);
+    if (!TEST_ptr(b = BN_CTX_get(ctx))
+        || !TEST_true(BN_one(a))
+        || !TEST_true(BN_one(b)))
+        goto out;
+
+    /* Even pentanomial value should be rejected */
+    if (!TEST_true(BN_set_word(p, 0xf2)))
+        goto out;
+    if (!TEST_ptr_null(group1 = EC_GROUP_new_curve_GF2m(p, a, b, ctx)))
+        TEST_error("Zero constant term accepted in GF2m polynomial");
+
+    /* Odd hexanomial should also be rejected */
+    if (!TEST_true(BN_set_word(p, 0xf3)))
+        goto out;
+    if (!TEST_ptr_null(group2 = EC_GROUP_new_curve_GF2m(p, a, b, ctx)))
+        TEST_error("Hexanomial accepted as GF2m polynomial");
+
+    /* Excessive polynomial degree should also be rejected */
+    if (!TEST_true(BN_set_word(p, 0x71))
+        || !TEST_true(BN_set_bit(p, OPENSSL_ECC_MAX_FIELD_BITS + 1)))
+        goto out;
+    if (!TEST_ptr_null(group3 = EC_GROUP_new_curve_GF2m(p, a, b, ctx)))
+        TEST_error("GF2m polynomial degree > %d accepted",
+                   OPENSSL_ECC_MAX_FIELD_BITS);
+
+    ret = group1 == NULL && group2 == NULL && group3 == NULL;
+
+ out:
+    EC_GROUP_free(group1);
+    EC_GROUP_free(group2);
+    EC_GROUP_free(group3);
+    BN_CTX_end(ctx);
+    BN_CTX_free(ctx);
+
+    return ret;
+}
+
 /* test EC_GF2m_simple_method directly */
 static int field_tests_ec2_simple(void)
 {
@@ -182,6 +238,77 @@ static int field_tests_default(int n)
         BN_CTX_free(ctx);
     return ret;
 }
+
+#ifndef OPENSSL_NO_EC_NISTP_64_GCC_128
+/*
+ * Tests a point known to cause an incorrect underflow in an old version of
+ * ecp_nist521.c
+ */
+static int underflow_test(void)
+{
+    BN_CTX *ctx = NULL;
+    EC_GROUP *grp = NULL;
+    EC_POINT *P = NULL, *Q = NULL, *R = NULL;
+    BIGNUM *x1 = NULL, *y1 = NULL, *z1 = NULL, *x2 = NULL, *y2 = NULL;
+    BIGNUM *k = NULL;
+    int testresult = 0;
+    const char *x1str =
+        "1534f0077fffffe87e9adcfe000000000000000000003e05a21d2400002e031b1f4"
+        "b80000c6fafa4f3c1288798d624a247b5e2ffffffffffffffefe099241900004";
+    const char *p521m1 =
+        "1ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
+        "fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe";
+
+    ctx = BN_CTX_new();
+    if (!TEST_ptr(ctx))
+        return 0;
+
+    BN_CTX_start(ctx);
+    x1 = BN_CTX_get(ctx);
+    y1 = BN_CTX_get(ctx);
+    z1 = BN_CTX_get(ctx);
+    x2 = BN_CTX_get(ctx);
+    y2 = BN_CTX_get(ctx);
+    k = BN_CTX_get(ctx);
+    if (!TEST_ptr(k))
+        goto err;
+
+    grp = EC_GROUP_new_by_curve_name(NID_secp521r1);
+    P = EC_POINT_new(grp);
+    Q = EC_POINT_new(grp);
+    R = EC_POINT_new(grp);
+    if (!TEST_ptr(grp) || !TEST_ptr(P) || !TEST_ptr(Q) || !TEST_ptr(R))
+        goto err;
+
+    if (!TEST_int_gt(BN_hex2bn(&x1, x1str), 0)
+            || !TEST_int_gt(BN_hex2bn(&y1, p521m1), 0)
+            || !TEST_int_gt(BN_hex2bn(&z1, p521m1), 0)
+            || !TEST_int_gt(BN_hex2bn(&k, "02"), 0)
+            || !TEST_true(ossl_ec_GFp_simple_set_Jprojective_coordinates_GFp(grp, P, x1,
+                                                                             y1, z1, ctx))
+            || !TEST_true(EC_POINT_mul(grp, Q, NULL, P, k, ctx))
+            || !TEST_true(EC_POINT_get_affine_coordinates(grp, Q, x1, y1, ctx))
+            || !TEST_true(EC_POINT_dbl(grp, R, P, ctx))
+            || !TEST_true(EC_POINT_get_affine_coordinates(grp, R, x2, y2, ctx)))
+        goto err;
+
+    if (!TEST_int_eq(BN_cmp(x1, x2), 0)
+            || !TEST_int_eq(BN_cmp(y1, y2), 0))
+        goto err;
+
+    testresult = 1;
+
+ err:
+    BN_CTX_end(ctx);
+    EC_POINT_free(P);
+    EC_POINT_free(Q);
+    EC_POINT_free(R);
+    EC_GROUP_free(grp);
+    BN_CTX_free(ctx);
+
+    return testresult;
+}
+#endif
 
 /*
  * Tests behavior of the EC_KEY_set_private_key
@@ -357,6 +484,68 @@ end:
     return testresult;
 }
 
+
+static int check_bn_mont_ctx(BN_MONT_CTX *mont, BIGNUM *mod, BN_CTX *ctx)
+{
+    int ret = 0;
+    BN_MONT_CTX *regenerated = BN_MONT_CTX_new();
+
+    if (!TEST_ptr(regenerated))
+        return ret;
+    if (!TEST_ptr(mont))
+        goto err;
+
+    if (!TEST_true(BN_MONT_CTX_set(regenerated, mod, ctx)))
+        goto err;
+
+    if (!TEST_true(ossl_bn_mont_ctx_eq(regenerated, mont)))
+        goto err;
+
+    ret = 1;
+
+ err:
+    BN_MONT_CTX_free(regenerated);
+    return ret;
+}
+
+static int montgomery_correctness_test(EC_GROUP *group)
+{
+    int ret = 0;
+    BN_CTX *ctx = NULL;
+
+    ctx = BN_CTX_new();
+    if (!TEST_ptr(ctx))
+        return ret;
+    if (!TEST_true(check_bn_mont_ctx(group->mont_data, group->order, ctx))) {
+        TEST_error("group order issue");
+        goto err;
+    }
+    if (group->field_data1 != NULL) {
+        if (!TEST_true(check_bn_mont_ctx(group->field_data1, group->field, ctx)))
+            goto err;
+    }
+    ret = 1;
+ err:
+    BN_CTX_free(ctx);
+    return ret;
+}
+
+static int named_group_creation_test(void)
+{
+    int ret = 0;
+    EC_GROUP *group = NULL;
+
+    if (!TEST_ptr(group = EC_GROUP_new_by_curve_name(NID_X9_62_prime256v1))
+        || !TEST_true(montgomery_correctness_test(group)))
+      goto err;
+
+    ret = 1;
+
+ err:
+    EC_GROUP_free(group);
+    return ret;
+}
+
 int setup_tests(void)
 {
     crv_len = EC_get_builtin_curves(NULL, 0);
@@ -367,12 +556,17 @@ int setup_tests(void)
     ADD_TEST(field_tests_ecp_simple);
     ADD_TEST(field_tests_ecp_mont);
 #ifndef OPENSSL_NO_EC2M
+    ADD_TEST(ec2m_field_sanity);
     ADD_TEST(field_tests_ec2_simple);
 #endif
     ADD_ALL_TESTS(field_tests_default, crv_len);
+#ifndef OPENSSL_NO_EC_NISTP_64_GCC_128
+    ADD_TEST(underflow_test);
+#endif
     ADD_TEST(set_private_key);
     ADD_TEST(decoded_flag_test);
     ADD_ALL_TESTS(ecpkparams_i2d2i_test, crv_len);
+    ADD_TEST(named_group_creation_test);
 
     return 1;
 }

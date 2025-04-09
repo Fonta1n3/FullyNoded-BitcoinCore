@@ -1,10 +1,13 @@
+// SPDX-License-Identifier: 0BSD
+
 ///////////////////////////////////////////////////////////////////////////////
 //
 /// \file       tuktest.h
 /// \brief      Helper macros for writing simple test programs
-/// \version    2023-01-08
+/// \version    2024-02-14
 ///
-/// Some inspiration was taken from STest by Keith Nicholas.
+/// Some inspiration was taken from Seatest by Keith Nicholas and
+/// from STest which is a fork of Seatest by Jia Tan.
 ///
 /// This is standard C99/C11 only and thus should be fairly portable
 /// outside POSIX systems too.
@@ -110,8 +113,8 @@
 ///     Meson: https://mesonbuild.com/Unit-tests.html
 ///
 ///     CMake handles passing and failing tests by default but treats hard
-///     errors as regular fails. To CMake support skipped tests correctly,
-///     one has to set the SKIP_RETURN_CODE property for each test:
+///     errors as regular fails. To make CMake support skipped tests
+///     correctly, one has to set the SKIP_RETURN_CODE property for each test:
 ///
 ///     set_tests_properties(foo_test_name PROPERTIES SKIP_RETURN_CODE 77)
 ///
@@ -120,9 +123,6 @@
 ///     https://cmake.org/cmake/help/latest/prop_test/SKIP_RETURN_CODE.html
 //
 //  Author:    Lasse Collin
-//
-//  This file has been put into the public domain.
-//  You can do whatever you want with this file.
 //
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -155,14 +155,14 @@
 
 // This is silencing warnings about unused functions. Not all test programs
 // need all functions from this header.
-#if TUKTEST_GNUC_REQ(3, 0)
+#if TUKTEST_GNUC_REQ(3, 0) || defined(__clang__)
 #	define tuktest_maybe_unused __attribute__((__unused__))
 #else
 #	define tuktest_maybe_unused
 #endif
 
 // We need printf("") so silence the warning about empty format string.
-#if TUKTEST_GNUC_REQ(4, 2)
+#if TUKTEST_GNUC_REQ(4, 2) || defined(__clang__)
 #	pragma GCC diagnostic ignored "-Wformat-zero-length"
 #endif
 

@@ -29,7 +29,6 @@
 #include "k5-int.h"
 #include "os-proto.h"
 #include "../krb/int-proto.h"
-#include "prof_int.h"        /* XXX for profile_copy, not public yet */
 
 #if defined(_WIN32)
 #include <winsock.h>
@@ -243,7 +242,7 @@ os_get_default_config_files(profile_filespec_t **pfiles, krb5_boolean secure)
     char *name = 0;
 
     if (!secure) {
-        char *env = getenv("KRB5_CONFIG");
+        char *env = secure_getenv("KRB5_CONFIG");
         if (env) {
             name = strdup(env);
             if (!name) return ENOMEM;
@@ -298,7 +297,7 @@ os_get_default_config_files(profile_filespec_t **pfiles, krb5_boolean secure)
     if (secure) {
         filepath = DEFAULT_SECURE_PROFILE_PATH;
     } else {
-        filepath = getenv("KRB5_CONFIG");
+        filepath = secure_getenv("KRB5_CONFIG");
         if (!filepath) filepath = DEFAULT_PROFILE_PATH;
     }
 
@@ -344,7 +343,7 @@ add_kdc_config_file(profile_filespec_t **pfiles)
     size_t count = 0;
     profile_filespec_t *newfiles;
 
-    file = getenv(KDC_PROFILE_ENV);
+    file = secure_getenv(KDC_PROFILE_ENV);
     if (file == NULL)
         file = DEFAULT_KDC_PROFILE;
 
@@ -369,7 +368,7 @@ add_kdc_config_file(profile_filespec_t **pfiles)
 
 /* Set the profile paths in the context.  If secure is set to TRUE
    then do not include user paths (from environment variables, etc).
-   If kdc is TRUE, include kdc.conf from whereever we expect to find
+   If kdc is TRUE, include kdc.conf from wherever we expect to find
    it.  */
 static krb5_error_code
 os_init_paths(krb5_context ctx, krb5_boolean kdc)
@@ -468,7 +467,7 @@ krb5_set_config_files(krb5_context ctx, const char **filenames)
         return retval;
 
     if (ctx->profile)
-        profile_release(ctx->profile);
+        profile_abandon(ctx->profile);
     ctx->profile = profile;
 
     return 0;
@@ -503,7 +502,7 @@ k5_os_free_context(krb5_context ctx)
     os_ctx->magic = 0;
 
     if (ctx->profile) {
-        profile_release(ctx->profile);
+        profile_abandon(ctx->profile);
         ctx->profile = 0;
     }
 

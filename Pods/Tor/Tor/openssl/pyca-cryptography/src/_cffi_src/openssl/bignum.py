@@ -8,6 +8,8 @@ INCLUDES = """
 """
 
 TYPES = """
+static const long Cryptography_HAS_BN_FLAGS;
+
 typedef ... BN_CTX;
 typedef ... BN_MONT_CTX;
 typedef ... BIGNUM;
@@ -52,6 +54,7 @@ int BN_num_bits(const BIGNUM *);
 
 int BN_cmp(const BIGNUM *, const BIGNUM *);
 int BN_is_negative(const BIGNUM *);
+int BN_is_odd(const BIGNUM *);
 int BN_add(BIGNUM *, const BIGNUM *, const BIGNUM *);
 int BN_sub(BIGNUM *, const BIGNUM *, const BIGNUM *);
 int BN_nnmod(BIGNUM *, const BIGNUM *, const BIGNUM *, BN_CTX *);
@@ -81,4 +84,13 @@ const int BN_prime_checks_for_size(int);
 """
 
 CUSTOMIZATIONS = """
+#if CRYPTOGRAPHY_IS_BORINGSSL
+static const long Cryptography_HAS_BN_FLAGS = 0;
+
+static const int BN_FLG_CONSTTIME = 0;
+void (*BN_set_flags)(BIGNUM *, int) = NULL;
+int (*BN_prime_checks_for_size)(int) = NULL;
+#else
+static const long Cryptography_HAS_BN_FLAGS = 1;
+#endif
 """

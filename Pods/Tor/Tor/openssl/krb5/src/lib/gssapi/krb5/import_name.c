@@ -102,8 +102,8 @@ parse_hostbased(const char *str, size_t len,
     memcpy(service, str, servicelen);
     service[servicelen] = '\0';
 
-    /* If present, copy the hostname. */
-    if (at != NULL) {
+    /* Copy the hostname if present (at least one character after '@'). */
+    if (len - servicelen > 1) {
         hostlen = len - servicelen - 1;
         host = malloc(hostlen + 1);
         if (host == NULL) {
@@ -120,12 +120,8 @@ parse_hostbased(const char *str, size_t len,
 }
 
 OM_uint32 KRB5_CALLCONV
-krb5_gss_import_name(minor_status, input_name_buffer,
-                     input_name_type, output_name)
-    OM_uint32 *minor_status;
-    gss_buffer_t input_name_buffer;
-    gss_OID input_name_type;
-    gss_name_t *output_name;
+krb5_gss_import_name(OM_uint32 *minor_status, gss_buffer_t input_name_buffer,
+                     gss_OID input_name_type, gss_name_t *output_name)
 {
     krb5_context context;
     krb5_principal princ = NULL;
@@ -136,7 +132,7 @@ krb5_gss_import_name(minor_status, input_name_buffer,
 #ifndef NO_PASSWORD
     struct passwd *pw;
 #endif
-    int is_composite = 0;
+    int is_composite = 0, is_cert = 0;
     krb5_authdata_context ad_context = NULL;
     OM_uint32 status = GSS_S_FAILURE;
     krb5_gss_name_t name;
@@ -188,6 +184,14 @@ krb5_gss_import_name(minor_status, input_name_buffer,
                                    &princ);
         if (code)
             goto cleanup;
+    } else if ((input_name_type != NULL) &&
+               g_OID_equal(input_name_type, GSS_KRB5_NT_X509_CERT)) {
+        code = krb5_build_principal_ext(context, &princ, 0, NULL,
+                                        input_name_buffer->length,
+                                        input_name_buffer->value, 0);
+        if (code)
+            goto cleanup;
+        is_cert = 1;
     } else {
 #ifndef NO_PASSWORD
         uid_t uid;
@@ -315,6 +319,8 @@ krb5_gss_import_name(minor_status, input_name_buffer,
                         KG_INIT_NAME_NO_COPY, &name);
     if (code)
         goto cleanup;
+    name->is_cert = is_cert;
+
     princ = NULL;
     ad_context = NULL;
     service = host = NULL;

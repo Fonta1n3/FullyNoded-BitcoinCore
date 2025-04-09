@@ -38,6 +38,16 @@
 #endif
 #define DEFAULT_URI_LOOKUP TRUE
 
+struct kdclist_entry {
+    krb5_data realm;
+    struct server_entry server;
+};
+
+struct kdclist {
+    size_t count;
+    struct kdclist_entry *list;
+};
+
 static int
 maybe_use_dns (krb5_context context, const char *name, int defalt)
 {
@@ -88,6 +98,22 @@ _krb5_use_dns_realm(krb5_context context)
                          DEFAULT_LOOKUP_REALM);
 }
 
+static krb5_error_code
+get_sitename(krb5_context context, const krb5_data *realm, char **out)
+{
+    krb5_error_code ret;
+    char *realmstr;
+
+    *out = NULL;
+    realmstr = k5memdup0(realm->data, realm->length, &ret);
+    if (realmstr == NULL)
+        return ret;
+    ret = profile_get_string(context->profile, KRB5_CONF_REALMS,
+                             realmstr, KRB5_CONF_SITENAME, NULL, out);
+    free(realmstr);
+    return ret;
+}
+
 #endif /* KRB5_DNS_LOOKUP */
 
 /* Free up everything pointed to by the serverlist structure, but don't
@@ -132,7 +158,7 @@ new_server_entry(struct serverlist *list)
     list->servers = newservers;
     entry = &newservers[list->nservers];
     memset(entry, 0, sizeof(*entry));
-    entry->master = -1;
+    entry->primary = -1;
     return entry;
 }
 
@@ -160,7 +186,7 @@ add_addr_to_list(struct serverlist *list, k5_transport transport, int family,
 static int
 add_host_to_list(struct serverlist *list, const char *hostname, int port,
                  k5_transport transport, int family, const char *uri_path,
-                 int master)
+                 int primary)
 {
     struct server_entry *entry;
 
@@ -178,7 +204,7 @@ add_host_to_list(struct serverlist *list, const char *hostname, int port,
             goto oom;
     }
     entry->port = port;
-    entry->master = master;
+    entry->primary = primary;
     list->nservers++;
     return 0;
 oom:
@@ -212,6 +238,8 @@ server_list_contains(struct serverlist *list, struct server_entry *server)
     struct server_entry *ent;
 
     for (ent = list->servers; ent < list->servers + list->nservers; ent++) {
+        if (server->port != ent->port)
+            continue;
         if (server->hostname != NULL && ent->hostname != NULL &&
             strcmp(server->hostname, ent->hostname) == 0)
             return TRUE;
@@ -246,6 +274,11 @@ locate_srv_conf_1(krb5_context context, const krb5_data *realm,
     realm_srv_names[2] = name;
     realm_srv_names[3] = 0;
     code = profile_get_values(context->profile, realm_srv_names, &hostlist);
+    if (code == PROF_NO_RELATION && strcmp(name, KRB5_CONF_PRIMARY_KDC) == 0) {
+        realm_srv_names[2] = KRB5_CONF_MASTER_KDC;
+        code = profile_get_values(context->profile, realm_srv_names,
+                                  &hostlist);
+    }
     if (code) {
         Tprintf("config file lookup failed: %s\n", error_message(code));
         if (code == PROF_NO_SECTION || code == PROF_NO_RELATION)
@@ -311,9 +344,14 @@ locate_srv_dns_1(krb5_context context, const krb5_data *realm,
     struct srv_dns_entry *head = NULL, *entry = NULL;
     krb5_error_code code = 0;
     k5_transport transport;
+    char *sitename;
 
+    code = get_sitename(context, realm, &sitename);
+    if (code)
+        return code;
     code = krb5int_make_srv_query_realm(context, realm, service, protocol,
-                                        &head);
+                                        sitename, &head);
+    free(sitename);
     if (code)
         return 0;
 
@@ -495,8 +533,8 @@ prof_locate_server(krb5_context context, const krb5_data *realm,
     kdc_ports:
         dflport = KRB5_DEFAULT_PORT;
         break;
-    case locate_service_master_kdc:
-        profname = KRB5_CONF_MASTER_KDC;
+    case locate_service_primary_kdc:
+        profname = KRB5_CONF_PRIMARY_KDC;
         goto kdc_ports;
     case locate_service_kadmin:
         profname = KRB5_CONF_ADMIN_SERVER;
@@ -523,7 +561,7 @@ prof_locate_server(krb5_context context, const krb5_data *realm,
 
 /*
  * Parse the initial part of the URI, first confirming the scheme name.  Get
- * the transport, flags (indicating master status), and host.  The host is
+ * the transport, flags (indicating primary status), and host.  The host is
  * either an address or hostname with an optional port, or an HTTPS URL.
  * The format is krb5srv:flags:udp|tcp|kkdcp:host
  *
@@ -531,15 +569,15 @@ prof_locate_server(krb5_context context, const krb5_data *realm,
  */
 static void
 parse_uri_fields(const char *uri, k5_transport *transport_out,
-                 const char **host_out, int *master_out)
+                 const char **host_out, int *primary_out)
 
 {
     k5_transport transport;
-    int master = FALSE;
+    int primary = FALSE;
 
     *transport_out = 0;
     *host_out = NULL;
-    *master_out = -1;
+    *primary_out = -1;
 
     /* Confirm the scheme name. */
     if (strncasecmp(uri, "krb5srv", 7) != 0)
@@ -556,7 +594,7 @@ parse_uri_fields(const char *uri, k5_transport *transport_out,
     /* Check the flags field for supported flags. */
     for (; *uri != ':' && *uri != '\0'; uri++) {
         if (*uri == 'm' || *uri == 'M')
-            master = TRUE;
+            primary = TRUE;
     }
     if (*uri != ':')
         return;
@@ -583,7 +621,7 @@ parse_uri_fields(const char *uri, k5_transport *transport_out,
     /* The rest of the URI is the host (with optional port) or URI. */
     *host_out = uri + 1;
     *transport_out = transport;
-    *master_out = master;
+    *primary_out = primary;
 }
 
 /*
@@ -594,16 +632,20 @@ static krb5_error_code
 locate_uri(krb5_context context, const krb5_data *realm,
            const char *req_service, struct serverlist *serverlist,
            k5_transport req_transport, int default_port,
-           krb5_boolean master_only)
+           krb5_boolean primary_only)
 {
     krb5_error_code ret;
     k5_transport transport, host_trans;
     struct srv_dns_entry *answers, *entry;
-    char *host;
+    char *host, *sitename;
     const char *host_field, *path;
-    int port, def_port, master;
+    int port, def_port, primary;
 
-    ret = k5_make_uri_query(context, realm, req_service, &answers);
+    ret = get_sitename(context, realm, &sitename);
+    if (ret)
+        return ret;
+    ret = k5_make_uri_query(context, realm, req_service, sitename, &answers);
+    free(sitename);
     if (ret || answers == NULL)
         return ret;
 
@@ -611,7 +653,7 @@ locate_uri(krb5_context context, const krb5_data *realm,
         def_port = default_port;
         path = NULL;
 
-        parse_uri_fields(entry->host, &transport, &host_field, &master);
+        parse_uri_fields(entry->host, &transport, &host_field, &primary);
         if (host_field == NULL)
             continue;
 
@@ -639,7 +681,7 @@ locate_uri(krb5_context context, const krb5_data *realm,
         }
 
         ret = add_host_to_list(serverlist, host, port, transport, AF_UNSPEC,
-                               path, master);
+                               path, primary);
         free(host);
         if (ret)
             break;
@@ -657,14 +699,14 @@ dns_locate_server_uri(krb5_context context, const krb5_data *realm,
     krb5_error_code ret;
     char *svcname;
     int def_port;
-    krb5_boolean find_master = FALSE;
+    krb5_boolean find_primary = FALSE;
 
     if (!_krb5_use_dns_kdc(context) || !use_dns_uri(context))
         return 0;
 
     switch (svc) {
-    case locate_service_master_kdc:
-        find_master = TRUE;
+    case locate_service_primary_kdc:
+        find_primary = TRUE;
         /* Fall through */
     case locate_service_kdc:
         svcname = "_kerberos";
@@ -683,7 +725,7 @@ dns_locate_server_uri(krb5_context context, const krb5_data *realm,
     }
 
     ret = locate_uri(context, realm, svcname, serverlist, transport, def_port,
-                     find_master);
+                     find_primary);
 
     if (serverlist->nservers == 0)
         TRACE_DNS_URI_NOTFOUND(context);
@@ -707,7 +749,7 @@ dns_locate_server_srv(krb5_context context, const krb5_data *realm,
     case locate_service_kdc:
         dnsname = "_kerberos";
         break;
-    case locate_service_master_kdc:
+    case locate_service_primary_kdc:
         dnsname = "_kerberos-master";
         break;
     case locate_service_kadmin:
@@ -819,29 +861,147 @@ k5_locate_server(krb5_context context, const krb5_data *realm,
 
 krb5_error_code
 k5_locate_kdc(krb5_context context, const krb5_data *realm,
-              struct serverlist *serverlist, krb5_boolean get_masters,
+              struct serverlist *serverlist, krb5_boolean get_primaries,
               krb5_boolean no_udp)
 {
     enum locate_service_type stype;
 
-    stype = get_masters ? locate_service_master_kdc : locate_service_kdc;
+    stype = get_primaries ? locate_service_primary_kdc : locate_service_kdc;
     return k5_locate_server(context, realm, serverlist, stype, no_udp);
 }
 
-krb5_boolean
-k5_kdc_is_master(krb5_context context, const krb5_data *realm,
-                 struct server_entry *server)
+krb5_error_code
+k5_kdclist_create(struct kdclist **kdcs_out)
 {
-    struct serverlist list;
+    struct kdclist *kdcs;
+
+    *kdcs_out = NULL;
+    kdcs = malloc(sizeof(*kdcs));
+    if (kdcs == NULL)
+        return ENOMEM;
+    kdcs->count = 0;
+    kdcs->list = NULL;
+    *kdcs_out = kdcs;
+    return 0;
+}
+
+krb5_error_code
+k5_kdclist_add(struct kdclist *kdcs, const krb5_data *realm,
+               struct server_entry *server)
+{
+    krb5_error_code ret;
+    struct kdclist_entry *newptr, *ent;
+
+    newptr = realloc(kdcs->list, (kdcs->count + 1) * sizeof(*kdcs->list));
+    if (newptr == NULL)
+        return ENOMEM;
+    kdcs->list = newptr;
+    ent = &kdcs->list[kdcs->count];
+    ret = krb5int_copy_data_contents(NULL, realm, &ent->realm);
+    if (ret)
+        return ret;
+    /* Steal memory ownership from *server. */
+    ent->server = *server;
+    memset(server, 0, sizeof(*server));
+    kdcs->count++;
+    return 0;
+}
+
+/*
+ * If primaries is empty, mark ent as primary (the realm has no primary KDCs
+ * and therefore no KDCs are replicas).  Otherwise mark ent according to
+ * whether it is present in primaries.  Return true if ent is determined to be
+ * a replica.
+ */
+static krb5_boolean
+mark_entry(struct kdclist_entry *ent, struct serverlist *primaries)
+{
+    if (primaries->nservers == 0) {
+        ent->server.primary = 1;
+        return FALSE;
+    }
+    ent->server.primary = server_list_contains(primaries, &ent->server);
+    return !ent->server.primary;
+}
+
+/* Mark kdcs->list[start] and all entries with the same realm and transport
+ * according to primaries.  Stop and return true if a replica is found. */
+static krb5_boolean
+mark_matching_servers(struct kdclist *kdcs, size_t start,
+                      struct serverlist *primaries)
+{
+    size_t i;
+    struct kdclist_entry *ent = &kdcs->list[start];
+
+    if (mark_entry(ent, primaries))
+        return TRUE;
+    for (i = start + 1; i < kdcs->count; i++) {
+        if (kdcs->list[i].server.primary == 1)
+            continue;
+        if (kdcs->list[i].server.transport != ent->server.transport)
+            continue;
+        if (!data_eq(kdcs->list[i].realm, ent->realm))
+            continue;
+        if (mark_entry(&kdcs->list[i], primaries))
+            return TRUE;
+    }
+    return FALSE;
+}
+
+/* Return true if any entry in kdcs is a replica.  May modify the primary
+ * fields of entries in kdcs. */
+krb5_boolean
+k5_kdclist_any_replicas(krb5_context context, struct kdclist *kdcs)
+{
+    size_t i;
+    struct kdclist_entry *ent;
+    struct serverlist primaries;
     krb5_boolean found;
 
-    if (server->master != -1)
-        return server->master;
+    /* Check if we already know that any of the KDCs is a replica. */
+    for (i = 0; i < kdcs->count; i++) {
+        if (kdcs->list[i].server.primary == 0)
+            return TRUE;
+    }
 
-    if (locate_server(context, realm, &list, locate_service_master_kdc,
-                      server->transport) != 0)
-        return FALSE;
-    found = server_list_contains(&list, server);
-    k5_free_serverlist(&list);
-    return found;
+    for (i = 0; i < kdcs->count; i++) {
+        ent = &kdcs->list[i];
+
+        /* Skip this entry if we already know that it's not a replica. */
+        if (ent->server.primary == 1)
+            continue;
+
+        /* Look up the primary KDCs for this entry's realm and transport.  Give
+         * up and return false on error. */
+        if (locate_server(context, &ent->realm, &primaries,
+                          locate_service_primary_kdc,
+                          ent->server.transport) != 0)
+            return FALSE;
+
+        /* Using the list of primaries, determine whether this entry and any
+         * entries with the same realm and transport are replicas. */
+        found = mark_matching_servers(kdcs, i, &primaries);
+
+        k5_free_serverlist(&primaries);
+        if (found)
+            return TRUE;
+    }
+
+    return FALSE;
+}
+
+void
+k5_kdclist_free(struct kdclist *kdcs)
+{
+    size_t i;
+
+    if (kdcs == NULL)
+        return;
+    for (i = 0; i < kdcs->count; i++) {
+        free(kdcs->list[i].realm.data);
+        free(kdcs->list[i].server.hostname);
+        free(kdcs->list[i].server.uri_path);
+    }
+    free(kdcs->list);
+    free(kdcs);
 }

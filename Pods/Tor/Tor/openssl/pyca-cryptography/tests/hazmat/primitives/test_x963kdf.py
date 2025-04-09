@@ -7,16 +7,14 @@ import binascii
 
 import pytest
 
-from cryptography.exceptions import AlreadyFinalized, InvalidKey, _Reasons
+from cryptography.exceptions import AlreadyFinalized, InvalidKey
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.kdf.x963kdf import X963KDF
 
-from ...utils import raises_unsupported_algorithm
 
-
-class TestX963KDF(object):
+class TestX963KDF:
     def test_length_limit(self, backend):
-        big_length = hashes.SHA256().digest_size * (2 ** 32 - 1) + 1
+        big_length = hashes.SHA256().digest_size * (2**32 - 1) + 1
 
         with pytest.raises(ValueError):
             X963KDF(hashes.SHA256(), big_length, None, backend)
@@ -110,15 +108,3 @@ class TestX963KDF(object):
             )
 
             xkdf.verify(b"foo", "bar")  # type: ignore[arg-type]
-
-
-def test_invalid_backend():
-    pretend_backend = object()
-
-    with raises_unsupported_algorithm(_Reasons.BACKEND_MISSING_INTERFACE):
-        X963KDF(
-            hashes.SHA256(),
-            16,
-            None,
-            pretend_backend,  # type: ignore[arg-type]
-        )

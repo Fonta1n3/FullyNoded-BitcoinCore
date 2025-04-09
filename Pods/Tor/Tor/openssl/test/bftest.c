@@ -1,16 +1,17 @@
 /*
- * Copyright 1995-2017 The OpenSSL Project Authors. All Rights Reserved.
+ * Copyright 1995-2024 The OpenSSL Project Authors. All Rights Reserved.
  *
- * Licensed under the OpenSSL license (the "License").  You may not use
+ * Licensed under the Apache License 2.0 (the "License").  You may not use
  * this file except in compliance with the License.  You can obtain a copy
  * in the file LICENSE in the source distribution or at
  * https://www.openssl.org/source/license.html
  */
 
 /*
- * This has been a quickly hacked 'ideatest.c'.  When I add tests for other
- * RC2 modes, more of the code will be uncommented.
+ * BF low level APIs are deprecated for public use, but still ok for internal
+ * use.
  */
+#include "internal/deprecated.h"
 
 #include <stdio.h>
 #include <string.h>
@@ -162,8 +163,9 @@ static unsigned char cbc_key[16] = {
     0x01, 0x23, 0x45, 0x67, 0x89, 0xab, 0xcd, 0xef,
     0xf0, 0xe1, 0xd2, 0xc3, 0xb4, 0xa5, 0x96, 0x87
 };
-static unsigned char cbc_iv[8] =
-    { 0xfe, 0xdc, 0xba, 0x98, 0x76, 0x54, 0x32, 0x10 };
+static unsigned char cbc_iv[8] = {
+    0xfe, 0xdc, 0xba, 0x98, 0x76, 0x54, 0x32, 0x10
+};
 static char cbc_data[40] = "7654321 Now is the time for ";
 static unsigned char cbc_ok[32] = {
     0x6B, 0x77, 0xB4, 0xD6, 0x30, 0x06, 0xDE, 0xE6,
@@ -194,8 +196,9 @@ static unsigned char key_test[KEY_TEST_NUM] = {
     0x88
 };
 
-static unsigned char key_data[8] =
-    { 0xFE, 0xDC, 0xBA, 0x98, 0x76, 0x54, 0x32, 0x10 };
+static unsigned char key_data[8] = {
+    0xFE, 0xDC, 0xBA, 0x98, 0x76, 0x54, 0x32, 0x10
+};
 
 static unsigned char key_out[KEY_TEST_NUM][8] = {
     {0xF9, 0xAD, 0x59, 0x7C, 0x49, 0xDB, 0x00, 0x5E},
@@ -434,28 +437,53 @@ static int test_bf_ofb64(void)
 }
 #endif
 
+typedef enum OPTION_choice {
+    OPT_ERR = -1,
+    OPT_EOF = 0,
+    OPT_PRINT,
+    OPT_TEST_ENUM
+} OPTION_CHOICE;
+
+const OPTIONS *test_get_options(void)
+{
+    static const OPTIONS test_options[] = {
+        OPT_TEST_OPTIONS_DEFAULT_USAGE,
+        { "print", OPT_PRINT, '-', "Output test tables instead of running tests"},
+        { NULL }
+    };
+    return test_options;
+}
+
 int setup_tests(void)
 {
 #ifndef OPENSSL_NO_BF
+    OPTION_CHOICE o;
 # ifdef CHARSET_EBCDIC
     int n;
-
     ebcdic2ascii(cbc_data, cbc_data, strlen(cbc_data));
     for (n = 0; n < 2; n++) {
         ebcdic2ascii(bf_key[n], bf_key[n], strlen(bf_key[n]));
     }
 # endif
 
-    if (test_get_argument(0) != NULL) {
-        print_test_data();
-    } else {
-        ADD_ALL_TESTS(test_bf_ecb_raw, 2);
-        ADD_ALL_TESTS(test_bf_ecb, NUM_TESTS);
-        ADD_ALL_TESTS(test_bf_set_key, KEY_TEST_NUM-1);
-        ADD_TEST(test_bf_cbc);
-        ADD_TEST(test_bf_cfb64);
-        ADD_TEST(test_bf_ofb64);
+    while ((o = opt_next()) != OPT_EOF) {
+        switch (o) {
+        case OPT_PRINT:
+            print_test_data();
+            return 1;
+        case OPT_TEST_CASES:
+            break;
+        default:
+           return 0;
+        }
     }
+
+    ADD_ALL_TESTS(test_bf_ecb_raw, 2);
+    ADD_ALL_TESTS(test_bf_ecb, NUM_TESTS);
+    ADD_ALL_TESTS(test_bf_set_key, KEY_TEST_NUM-1);
+    ADD_TEST(test_bf_cbc);
+    ADD_TEST(test_bf_cfb64);
+    ADD_TEST(test_bf_ofb64);
 #endif
     return 1;
 }

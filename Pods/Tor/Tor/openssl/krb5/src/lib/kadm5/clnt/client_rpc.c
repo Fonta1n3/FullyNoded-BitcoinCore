@@ -1,6 +1,7 @@
 /* -*- mode: c; c-file-style: "bsd"; indent-tabs-mode: t -*- */
 #include <gssrpc/rpc.h>
 #include <kadm5/kadm_rpc.h>
+#include <kadm5/admin_xdr.h>
 #include <krb5.h>
 #include <kadm5/admin.h>
 #include <string.h>  /* for memset prototype */
@@ -81,14 +82,6 @@ chpass_principal3_2(chpass3_arg *argp, generic_ret *res, CLIENT *clnt)
 {
 	return clnt_call(clnt, CHPASS_PRINCIPAL3,
 			 (xdrproc_t)xdr_chpass3_arg, (caddr_t)argp,
-			 (xdrproc_t)xdr_generic_ret, (caddr_t)res, TIMEOUT);
-}
-
-enum clnt_stat
-setv4key_principal_2(setv4key_arg *argp, generic_ret *res, CLIENT *clnt)
-{
-	return clnt_call(clnt, SETV4KEY_PRINCIPAL,
-			 (xdrproc_t)xdr_setv4key_arg, (caddr_t)argp,
 			 (xdrproc_t)xdr_generic_ret, (caddr_t)res, TIMEOUT);
 }
 

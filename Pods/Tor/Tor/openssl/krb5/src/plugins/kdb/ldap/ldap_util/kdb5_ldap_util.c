@@ -186,8 +186,8 @@ static struct _cmd_table {
  * The function cmd_lookup returns the structure matching the
  * command name and returns NULL if nothing matches.
  */
-static struct _cmd_table *cmd_lookup(name)
-    char *name;
+static struct _cmd_table *
+cmd_lookup(const char *name)
 {
     int i;
 
@@ -432,7 +432,7 @@ main(int argc, char *argv[])
                                          &global_params, &global_params);
         if (retval) {
             com_err(progname, retval,
-                    _("while retreiving configuration parameters"));
+                    _("while retrieving configuration parameters"));
             exit_status++;
             goto cleanup;
         }

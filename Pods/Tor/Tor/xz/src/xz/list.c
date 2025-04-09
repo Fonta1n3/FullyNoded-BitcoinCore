@@ -1,12 +1,11 @@
+// SPDX-License-Identifier: 0BSD
+
 ///////////////////////////////////////////////////////////////////////////////
 //
 /// \file       list.c
 /// \brief      Listing information about .xz files
 //
 //  Author:     Lasse Collin
-//
-//  This file has been put into the public domain.
-//  You can do whatever you want with this file.
 //
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -366,7 +365,7 @@ parse_indexes(xz_file_info *xfi, file_pair *pair)
 			hardware_memlimit_get(MODE_LIST),
 			(uint64_t)(pair->src_st.st_size));
 	if (ret != LZMA_OK) {
-		message_error("%s: %s", pair->src_name, message_strm(ret));
+		message_error(_("%s: %s"), pair->src_name, message_strm(ret));
 		return true;
 	}
 
@@ -412,7 +411,7 @@ parse_indexes(xz_file_info *xfi, file_pair *pair)
 		}
 
 		default:
-			message_error("%s: %s", pair->src_name,
+			message_error(_("%s: %s"), pair->src_name,
 					message_strm(ret));
 
 			// If the error was too low memory usage limit,
@@ -474,7 +473,7 @@ parse_block_header(file_pair *pair, const lzma_index_iter *iter,
 		break;
 
 	case LZMA_OPTIONS_ERROR:
-		message_error("%s: %s", pair->src_name,
+		message_error(_("%s: %s"), pair->src_name,
 				message_strm(LZMA_OPTIONS_ERROR));
 		return true;
 
@@ -544,11 +543,21 @@ parse_block_header(file_pair *pair, const lzma_index_iter *iter,
 		xfi->memusage_max = bhi->memusage;
 
 	// Determine the minimum XZ Utils version that supports this Block.
+	//   - RISC-V filter needs 5.6.0.
 	//
 	//   - ARM64 filter needs 5.4.0.
 	//
 	//   - 5.0.0 doesn't support empty LZMA2 streams and thus empty
 	//     Blocks that use LZMA2. This decoder bug was fixed in 5.0.2.
+	if (xfi->min_version < 50060002U) {
+		for (size_t i = 0; filters[i].id != LZMA_VLI_UNKNOWN; ++i) {
+			if (filters[i].id == LZMA_FILTER_RISCV) {
+				xfi->min_version = 50060002U;
+				break;
+			}
+		}
+	}
+
 	if (xfi->min_version < 50040002U) {
 		for (size_t i = 0; filters[i].id != LZMA_VLI_UNKNOWN; ++i) {
 			if (filters[i].id == LZMA_FILTER_ARM64) {
@@ -578,7 +587,8 @@ parse_block_header(file_pair *pair, const lzma_index_iter *iter,
 
 	// Check if the stringification succeeded.
 	if (str_ret != LZMA_OK) {
-		message_error("%s: %s", pair->src_name, message_strm(str_ret));
+		message_error(_("%s: %s"), pair->src_name,
+				message_strm(str_ret));
 		return true;
 	}
 
@@ -586,7 +596,7 @@ parse_block_header(file_pair *pair, const lzma_index_iter *iter,
 
 data_error:
 	// Show the error message.
-	message_error("%s: %s", pair->src_name,
+	message_error(_("%s: %s"), pair->src_name,
 			message_strm(LZMA_DATA_ERROR));
 	return true;
 }
@@ -1168,6 +1178,10 @@ print_totals_basic(void)
 				totals.uncompressed_size),
 			checks);
 
+#if defined(__sun) && (defined(__GNUC__) || defined(__clang__))
+#	pragma GCC diagnostic push
+#	pragma GCC diagnostic ignored "-Wformat-nonliteral"
+#endif
 	// Since we print totals only when there are at least two files,
 	// the English message will always use "%s files". But some other
 	// languages need different forms for different plurals so we
@@ -1179,6 +1193,9 @@ print_totals_basic(void)
 			totals.files <= ULONG_MAX ? totals.files
 				: (totals.files % 1000000) + 1000000),
 			uint64_to_str(totals.files, 0));
+#if defined(__sun) && (defined(__GNUC__) || defined(__clang__))
+#	pragma GCC diagnostic pop
+#endif
 
 	return;
 }
@@ -1265,9 +1282,21 @@ list_totals(void)
 extern void
 list_file(const char *filename)
 {
-	if (opt_format != FORMAT_XZ && opt_format != FORMAT_AUTO)
-		message_fatal(_("--list works only on .xz files "
+	if (opt_format != FORMAT_XZ && opt_format != FORMAT_AUTO) {
+		// The 'lzmainfo' message is printed only when --format=lzma
+		// is used (it is implied if using "lzma" as the command
+		// name). Thus instead of using message_fatal(), print
+		// the messages separately and then call tuklib_exit()
+		// like message_fatal() does.
+		message(V_ERROR, _("--list works only on .xz files "
 				"(--format=xz or --format=auto)"));
+
+		if (opt_format == FORMAT_LZMA)
+			message(V_ERROR,
+				_("Try 'lzmainfo' with .lzma files."));
+
+		tuklib_exit(E_ERROR, E_ERROR, false);
+	}
 
 	message_filename(filename);
 

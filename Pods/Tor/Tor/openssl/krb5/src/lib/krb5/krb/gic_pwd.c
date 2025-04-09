@@ -133,113 +133,6 @@ krb5_init_creds_set_password(krb5_context context,
     return 0;
 }
 
-/* Return the password expiry time indicated by enc_part2.  Set *is_last_req
- * if the information came from a last_req value. */
-static void
-get_expiry_times(krb5_enc_kdc_rep_part *enc_part2, krb5_timestamp *pw_exp,
-                 krb5_timestamp *acct_exp, krb5_boolean *is_last_req)
-{
-    krb5_last_req_entry **last_req;
-    krb5_int32 lr_type;
-
-    *pw_exp = 0;
-    *acct_exp = 0;
-    *is_last_req = FALSE;
-
-    /* Look for last-req entries for password or account expiration. */
-    if (enc_part2->last_req) {
-        for (last_req = enc_part2->last_req; *last_req; last_req++) {
-            lr_type = (*last_req)->lr_type;
-            if (lr_type == KRB5_LRQ_ALL_PW_EXPTIME ||
-                lr_type == KRB5_LRQ_ONE_PW_EXPTIME) {
-                *is_last_req = TRUE;
-                *pw_exp = (*last_req)->value;
-            } else if (lr_type == KRB5_LRQ_ALL_ACCT_EXPTIME ||
-                       lr_type == KRB5_LRQ_ONE_ACCT_EXPTIME) {
-                *is_last_req = TRUE;
-                *acct_exp = (*last_req)->value;
-            }
-        }
-    }
-
-    /* If we didn't find any, use the ambiguous key_exp field. */
-    if (*is_last_req == FALSE)
-        *pw_exp = enc_part2->key_exp;
-}
-
-/*
- * Send an appropriate warning prompter if as_reply indicates that the password
- * is going to expire soon.  If an expire callback was provided, use that
- * instead.
- */
-static void
-warn_pw_expiry(krb5_context context, krb5_get_init_creds_opt *options,
-               krb5_prompter_fct prompter, void *data,
-               const char *in_tkt_service, krb5_kdc_rep *as_reply)
-{
-    krb5_error_code ret;
-    krb5_expire_callback_func expire_cb;
-    void *expire_data;
-    krb5_timestamp pw_exp, acct_exp, now;
-    krb5_boolean is_last_req;
-    krb5_deltat delta;
-    char ts[256], banner[1024];
-
-    get_expiry_times(as_reply->enc_part2, &pw_exp, &acct_exp, &is_last_req);
-
-    k5_gic_opt_get_expire_cb(options, &expire_cb, &expire_data);
-    if (expire_cb != NULL) {
-        /* Invoke the expire callback and don't send prompter warnings. */
-        (*expire_cb)(context, expire_data, pw_exp, acct_exp, is_last_req);
-        return;
-    }
-
-    /* Don't warn if no password expiry value was sent. */
-    if (pw_exp == 0)
-        return;
-
-    /* Don't warn if the password is being changed. */
-    if (in_tkt_service && strcmp(in_tkt_service, "kadmin/changepw") == 0)
-        return;
-
-    /*
-     * If the expiry time came from a last_req field, assume the KDC wants us
-     * to warn.  Otherwise, warn only if the expiry time is less than a week
-     * from now.
-     */
-    ret = krb5_timeofday(context, &now);
-    if (ret != 0)
-        return;
-    if (!is_last_req &&
-        (ts_after(now, pw_exp) || ts_delta(pw_exp, now) > 7 * 24 * 60 * 60))
-        return;
-
-    if (!prompter)
-        return;
-
-    ret = krb5_timestamp_to_string(pw_exp, ts, sizeof(ts));
-    if (ret != 0)
-        return;
-
-    delta = ts_delta(pw_exp, now);
-    if (delta < 3600) {
-        snprintf(banner, sizeof(banner),
-                 _("Warning: Your password will expire in less than one hour "
-                   "on %s"), ts);
-    } else if (delta < 86400*2) {
-        snprintf(banner, sizeof(banner),
-                 _("Warning: Your password will expire in %d hour%s on %s"),
-                 delta / 3600, delta < 7200 ? "" : "s", ts);
-    } else {
-        snprintf(banner, sizeof(banner),
-                 _("Warning: Your password will expire in %d days on %s"),
-                 delta / 86400, ts);
-    }
-
-    /* PROMPTER_INVOCATION */
-    (*prompter)(context, data, 0, banner, 0, 0);
-}
-
 /*
  * Create a temporary options structure for getting a kadmin/changepw ticket,
  * based on the appplication-specified options.  Propagate all application
@@ -289,7 +182,6 @@ krb5_get_init_creds_password(krb5_context context,
                              krb5_get_init_creds_opt *options)
 {
     krb5_error_code ret;
-    int use_master;
     krb5_kdc_rep *as_reply;
     int tries;
     krb5_creds chpw_creds;
@@ -299,10 +191,8 @@ krb5_get_init_creds_password(krb5_context context,
     char banner[1024], pw0array[1024], pw1array[1024];
     krb5_prompt prompt[2];
     krb5_prompt_type prompt_types[sizeof(prompt)/sizeof(prompt[0])];
-    struct errinfo errsave = EMPTY_ERRINFO;
     char *message;
 
-    use_master = 0;
     as_reply = NULL;
     memset(&chpw_creds, 0, sizeof(chpw_creds));
     memset(&gakpw, 0, sizeof(gakpw));
@@ -312,59 +202,15 @@ krb5_get_init_creds_password(krb5_context context,
         gakpw.password = &pw0;
     }
 
-    /* first try: get the requested tkt from any kdc */
-
     ret = k5_get_init_creds(context, creds, client, prompter, data, start_time,
                             in_tkt_service, options, krb5_get_as_key_password,
-                            &gakpw, &use_master, &as_reply);
-
-    /* check for success */
-
-    if (ret == 0)
+                            &gakpw, &as_reply);
+    if (!ret)
         goto cleanup;
 
-    /* If all the kdc's are unavailable, or if the error was due to a
-       user interrupt, fail */
-
-    if (ret == KRB5_KDC_UNREACH || ret == KRB5_REALM_CANT_RESOLVE ||
-        ret == KRB5_LIBOS_PWDINTR || ret == KRB5_LIBOS_CANTREADPWD)
-        goto cleanup;
-
-    /* if the reply did not come from the master kdc, try again with
-       the master kdc */
-
-    if (!use_master) {
-        TRACE_GIC_PWD_MASTER(context);
-        use_master = 1;
-
-        k5_save_ctx_error(context, ret, &errsave);
-        if (as_reply) {
-            krb5_free_kdc_rep( context, as_reply);
-            as_reply = NULL;
-        }
-        ret = k5_get_init_creds(context, creds, client, prompter, data,
-                                start_time, in_tkt_service, options,
-                                krb5_get_as_key_password, &gakpw, &use_master,
-                                &as_reply);
-
-        if (ret == 0)
-            goto cleanup;
-
-        /* If the master is unreachable, return the error from the replica we
-         * were able to contact and reset the use_master flag. */
-        if (ret == KRB5_KDC_UNREACH || ret == KRB5_REALM_CANT_RESOLVE ||
-            ret == KRB5_REALM_UNKNOWN) {
-            ret = k5_restore_ctx_error(context, &errsave);
-            use_master = 0;
-        }
-    }
-
-    /* at this point, we have an error from the master.  if the error
-       is not password expired, or if it is but there's no prompter,
-       return this error */
-
-    if ((ret != KRB5KDC_ERR_KEY_EXP) ||
-        (prompter == NULL))
+    /* If the error is not password expired, or if it is but there's no
+     * prompter, return this error. */
+    if (ret != KRB5KDC_ERR_KEY_EXP || prompter == NULL)
         goto cleanup;
 
     /* historically the default has been to prompt for password change.
@@ -384,8 +230,7 @@ krb5_get_init_creds_password(krb5_context context,
         goto cleanup;
     ret = k5_get_init_creds(context, &chpw_creds, client, prompter, data,
                             start_time, "kadmin/changepw", chpw_opts,
-                            krb5_get_as_key_password, &gakpw, &use_master,
-                            NULL);
+                            krb5_get_as_key_password, &gakpw, NULL);
     if (ret)
         goto cleanup;
 
@@ -482,23 +327,17 @@ krb5_get_init_creds_password(krb5_context context,
     if (ret)
         goto cleanup;
 
-    /* the password change was successful.  Get an initial ticket
-       from the master.  this is the last try.  the return from this
-       is final.  */
-
+    /* The password change was successful.  Try one last time to get an initial
+     * ticket. */
     TRACE_GIC_PWD_CHANGED(context);
     gakpw.password = &pw0;
     ret = k5_get_init_creds(context, creds, client, prompter, data,
                             start_time, in_tkt_service, options,
-                            krb5_get_as_key_password, &gakpw, &use_master,
-                            &as_reply);
+                            krb5_get_as_key_password, &gakpw, &as_reply);
     if (ret)
         goto cleanup;
 
 cleanup:
-    if (ret == 0)
-        warn_pw_expiry(context, options, prompter, data, in_tkt_service,
-                       as_reply);
     free(chpw_opts);
     zapfree(gakpw.storage.data, gakpw.storage.length);
     memset(pw0array, 0, sizeof(pw0array));
@@ -506,7 +345,6 @@ cleanup:
     krb5_free_cred_contents(context, &chpw_creds);
     if (as_reply)
         krb5_free_kdc_rep(context, as_reply);
-    k5_clear_error(&errsave);
 
     return(ret);
 }
@@ -527,7 +365,7 @@ cleanup:
   If password is passed as NULL, the password is read from the terminal,
   and then converted into a key.
 
-  A succesful call will place the ticket in the credentials cache ccache.
+  A successful call will place the ticket in the credentials cache ccache.
 
   returns system errors, encryption errors
 */
@@ -543,7 +381,6 @@ krb5_get_in_tkt_with_password(krb5_context context, krb5_flags options,
     krb5_data pw;
     char * server;
     krb5_principal server_princ, client_princ;
-    int use_master = 0;
     krb5_get_init_creds_opt *opts = NULL;
 
     memset(&gakpw, 0, sizeof(gakpw));
@@ -564,8 +401,7 @@ krb5_get_in_tkt_with_password(krb5_context context, krb5_flags options,
     client_princ = creds->client;
     retval = k5_get_init_creds(context, creds, creds->client,
                                krb5_prompter_posix, NULL, 0, server, opts,
-                               krb5_get_as_key_password, &gakpw, &use_master,
-                               ret_as_reply);
+                               krb5_get_as_key_password, &gakpw, ret_as_reply);
     krb5_free_unparsed_name( context, server);
     krb5_get_init_creds_opt_free(context, opts);
     zapfree(gakpw.storage.data, gakpw.storage.length);

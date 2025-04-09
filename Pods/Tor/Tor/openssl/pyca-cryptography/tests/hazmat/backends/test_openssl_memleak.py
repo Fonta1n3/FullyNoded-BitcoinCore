@@ -27,6 +27,8 @@ def main(argv):
     from cryptography.hazmat.bindings._openssl import ffi, lib
 
     heap = {}
+    start_heap = {}
+    start_heap_realloc_delta = [0]  # 1-item list so callbacks can mutate it
 
     BACKTRACE_ENABLED = False
     if BACKTRACE_ENABLED:
@@ -70,6 +72,20 @@ def main(argv):
             del heap[ptr]
         new_ptr = lib.Cryptography_realloc_wrapper(ptr, size, path, line)
         heap[new_ptr] = (size, path, line, backtrace())
+
+        # It is possible that something during the test will cause a
+        # realloc of memory allocated during the startup phase. (This
+        # was observed in conda-forge Windows builds of this package with
+        # provider operation_bits pointers in crypto/provider_core.c.) If
+        # we don't pay attention to that, the realloc'ed pointer will show
+        # up as a leak; but we also don't want to allow this kind of realloc
+        # to consume large amounts of additional memory. So we track the
+        # realloc and the change in memory consumption.
+        startup_info = start_heap.pop(ptr, None)
+        if startup_info is not None:
+            start_heap[new_ptr] = heap[new_ptr]
+            start_heap_realloc_delta[0] += size - startup_info[0]
+
         return new_ptr
 
     @ffi.callback("void(void *, const char *, int)")
@@ -82,9 +98,12 @@ def main(argv):
     assert result == 1
 
     # Trigger a bunch of initialization stuff.
+    import hashlib
     from cryptography.hazmat.backends.openssl.backend import backend
 
-    start_heap = set(heap)
+    hashlib.sha256()
+
+    start_heap.update(heap)
 
     try:
         func(*argv[1:])
@@ -110,10 +129,12 @@ def main(argv):
         )
         assert result == 1
 
-    remaining = set(heap) - start_heap
+    remaining = set(heap) - set(start_heap)
 
-    if remaining:
-        sys.stdout.write(json.dumps(dict(
+    # The constant here is the number of additional bytes of memory
+    # consumption that are allowed in reallocs of start_heap memory.
+    if remaining or start_heap_realloc_delta[0] > 3072:
+        info = dict(
             (int(ffi.cast("size_t", ptr)), {
                 "size": heap[ptr][0],
                 "path": ffi.string(heap[ptr][1]).decode(),
@@ -121,7 +142,9 @@ def main(argv):
                 "backtrace": symbolize_backtrace(heap[ptr][3]),
             })
             for ptr in remaining
-        )))
+        )
+        info["start_heap_realloc_delta"] = start_heap_realloc_delta[0]
+        sys.stdout.write(json.dumps(info))
         sys.stdout.flush()
         sys.exit(255)
 
@@ -179,7 +202,7 @@ def skip_if_memtesting_not_supported():
 
 @pytest.mark.skip_fips(reason="FIPS self-test sets allow_customize = 0")
 @skip_if_memtesting_not_supported()
-class TestAssertNoMemoryLeaks(object):
+class TestAssertNoMemoryLeaks:
     def test_no_leak_no_malloc(self):
         assert_no_memory_leaks(
             textwrap.dedent(
@@ -245,53 +268,7 @@ class TestAssertNoMemoryLeaks(object):
 
 @pytest.mark.skip_fips(reason="FIPS self-test sets allow_customize = 0")
 @skip_if_memtesting_not_supported()
-class TestOpenSSLMemoryLeaks(object):
-    @pytest.mark.parametrize(
-        "path", ["x509/PKITS_data/certs/ValidcRLIssuerTest28EE.crt"]
-    )
-    def test_der_x509_certificate_extensions(self, path):
-        assert_no_memory_leaks(
-            textwrap.dedent(
-                """
-        def func(path):
-            from cryptography import x509
-            from cryptography.hazmat.backends.openssl import backend
-
-            import cryptography_vectors
-
-            with cryptography_vectors.open_vector_file(path, "rb") as f:
-                cert = x509.load_der_x509_certificate(
-                    f.read(), backend
-                )
-
-            cert.extensions
-        """
-            ),
-            [path],
-        )
-
-    @pytest.mark.parametrize("path", ["x509/cryptography.io.pem"])
-    def test_pem_x509_certificate_extensions(self, path):
-        assert_no_memory_leaks(
-            textwrap.dedent(
-                """
-        def func(path):
-            from cryptography import x509
-            from cryptography.hazmat.backends.openssl import backend
-
-            import cryptography_vectors
-
-            with cryptography_vectors.open_vector_file(path, "rb") as f:
-                cert = x509.load_pem_x509_certificate(
-                    f.read(), backend
-                )
-
-            cert.extensions
-        """
-            ),
-            [path],
-        )
-
+class TestOpenSSLMemoryLeaks:
     def test_x509_csr_extensions(self):
         assert_no_memory_leaks(
             textwrap.dedent(

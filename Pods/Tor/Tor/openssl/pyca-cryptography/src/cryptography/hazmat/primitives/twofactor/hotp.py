@@ -4,13 +4,9 @@
 
 
 import base64
-import struct
 import typing
 from urllib.parse import quote, urlencode
 
-from cryptography.exceptions import UnsupportedAlgorithm, _Reasons
-from cryptography.hazmat.backends import _get_backend
-from cryptography.hazmat.backends.interfaces import Backend, HMACBackend
 from cryptography.hazmat.primitives import constant_time, hmac
 from cryptography.hazmat.primitives.hashes import SHA1, SHA256, SHA512
 from cryptography.hazmat.primitives.twofactor import InvalidToken
@@ -37,34 +33,23 @@ def _generate_uri(
 
     parameters.extend(extra_parameters)
 
-    uriparts = {
-        "type": type_name,
-        "label": (
-            "%s:%s" % (quote(issuer), quote(account_name))
-            if issuer
-            else quote(account_name)
-        ),
-        "parameters": urlencode(parameters),
-    }
-    return "otpauth://{type}/{label}?{parameters}".format(**uriparts)
+    label = (
+        f"{quote(issuer)}:{quote(account_name)}"
+        if issuer
+        else quote(account_name)
+    )
+    return f"otpauth://{type_name}/{label}?{urlencode(parameters)}"
 
 
-class HOTP(object):
+class HOTP:
     def __init__(
         self,
         key: bytes,
         length: int,
         algorithm: _ALLOWED_HASH_TYPES,
-        backend: typing.Optional[Backend] = None,
+        backend: typing.Any = None,
         enforce_key_length: bool = True,
     ) -> None:
-        backend = _get_backend(backend)
-        if not isinstance(backend, HMACBackend):
-            raise UnsupportedAlgorithm(
-                "Backend object does not implement HMACBackend.",
-                _Reasons.BACKEND_MISSING_INTERFACE,
-            )
-
         if len(key) < 16 and enforce_key_length is True:
             raise ValueError("Key length has to be at least 128 bits.")
 
@@ -80,11 +65,10 @@ class HOTP(object):
         self._key = key
         self._length = length
         self._algorithm = algorithm
-        self._backend = backend
 
     def generate(self, counter: int) -> bytes:
         truncated_value = self._dynamic_truncate(counter)
-        hotp = truncated_value % (10 ** self._length)
+        hotp = truncated_value % (10**self._length)
         return "{0:0{1}}".format(hotp, self._length).encode()
 
     def verify(self, hotp: bytes, counter: int) -> None:
@@ -92,13 +76,13 @@ class HOTP(object):
             raise InvalidToken("Supplied HOTP value does not match.")
 
     def _dynamic_truncate(self, counter: int) -> int:
-        ctx = hmac.HMAC(self._key, self._algorithm, self._backend)
-        ctx.update(struct.pack(">Q", counter))
+        ctx = hmac.HMAC(self._key, self._algorithm)
+        ctx.update(counter.to_bytes(length=8, byteorder="big"))
         hmac_value = ctx.finalize()
 
         offset = hmac_value[len(hmac_value) - 1] & 0b1111
         p = hmac_value[offset : offset + 4]
-        return struct.unpack(">I", p)[0] & 0x7FFFFFFF
+        return int.from_bytes(p, byteorder="big") & 0x7FFFFFFF
 
     def get_provisioning_uri(
         self, account_name: str, counter: int, issuer: typing.Optional[str]

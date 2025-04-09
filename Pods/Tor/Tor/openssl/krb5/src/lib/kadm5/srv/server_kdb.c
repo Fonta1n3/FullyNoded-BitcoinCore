@@ -67,11 +67,10 @@ krb5_error_code kdb_init_master(kadm5_server_handle_t handle,
     if (ret)
         goto done;
 
-    if ((ret = krb5_db_fetch_mkey_list(handle->context, master_princ,
-                                       &master_keyblock))) {
+    ret = krb5_db_fetch_mkey_list(handle->context, master_princ,
+                                  &master_keyblock);
+    if (ret)
         krb5_db_fini(handle->context);
-        return (ret);
-    }
 
 done:
     if (r == NULL)
@@ -127,6 +126,8 @@ krb5_error_code kdb_init_hist(kadm5_server_handle_t handle, char *r)
         goto done;
     }
 
+    krb5_free_principal(handle->context, hist_princ);
+    hist_princ = NULL;
     if ((ret = krb5_parse_name(handle->context, hist_name, &hist_princ)))
         goto done;
 
@@ -264,8 +265,7 @@ kdb_get_entry(kadm5_server_handle_t handle,
 
     *kdb_ptr = NULL;
 
-    ret = krb5_db_get_principal(handle->context, principal,
-                                KRB5_KDB_FLAG_ALIAS_OK, &kdb);
+    ret = krb5_db_get_principal(handle->context, principal, 0, &kdb);
     if (ret == KRB5_KDB_NOENTRY)
         return(KADM5_UNK_PRINC);
     if (ret)

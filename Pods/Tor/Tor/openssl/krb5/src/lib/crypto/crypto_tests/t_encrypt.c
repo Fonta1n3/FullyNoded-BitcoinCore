@@ -37,9 +37,6 @@
 
 /* What enctypes should we test?*/
 krb5_enctype interesting_enctypes[] = {
-    ENCTYPE_DES_CBC_CRC,
-    ENCTYPE_DES_CBC_MD4,
-    ENCTYPE_DES_CBC_MD5,
     ENCTYPE_DES3_CBC_SHA1,
     ENCTYPE_ARCFOUR_HMAC,
     ENCTYPE_ARCFOUR_HMAC_EXP,
@@ -91,7 +88,7 @@ display(const char *msg, const krb5_data *d)
 }
 
 int
-main ()
+main(void)
 {
     krb5_context context = 0;
     krb5_data  in, in2, out, out2, check, check2, state, signdata;

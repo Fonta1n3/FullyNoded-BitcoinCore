@@ -31,6 +31,7 @@
 
 #include "k5-int.h"
 #include "int-proto.h"
+#include "os-proto.h"
 #include "fast.h"
 
 static krb5_error_code
@@ -257,9 +258,12 @@ krb5int_process_tgs_reply(krb5_context context,
         /* Final hop, check whether KDC supports S4U2Self */
         if (krb5_principal_compare(context, dec_rep->client, in_cred->server))
             retval = KRB5KDC_ERR_PADATA_TYPE_NOSUPP;
-    } else if ((kdcoptions & KDC_OPT_CNAME_IN_ADDL_TKT) == 0) {
-        /* XXX for constrained delegation this check must be performed by caller
-         * as we don't have access to the key to decrypt the evidence ticket.
+    } else if ((kdcoptions & KDC_OPT_CNAME_IN_ADDL_TKT) == 0 ||
+               IS_TGS_PRINC(dec_rep->ticket->server)) {
+        /*
+         * For constrained delegation this check must be performed by caller,
+         * as we can't decrypt the evidence ticket.  However, if it is a
+         * referral the client should match the TGT client like normal.
          */
         if (!krb5_principal_compare(context, dec_rep->client, tkt->client))
             retval = KRB5_KDCREP_MODIFIED;
@@ -342,7 +346,7 @@ krb5_get_cred_via_tkt_ext(krb5_context context, krb5_creds *tkt,
     krb5_timestamp timestamp;
     krb5_int32 nonce;
     krb5_keyblock *subkey = NULL;
-    int tcp_only = 0, use_master = 0;
+    int no_udp = 0;
     struct krb5int_fast_request_state *fast_state = NULL;
 
     request_data.data = NULL;
@@ -364,12 +368,11 @@ krb5_get_cred_via_tkt_ext(krb5_context context, krb5_creds *tkt,
         goto cleanup;
 
 send_again:
-    use_master = 0;
-    retval = krb5_sendto_kdc(context, &request_data, &in_cred->server->realm,
-                             &response_data, &use_master, tcp_only);
+    retval = k5_sendto_kdc(context, &request_data, &in_cred->server->realm,
+                           FALSE, no_udp, &response_data, NULL);
     if (retval == 0) {
         if (krb5_is_krb_error(&response_data)) {
-            if (!tcp_only) {
+            if (!no_udp) {
                 krb5_error *err_reply;
                 retval = decode_krb5_error(&response_data, &err_reply);
                 if (retval != 0)
@@ -379,7 +382,7 @@ send_again:
                 if (retval)
                     goto cleanup;
                 if (err_reply->error == KRB_ERR_RESPONSE_TOO_BIG) {
-                    tcp_only = 1;
+                    no_udp = 1;
                     krb5_free_error(context, err_reply);
                     krb5_free_data_contents(context, &response_data);
                     goto send_again;

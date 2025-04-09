@@ -17,7 +17,7 @@ static void test7(void);
 
 /* When run on a little-endian CPU we need to perform byte reversal on an
    array of longwords.  It is possible to make the code endianness-
-   independant by fiddling around with data at the byte level, but this
+   independent by fiddling around with data at the byte level, but this
    makes for very slow code, so we rely on the user to sort out endianness
    at compile time */
 
@@ -55,9 +55,7 @@ int mode;
 int Dflag;
 
 int
-main(argc,argv)
-    int argc;
-    char **argv;
+main(int argc, char **argv)
 {
     char *argp;
 
@@ -131,8 +129,7 @@ static void process(void)
 
 #ifndef shsDigest
 static unsigned char *
-shsDigest(si)
-    SHS_INFO *si;
+shsDigest(SHS_INFO *si)
 {
     longReverse(si->digest, SHS_DIGESTSIZE);
     return (unsigned char*) si->digest;

@@ -8,6 +8,8 @@ INCLUDES = """
 """
 
 TYPES = """
+static const int CIPHER_R_DATA_NOT_MULTIPLE_OF_BLOCK_LENGTH;
+
 static const int EVP_F_EVP_ENCRYPTFINAL_EX;
 static const int EVP_R_DATA_NOT_MULTIPLE_OF_BLOCK_LENGTH;
 static const int EVP_R_BAD_DECRYPT;
@@ -27,6 +29,10 @@ static const int SSL_TLSEXT_ERR_ALERT_FATAL;
 static const int SSL_TLSEXT_ERR_NOACK;
 
 static const int X509_R_CERT_ALREADY_IN_HASH_TABLE;
+
+static const int SSL_R_UNEXPECTED_EOF_WHILE_READING;
+
+static const int Cryptography_HAS_UNEXPECTED_EOF_WHILE_READING;
 """
 
 FUNCTIONS = """
@@ -51,7 +57,27 @@ CUSTOMIZATIONS = """
 #define ERR_LIB_PROV 0
 #endif
 
-#if !CRYPTOGRAPHY_OPENSSL_111D_OR_GREATER
+#if !CRYPTOGRAPHY_OPENSSL_111D_OR_GREATER || CRYPTOGRAPHY_IS_BORINGSSL
 static const int EVP_R_XTS_DUPLICATED_KEYS = 0;
+#endif
+
+#if CRYPTOGRAPHY_IS_BORINGSSL
+static const int ERR_LIB_PKCS12 = 0;
+static const int EVP_F_EVP_ENCRYPTFINAL_EX = 0;
+static const int EVP_R_BAD_DECRYPT = 0;
+static const int EVP_R_DATA_NOT_MULTIPLE_OF_BLOCK_LENGTH = 0;
+static const int EVP_R_UNSUPPORTED_PRIVATE_KEY_ALGORITHM = 0;
+static const int PKCS12_R_PKCS12_CIPHERFINAL_ERROR = 0;
+#else
+static const int CIPHER_R_DATA_NOT_MULTIPLE_OF_BLOCK_LENGTH = 0;
+#endif
+
+/* SSL_R_UNEXPECTED_EOF_WHILE_READING is needed for pyOpenSSL
+   with OpenSSL 3+ */
+#if defined(SSL_R_UNEXPECTED_EOF_WHILE_READING)
+#define Cryptography_HAS_UNEXPECTED_EOF_WHILE_READING 1
+#else
+#define Cryptography_HAS_UNEXPECTED_EOF_WHILE_READING 0
+#define SSL_R_UNEXPECTED_EOF_WHILE_READING 0
 #endif
 """

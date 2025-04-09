@@ -15,9 +15,9 @@ static const int RSA_NO_PADDING;
 static const int RSA_PKCS1_OAEP_PADDING;
 static const int RSA_PKCS1_PSS_PADDING;
 static const int RSA_F4;
+static const int RSA_PSS_SALTLEN_AUTO;
 
-static const int Cryptography_HAS_RSA_OAEP_MD;
-static const int Cryptography_HAS_RSA_OAEP_LABEL;
+static const int Cryptography_HAS_IMPLICIT_RSA_REJECTION;
 """
 
 FUNCTIONS = """
@@ -29,7 +29,6 @@ RSA *RSAPublicKey_dup(RSA *);
 int RSA_blinding_on(RSA *, BN_CTX *);
 int RSA_print(BIO *, const RSA *, int);
 
-/* added in 1.1.0 when the RSA struct was opaqued */
 int RSA_set0_key(RSA *, BIGNUM *, BIGNUM *, BIGNUM *);
 int RSA_set0_factors(RSA *, BIGNUM *, BIGNUM *);
 int RSA_set0_crt_params(RSA *, BIGNUM *, BIGNUM *, BIGNUM *);
@@ -47,14 +46,15 @@ int EVP_PKEY_CTX_set_rsa_oaep_md(EVP_PKEY_CTX *, EVP_MD *);
 """
 
 CUSTOMIZATIONS = """
-#if !CRYPTOGRAPHY_IS_LIBRESSL
-static const long Cryptography_HAS_RSA_OAEP_MD = 1;
-static const long Cryptography_HAS_RSA_OAEP_LABEL = 1;
+// BoringSSL doesn't define this constant, but the value is used for
+// automatic salt length computation as in OpenSSL and LibreSSL
+#if !defined(RSA_PSS_SALTLEN_AUTO)
+#define RSA_PSS_SALTLEN_AUTO -2
+#endif
+
+#if defined(EVP_PKEY_CTRL_RSA_IMPLICIT_REJECTION)
+static const int Cryptography_HAS_IMPLICIT_RSA_REJECTION = 1;
 #else
-static const long Cryptography_HAS_RSA_OAEP_MD = 0;
-static const long Cryptography_HAS_RSA_OAEP_LABEL = 0;
-int (*EVP_PKEY_CTX_set_rsa_oaep_md)(EVP_PKEY_CTX *, EVP_MD *) = NULL;
-int (*EVP_PKEY_CTX_set0_rsa_oaep_label)(EVP_PKEY_CTX *, unsigned char *,
-                                        int) = NULL;
+static const int Cryptography_HAS_IMPLICIT_RSA_REJECTION = 0;
 #endif
 """

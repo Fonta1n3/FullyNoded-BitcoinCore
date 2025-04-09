@@ -1,7 +1,7 @@
 /*
- * Copyright 1998-2017 The OpenSSL Project Authors. All Rights Reserved.
+ * Copyright 1998-2024 The OpenSSL Project Authors. All Rights Reserved.
  *
- * Licensed under the OpenSSL license (the "License").  You may not use
+ * Licensed under the Apache License 2.0 (the "License").  You may not use
  * this file except in compliance with the License.  You can obtain a copy
  * in the file LICENSE in the source distribution or at
  * https://www.openssl.org/source/license.html
@@ -27,13 +27,16 @@
 
 static volatile int done = 0;
 
-void interrupt(int sig)
+static void interrupt(int sig)
 {
     done = 1;
 }
 
-void sigsetup(void)
+static void sigsetup(void)
 {
+#if defined(OPENSSL_SYS_WINDOWS)
+    signal(SIGINT, interrupt);
+#else
     struct sigaction sa;
 
     /*
@@ -43,6 +46,7 @@ void sigsetup(void)
     sa.sa_handler = interrupt;
     sigemptyset(&sa.sa_mask);
     sigaction(SIGINT, &sa, NULL);
+#endif
 }
 
 int main(int argc, char *argv[])

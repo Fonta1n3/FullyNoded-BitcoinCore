@@ -25,6 +25,7 @@
  */
 
 #include "k5-int.h"
+#include "k5-der.h"
 #include "gssapiP_krb5.h"
 
 static OM_uint32
@@ -44,7 +45,6 @@ kg_unseal_v1_iov(krb5_context context,
     unsigned char *ptr;
     int sealalg;
     int signalg;
-    krb5_checksum cksum;
     krb5_checksum md5cksum;
     size_t cksum_len = 0;
     size_t conflen = 0;
@@ -54,8 +54,8 @@ kg_unseal_v1_iov(krb5_context context,
     size_t sumlen;
     krb5_keyusage sign_usage = KG_USAGE_SIGN;
 
-    md5cksum.length = cksum.length = 0;
-    md5cksum.contents = cksum.contents = NULL;
+    md5cksum.length = 0;
+    md5cksum.contents = NULL;
 
     header = kg_locate_header_iov(iov, iov_count, toktype);
     assert(header != NULL);
@@ -103,7 +103,6 @@ kg_unseal_v1_iov(krb5_context context,
     }
 
     if ((ctx->sealalg == SEAL_ALG_NONE && signalg > 1) ||
-        (ctx->sealalg == SEAL_ALG_1 && signalg != SGN_ALG_3) ||
         (ctx->sealalg == SEAL_ALG_DES3KD &&
          signalg != SGN_ALG_HMAC_SHA1_DES3_KD)||
         (ctx->sealalg == SEAL_ALG_MICROSOFT_RC4 &&
@@ -113,15 +112,10 @@ kg_unseal_v1_iov(krb5_context context,
     }
 
     switch (signalg) {
-    case SGN_ALG_DES_MAC_MD5:
-    case SGN_ALG_MD2_5:
     case SGN_ALG_HMAC_MD5:
         cksum_len = 8;
         if (toktype != KG_TOK_WRAP_MSG)
             sign_usage = 15;
-        break;
-    case SGN_ALG_3:
-        cksum_len = 16;
         break;
     case SGN_ALG_HMAC_SHA1_DES3_KD:
         cksum_len = 20;
@@ -189,12 +183,6 @@ kg_unseal_v1_iov(krb5_context context,
     /* initialize the checksum */
 
     switch (signalg) {
-    case SGN_ALG_DES_MAC_MD5:
-    case SGN_ALG_MD2_5:
-    case SGN_ALG_DES_MAC:
-    case SGN_ALG_3:
-        md5cksum.checksum_type = CKSUMTYPE_RSA_MD5;
-        break;
     case SGN_ALG_HMAC_MD5:
         md5cksum.checksum_type = CKSUMTYPE_HMAC_MD5_ARCFOUR;
         break;
@@ -223,23 +211,6 @@ kg_unseal_v1_iov(krb5_context context,
     }
 
     switch (signalg) {
-    case SGN_ALG_DES_MAC_MD5:
-    case SGN_ALG_3:
-        code = kg_encrypt_inplace(context, ctx->seq, KG_USAGE_SEAL,
-                                  (g_OID_equal(ctx->mech_used,
-                                               gss_mech_krb5_old) ?
-                                   ctx->seq->keyblock.contents : NULL),
-                                  md5cksum.contents, 16);
-        if (code != 0) {
-            retval = GSS_S_FAILURE;
-            goto cleanup;
-        }
-
-        cksum.length = cksum_len;
-        cksum.contents = md5cksum.contents + 16 - cksum.length;
-
-        code = k5_bcmp(cksum.contents, ptr + 14, cksum.length);
-        break;
     case SGN_ALG_HMAC_SHA1_DES3_KD:
     case SGN_ALG_HMAC_MD5:
         code = k5_bcmp(md5cksum.contents, ptr + 14, cksum_len);
@@ -311,12 +282,12 @@ kg_unseal_iov_token(OM_uint32 *minor_status,
 {
     krb5_error_code code;
     krb5_context context = ctx->k5_context;
-    unsigned char *ptr;
+    struct k5input in;
+    gss_OID_desc mech;
+    size_t tlen, header_tlen;
     gss_iov_buffer_t header;
     gss_iov_buffer_t padding;
     gss_iov_buffer_t trailer;
-    size_t input_length;
-    unsigned int bodysize;
     int toktype2;
 
     header = kg_locate_header_iov(iov, iov_count, toktype);
@@ -328,41 +299,32 @@ kg_unseal_iov_token(OM_uint32 *minor_status,
     padding = kg_locate_iov(iov, iov_count, GSS_IOV_BUFFER_TYPE_PADDING);
     trailer = kg_locate_iov(iov, iov_count, GSS_IOV_BUFFER_TYPE_TRAILER);
 
-    ptr = (unsigned char *)header->buffer.value;
-    input_length = header->buffer.length;
-
+    tlen = header->buffer.length;
     if ((ctx->gss_flags & GSS_C_DCE_STYLE) == 0 &&
         toktype == KG_TOK_WRAP_MSG) {
         size_t data_length, assoc_data_length;
 
         kg_iov_msglen(iov, iov_count, &data_length, &assoc_data_length);
 
-        input_length += data_length - assoc_data_length;
+        tlen += data_length - assoc_data_length;
 
         if (padding != NULL)
-            input_length += padding->buffer.length;
+            tlen += padding->buffer.length;
 
         if (trailer != NULL)
-            input_length += trailer->buffer.length;
+            tlen += trailer->buffer.length;
     }
 
-    code = g_verify_token_header(ctx->mech_used,
-                                 &bodysize, &ptr, -1,
-                                 input_length, 0);
-    if (code != 0) {
-        *minor_status = code;
-        return GSS_S_DEFECTIVE_TOKEN;
+    /* If there is a token header, advance past it and verify its mech and
+     * token length. */
+    k5_input_init(&in, header->buffer.value, header->buffer.length);
+    if (g_get_token_header(&in, &mech, &header_tlen)) {
+        if (!g_OID_equal(&mech, ctx->mech_used) || header_tlen != tlen) {
+            *minor_status = G_BAD_TOK_HEADER;
+            return GSS_S_DEFECTIVE_TOKEN;
+        }
     }
-
-    if (bodysize < 2) {
-        *minor_status = (OM_uint32)G_BAD_TOK_HEADER;
-        return GSS_S_DEFECTIVE_TOKEN;
-    }
-
-    toktype2 = load_16_be(ptr);
-
-    ptr += 2;
-    bodysize -= 2;
+    toktype2 = k5_input_get_uint16_be(&in);
 
     switch (toktype2) {
     case KG2_TOK_MIC_MSG:
@@ -375,7 +337,7 @@ kg_unseal_iov_token(OM_uint32 *minor_status,
     case KG_TOK_WRAP_MSG:
     case KG_TOK_DEL_CTX:
         code = kg_unseal_v1_iov(context, minor_status, ctx, iov, iov_count,
-                                (size_t)(ptr - (unsigned char *)header->buffer.value),
+                                (size_t)(in.ptr - (unsigned char *)header->buffer.value),
                                 conf_state, qop_state, toktype);
         break;
     default:
@@ -403,6 +365,7 @@ kg_unseal_stream_iov(OM_uint32 *minor_status,
                      int iov_count,
                      int toktype)
 {
+    struct k5input in;
     unsigned char *ptr;
     unsigned int bodysize;
     OM_uint32 code = 0, major_status = GSS_S_FAILURE;
@@ -425,23 +388,16 @@ kg_unseal_stream_iov(OM_uint32 *minor_status,
 
     ptr = (unsigned char *)stream->buffer.value;
 
-    code = g_verify_token_header(ctx->mech_used,
-                                 &bodysize, &ptr, -1,
-                                 stream->buffer.length, 0);
-    if (code != 0) {
-        major_status = GSS_S_DEFECTIVE_TOKEN;
-        goto cleanup;
-    }
-
-    if (bodysize < 2) {
+    k5_input_init(&in, stream->buffer.value, stream->buffer.length);
+    (void)g_verify_token_header(&in, ctx->mech_used);
+    toktype2 = k5_input_get_uint16_be(&in);
+    if (in.status) {
         *minor_status = (OM_uint32)G_BAD_TOK_HEADER;
         return GSS_S_DEFECTIVE_TOKEN;
     }
 
-    toktype2 = load_16_be(ptr);
-
-    ptr += 2;
-    bodysize -= 2;
+    ptr = (uint8_t *)in.ptr;
+    bodysize = in.len;
 
     tiov = (gss_iov_buffer_desc *)calloc((size_t)iov_count + 2, sizeof(gss_iov_buffer_desc));
     if (tiov == NULL) {

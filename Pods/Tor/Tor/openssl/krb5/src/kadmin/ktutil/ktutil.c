@@ -39,9 +39,8 @@ extern ss_request_table ktutil_cmds;
 krb5_context kcontext;
 krb5_kt_list ktlist = NULL;
 
-int main(argc, argv)
-    int argc;
-    char *argv[];
+int
+main(int argc, char *argv[])
 {
     krb5_error_code retval;
     int sci_idx;
@@ -63,9 +62,8 @@ int main(argc, argv)
     exit(0);
 }
 
-void ktutil_clear_list(argc, argv)
-    int argc;
-    char *argv[];
+void
+ktutil_clear_list(int argc, char *argv[], int sci_idx, void *info_ptr)
 {
     krb5_error_code retval;
 
@@ -79,9 +77,8 @@ void ktutil_clear_list(argc, argv)
     ktlist = NULL;
 }
 
-void ktutil_read_v5(argc, argv)
-    int argc;
-    char *argv[];
+void
+ktutil_read_v5(int argc, char *argv[], int sci_idx, void *info_ptr)
 {
     krb5_error_code retval;
 
@@ -94,24 +91,15 @@ void ktutil_read_v5(argc, argv)
         com_err(argv[0], retval, _("while reading keytab \"%s\""), argv[1]);
 }
 
-void ktutil_read_v4(argc, argv)
-    int argc;
-    char *argv[];
+void
+ktutil_read_v4(int argc, char *argv[], int sci_idx, void *info_ptr)
 {
-    krb5_error_code retval;
-
-    if (argc != 2) {
-        fprintf(stderr, _("%s: must specify the srvtab to read\n"), argv[0]);
-        return;
-    }
-    retval = ktutil_read_srvtab(kcontext, argv[1], &ktlist);
-    if (retval)
-        com_err(argv[0], retval, _("while reading srvtab \"%s\""), argv[1]);
+    fprintf(stderr, _("%s: reading srvtabs is no longer supported\n"),
+            argv[0]);
 }
 
-void ktutil_write_v5(argc, argv)
-    int argc;
-    char *argv[];
+void
+ktutil_write_v5(int argc, char *argv[], int sci_idx, void *info_ptr)
 {
     krb5_error_code retval;
 
@@ -124,17 +112,15 @@ void ktutil_write_v5(argc, argv)
         com_err(argv[0], retval, _("while writing keytab \"%s\""), argv[1]);
 }
 
-void ktutil_write_v4(argc, argv)
-    int argc;
-    char *argv[];
+void
+ktutil_write_v4(int argc, char *argv[], int sci_idx, void *info_ptr)
 {
     fprintf(stderr, _("%s: writing srvtabs is no longer supported\n"),
             argv[0]);
 }
 
-void ktutil_add_entry(argc, argv)
-    int argc;
-    char *argv[];
+void
+ktutil_add_entry(int argc, char *argv[], int sci_idx, void *info_ptr)
 {
     krb5_error_code retval;
     char *princ = NULL;
@@ -190,9 +176,8 @@ void ktutil_add_entry(argc, argv)
         com_err(argv[0], retval, _("while adding new entry"));
 }
 
-void ktutil_delete_entry(argc, argv)
-    int argc;
-    char *argv[];
+void
+ktutil_delete_entry(int argc, char *argv[], int sci_idx, void *info_ptr)
 {
     krb5_error_code retval;
 
@@ -205,9 +190,8 @@ void ktutil_delete_entry(argc, argv)
         com_err(argv[0], retval, _("while deleting entry %d"), atoi(argv[1]));
 }
 
-void ktutil_list(argc, argv)
-    int argc;
-    char *argv[];
+void
+ktutil_list(int argc, char *argv[], int sci_idx, void *info_ptr)
 {
     krb5_error_code retval;
     krb5_kt_list lp;
@@ -270,6 +254,7 @@ void ktutil_list(argc, argv)
                                                buf, sizeof(buf)))) {
                 com_err(argv[0], retval,
                         _("While converting enctype to string"));
+                free(pname);
                 return;
             }
             printf(" (%s) ", buf);

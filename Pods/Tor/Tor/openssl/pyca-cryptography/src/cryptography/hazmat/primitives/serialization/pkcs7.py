@@ -2,29 +2,40 @@
 # 2.0, and the BSD License. See the LICENSE file in the root of this repository
 # for complete details.
 
+import email.base64mime
+import email.generator
+import email.message
+import io
 import typing
 
 from cryptography import utils
 from cryptography import x509
-from cryptography.hazmat.backends import _get_backend
-from cryptography.hazmat.backends.interfaces import Backend
+from cryptography.hazmat.bindings._rust import pkcs7 as rust_pkcs7
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import ec, rsa
 from cryptography.utils import _check_byteslike
 
 
 def load_pem_pkcs7_certificates(data: bytes) -> typing.List[x509.Certificate]:
-    backend = _get_backend(None)
+    from cryptography.hazmat.backends.openssl.backend import backend
+
     return backend.load_pem_pkcs7_certificates(data)
 
 
 def load_der_pkcs7_certificates(data: bytes) -> typing.List[x509.Certificate]:
-    backend = _get_backend(None)
+    from cryptography.hazmat.backends.openssl.backend import backend
+
     return backend.load_der_pkcs7_certificates(data)
 
 
+def serialize_certificates(
+    certs: typing.List[x509.Certificate],
+    encoding: serialization.Encoding,
+) -> bytes:
+    return rust_pkcs7.serialize_certificates(certs, encoding)
+
+
 _ALLOWED_PKCS7_HASH_TYPES = typing.Union[
-    hashes.SHA1,
     hashes.SHA224,
     hashes.SHA256,
     hashes.SHA384,
@@ -45,8 +56,19 @@ class PKCS7Options(utils.Enum):
     NoCerts = "Don't embed signer certificate"
 
 
-class PKCS7SignatureBuilder(object):
-    def __init__(self, data=None, signers=[], additional_certs=[]):
+class PKCS7SignatureBuilder:
+    def __init__(
+        self,
+        data: typing.Optional[bytes] = None,
+        signers: typing.List[
+            typing.Tuple[
+                x509.Certificate,
+                _ALLOWED_PRIVATE_KEY_TYPES,
+                _ALLOWED_PKCS7_HASH_TYPES,
+            ]
+        ] = [],
+        additional_certs: typing.List[x509.Certificate] = [],
+    ):
         self._data = data
         self._signers = signers
         self._additional_certs = additional_certs
@@ -56,7 +78,7 @@ class PKCS7SignatureBuilder(object):
         if self._data is not None:
             raise ValueError("data may only be set once")
 
-        return PKCS7SignatureBuilder(data, self._signers)
+        return PKCS7SignatureBuilder(bytes(data), self._signers)
 
     def add_signer(
         self,
@@ -105,7 +127,7 @@ class PKCS7SignatureBuilder(object):
         self,
         encoding: serialization.Encoding,
         options: typing.Iterable[PKCS7Options],
-        backend: typing.Optional[Backend] = None,
+        backend: typing.Any = None,
     ) -> bytes:
         if len(self._signers) == 0:
             raise ValueError("Must have at least one signer")
@@ -153,5 +175,46 @@ class PKCS7SignatureBuilder(object):
                 "both values."
             )
 
-        backend = _get_backend(backend)
-        return backend.pkcs7_sign(self, encoding, options)
+        return rust_pkcs7.sign_and_serialize(self, encoding, options)
+
+
+def _smime_encode(data: bytes, signature: bytes, micalg: str) -> bytes:
+    # This function works pretty hard to replicate what OpenSSL does
+    # precisely. For good and for ill.
+
+    m = email.message.Message()
+    m.add_header("MIME-Version", "1.0")
+    m.add_header(
+        "Content-Type",
+        "multipart/signed",
+        protocol="application/x-pkcs7-signature",
+        micalg=micalg,
+    )
+
+    m.preamble = "This is an S/MIME signed message\n"
+
+    msg_part = email.message.MIMEPart()
+    msg_part.set_payload(data)
+    msg_part.add_header("Content-Type", "text/plain")
+    m.attach(msg_part)
+
+    sig_part = email.message.MIMEPart()
+    sig_part.add_header(
+        "Content-Type", "application/x-pkcs7-signature", name="smime.p7s"
+    )
+    sig_part.add_header("Content-Transfer-Encoding", "base64")
+    sig_part.add_header(
+        "Content-Disposition", "attachment", filename="smime.p7s"
+    )
+    sig_part.set_payload(
+        email.base64mime.body_encode(signature, maxlinelen=65)
+    )
+    del sig_part["MIME-Version"]
+    m.attach(sig_part)
+
+    fp = io.BytesIO()
+    g = email.generator.BytesGenerator(
+        fp, maxheaderlen=0, mangle_from_=False, policy=m.policy
+    )
+    g.flatten(m)
+    return fp.getvalue()

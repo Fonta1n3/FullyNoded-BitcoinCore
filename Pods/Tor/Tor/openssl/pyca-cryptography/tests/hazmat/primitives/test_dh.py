@@ -135,7 +135,11 @@ def test_dh_public_numbers_equality():
     assert public != object()
 
 
-class TestDH(object):
+@pytest.mark.supported(
+    only_if=lambda backend: backend.dh_supported(),
+    skip_message="DH not supported",
+)
+class TestDH:
     def test_small_key_generate_dh(self, backend):
         with pytest.raises(ValueError):
             dh.generate_parameters(2, 511, backend)
@@ -143,6 +147,10 @@ class TestDH(object):
     def test_unsupported_generator_generate_dh(self, backend):
         with pytest.raises(ValueError):
             dh.generate_parameters(7, 512, backend)
+
+    def test_large_key_generate_dh(self):
+        with pytest.raises(ValueError):
+            dh.generate_parameters(2, 1 << 30)
 
     @pytest.mark.skip_fips(reason="non-FIPS parameters")
     def test_dh_parameters_supported(self, backend):
@@ -457,7 +465,11 @@ class TestDH(object):
         assert int.from_bytes(symkey2, "big") == int(vector["z"], 16)
 
 
-class TestDHPrivateKeySerialization(object):
+@pytest.mark.supported(
+    only_if=lambda backend: backend.dh_supported(),
+    skip_message="DH not supported",
+)
+class TestDHPrivateKeySerialization:
     @pytest.mark.parametrize(
         ("encoding", "loader_func"),
         [
@@ -644,7 +656,11 @@ class TestDHPrivateKeySerialization(object):
             )
 
 
-class TestDHPublicKeySerialization(object):
+@pytest.mark.supported(
+    only_if=lambda backend: backend.dh_supported(),
+    skip_message="DH not supported",
+)
+class TestDHPublicKeySerialization:
     @pytest.mark.parametrize(
         ("encoding", "loader_func"),
         [
@@ -773,7 +789,11 @@ class TestDHPublicKeySerialization(object):
             )
 
 
-class TestDHParameterSerialization(object):
+@pytest.mark.supported(
+    only_if=lambda backend: backend.dh_supported(),
+    skip_message="DH not supported",
+)
+class TestDHParameterSerialization:
     @pytest.mark.parametrize(
         ("encoding", "loader_func"),
         [

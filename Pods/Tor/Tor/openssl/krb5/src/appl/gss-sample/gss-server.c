@@ -73,7 +73,7 @@ static OM_uint32
 showLocalIdentity(OM_uint32 *minor, gss_name_t name);
 
 static void
-usage()
+usage(void)
 {
     fprintf(stderr, "Usage: gss-server [-port port] [-verbose] [-once]");
 #ifdef _WIN32
@@ -106,7 +106,7 @@ int     verbose = 0;
  * Effects:
  *
  * The service name is imported with gss_import_name, and service
- * credentials are acquired with gss_acquire_cred.  If either opertion
+ * credentials are acquired with gss_acquire_cred.  If either operation
  * fails, an error message is displayed and -1 is returned; otherwise,
  * 0 is returned.  If mech is given, credentials are acquired for the
  * specified mechanism.
@@ -138,12 +138,11 @@ server_acquire_creds(char *service_name, gss_OID mech,
     }
     maj_stat = gss_acquire_cred(&min_stat, server_name, 0, mechs, GSS_C_ACCEPT,
                                 server_creds, NULL, NULL);
+    (void) gss_release_name(&min_stat, &server_name);
     if (maj_stat != GSS_S_COMPLETE) {
         display_status("acquiring credentials", maj_stat, min_stat);
         return -1;
     }
-
-    (void) gss_release_name(&min_stat, &server_name);
 
     return 0;
 }
@@ -766,8 +765,6 @@ main(int argc, char **argv)
         int     stmp;
 
         if ((stmp = create_socket(port)) >= 0) {
-            if (listen(stmp, max_threads == 1 ? 0 : max_threads) < 0)
-                perror("listening on socket");
             fprintf(stderr, "starting...\n");
 
             do {

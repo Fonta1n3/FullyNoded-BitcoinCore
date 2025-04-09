@@ -21,15 +21,8 @@ static char const twentyfive_spaces[26] =
 static char const NL[2] = "\n";
 
 void
-ss_list_requests(argc, argv, sci_idx, info_ptr)
-    int argc;
-    const char * const *argv;
-    int sci_idx;
-#ifdef __STDC__
-    void *info_ptr;
-#else
-    char *info_ptr;
-#endif
+ss_list_requests(int argc, const char * const *argv, int sci_idx,
+                 void *info_ptr)
 {
     ss_request_entry *entry;
     char const *const *name;
@@ -44,7 +37,7 @@ ss_list_requests(argc, argv, sci_idx, info_ptr)
     sigset_t nmask, omask;
 #else
     int mask;
-    RETSIGTYPE (*func)();
+    void (*func)();
 #endif
 #ifndef WAIT_USES_INT
     union wait waitb;

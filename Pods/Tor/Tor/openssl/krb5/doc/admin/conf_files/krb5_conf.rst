@@ -35,12 +35,6 @@ or::
         baz = quux
     }
 
-Placing a '\*' after the closing bracket of a section name indicates
-that the section is *final*, meaning that if the same section appears
-within a later file specified in **KRB5_CONFIG**, it will be ignored.
-A subsection can be marked as final by placing a '\*' after either the
-tag name or the closing brace.
-
 The krb5.conf file can include other files using either of the
 following directives at the beginning of a line::
 
@@ -57,6 +51,16 @@ independent of their parents, so each included file must begin with a
 section header.  Starting in release 1.17, files are read in
 alphanumeric order; in previous releases, they may be read in any
 order.
+
+Placing a '\*' after the closing bracket of a section name indicates
+that the section is *final*, meaning that if the same section appears
+again later, it will be ignored.  A subsection can be marked as final
+by placing a '\*' after either the tag name or the closing brace.  A
+relation can be marked as final by placing a '\*' after the tag name.
+Prior to release 1.22, only sections and subsections can be marked as
+final, and the flag only causes values to be ignored if they appear in
+later files specified in **KRB5_CONFIG**, not if they appear later
+within the same file or an included file.
 
 The krb5.conf file can specify that configuration should be obtained
 from a loadable module, rather than the file itself, using the
@@ -95,23 +99,24 @@ Additionally, krb5.conf may include any of the relations described in
 
 The libdefaults section may contain any of the following relations:
 
+**allow_des3**
+    Permit the KDC to issue tickets with des3-cbc-sha1 session keys.
+    In future releases, this flag will allow des3-cbc-sha1 to be used
+    at all.  The default value for this tag is false.  (Added in
+    release 1.21.)
+
+**allow_rc4**
+    Permit the KDC to issue tickets with arcfour-hmac session keys.
+    In future releases, this flag will allow arcfour-hmac to be used
+    at all.  The default value for this tag is false.  (Added in
+    release 1.21.)
+
 **allow_weak_crypto**
     If this flag is set to false, then weak encryption types (as noted
     in :ref:`Encryption_types` in :ref:`kdc.conf(5)`) will be filtered
     out of the lists **default_tgs_enctypes**,
     **default_tkt_enctypes**, and **permitted_enctypes**.  The default
-    value for this tag is false, which may cause authentication
-    failures in existing Kerberos infrastructures that do not support
-    strong crypto.  Users in affected environments should set this tag
-    to true until their infrastructure adopts stronger ciphers.
-
-**ap_req_checksum_type**
-    An integer which specifies the type of AP-REQ checksum to use in
-    authenticators.  This variable should be unset so the appropriate
-    checksum for the encryption key in use will be used.  This can be
-    set if backward compatibility requires a specific checksum type.
-    See the **kdc_req_checksum_type** configuration option for the
-    possible values and their meanings.
+    value for this tag is false.
 
 **canonicalize**
     If this flag is set to true, initial ticket requests to the KDC
@@ -153,6 +158,11 @@ The libdefaults section may contain any of the following relations:
     application servers such as sshd.  The default is |keytab|.  This
     relation is subject to parameter expansion (see below).
 
+**default_rcache_name**
+    This relation specifies the name of the default replay cache.
+    The default is ``dfl:``.  This relation is subject to parameter
+    expansion (see below).  New in release 1.18.
+
 **default_realm**
     Identifies the default Kerberos realm for the client.  Set its
     value to your Kerberos realm.  If this value is not set, then a
@@ -165,9 +175,10 @@ The libdefaults section may contain any of the following relations:
     preference from highest to lowest.  The list may be delimited with
     commas or whitespace.  See :ref:`Encryption_types` in
     :ref:`kdc.conf(5)` for a list of the accepted values for this tag.
-    The default value is |defetypes|, but single-DES encryption types
-    will be implicitly removed from this list if the value of
-    **allow_weak_crypto** is false.
+    Starting in release 1.18, the default value is the value of
+    **permitted_enctypes**.  For previous releases or if
+    **permitted_enctypes** is not set, the default value is
+    |defetypes|.
 
     Do not set this unless required for specific backward
     compatibility purposes; stale values of this setting can prevent
@@ -178,10 +189,10 @@ The libdefaults section may contain any of the following relations:
     Identifies the supported list of session key encryption types that
     the client should request when making an AS-REQ, in order of
     preference from highest to lowest.  The format is the same as for
-    default_tgs_enctypes.  The default value for this tag is
-    |defetypes|, but single-DES encryption types will be implicitly
-    removed from this list if the value of **allow_weak_crypto** is
-    false.
+    default_tgs_enctypes.  Starting in release 1.18, the default
+    value is the value of **permitted_enctypes**.  For previous
+    releases or if **permitted_enctypes** is not set, the default
+    value is |defetypes|.
 
     Do not set this unless required for specific backward
     compatibility purposes; stale values of this setting can prevent
@@ -193,7 +204,10 @@ The libdefaults section may contain any of the following relations:
     hostnames for use in service principal names.  Setting this flag
     to false can improve security by reducing reliance on DNS, but
     means that short hostnames will not be canonicalized to
-    fully-qualified hostnames.  The default value is true.
+    fully-qualified hostnames.  If this option is set to ``fallback`` (new
+    in release 1.18), DNS canonicalization will only be performed the
+    server hostname is not found with the original name when
+    requesting credentials.  The default value is true.
 
 **dns_lookup_kdc**
     Indicate whether DNS SRV records should be used to locate the KDCs
@@ -217,6 +231,13 @@ The libdefaults section may contain any of the following relations:
     krb5.conf information for the realm.  SRV records are used as a
     fallback if no URI records were found.  The default value is true.
     New in release 1.15.
+
+**enforce_ok_as_delegate**
+    If this flag to true, GSSAPI credential delegation will be
+    disabled when the ``ok-as-delegate`` flag is not set in the
+    service ticket.  If this flag is false, the ``ok-as-delegate``
+    ticket flag is only enforced when an application specifically
+    requests enforcement.  The default value is false.
 
 **err_fmt**
     This relation allows for custom error message formatting.  If a
@@ -287,37 +308,18 @@ The libdefaults section may contain any of the following relations:
     corrective factor is only used by the Kerberos library; it is not
     used to change the system clock.  The default value is 1.
 
-**kdc_req_checksum_type**
-    An integer which specifies the type of checksum to use for the KDC
-    requests, for compatibility with very old KDC implementations.
-    This value is only used for DES keys; other keys use the preferred
-    checksum type for those keys.
-
-    The possible values and their meanings are as follows.
-
-    ======== ===============================
-    1        CRC32
-    2        RSA MD4
-    3        RSA MD4 DES
-    4        DES CBC
-    7        RSA MD5
-    8        RSA MD5 DES
-    9        NIST SHA
-    12       HMAC SHA1 DES3
-    -138     Microsoft MD5 HMAC checksum type
-    ======== ===============================
-
 **noaddresses**
     If this flag is true, requests for initial tickets will not be
     made with address restrictions set, allowing the tickets to be
     used across NATs.  The default value is true.
 
 **permitted_enctypes**
-    Identifies all encryption types that are permitted for use in
-    session key encryption.  The default value for this tag is
-    |defetypes|, but single-DES encryption types will be implicitly
-    removed from this list if the value of **allow_weak_crypto** is
-    false.
+    Identifies the encryption types that servers will permit for
+    session keys and for ticket and authenticator encryption, ordered
+    by preference from highest to lowest.  Starting in release 1.18,
+    this tag also acts as the default value for
+    **default_tgs_enctypes** and **default_tkt_enctypes**.  The
+    default value for this tag is |defetypes|.
 
 **plugin_base_dir**
     If set, determines the base directory where krb5 plugins are
@@ -334,6 +336,15 @@ The libdefaults section may contain any of the following relations:
 **proxiable**
     If this flag is true, initial tickets will be proxiable by
     default, if allowed by the KDC.  The default value is false.
+
+**qualify_shortname**
+    If this string is set, it determines the domain suffix for
+    single-component hostnames when DNS canonicalization is not used
+    (either because **dns_canonicalize_hostname** is false or because
+    forward canonicalization failed).  The default value is the first
+    search domain of the system's DNS configuration.  To disable
+    qualification of shortnames, set this relation to the empty string
+    with ``qualify_shortname = ""``.  (New in release 1.18.)
 
 **rdns**
     If this flag is true, reverse name lookup will be used in addition
@@ -355,14 +366,14 @@ The libdefaults section may contain any of the following relations:
     (:ref:`duration` string.)  Sets the default renewable lifetime
     for initial ticket requests.  The default value is 0.
 
-**safe_checksum_type**
-    An integer which specifies the type of checksum to use for the
-    KRB-SAFE requests.  By default it is set to 8 (RSA MD5 DES).  For
-    compatibility with applications linked against DCE version 1.1 or
-    earlier Kerberos libraries, use a value of 3 to use the RSA MD4
-    DES instead.  This field is ignored when its value is incompatible
-    with the session key type.  See the **kdc_req_checksum_type**
-    configuration option for the possible values and their meanings.
+**request_timeout**
+    (:ref:`duration` string.)  Sets the maximum total time for KDC and
+    password change requests.  This timeout does not affect the
+    intervals between requests, so setting a low timeout may result in
+    fewer requests being attempted and/or some servers not being
+    contacted.  A value of 0 indicates no specific maximum, in which
+    case requests will time out if no server responds after several
+    tries.  The default value is 0.  (New in release 1.22.)
 
 **spake_preauth_groups**
     A whitespace or comma-separated list of words which specifies the
@@ -396,6 +407,12 @@ The libdefaults section may contain any of the following relations:
     credentials will fail if the client machine does not have a
     keytab.  The default value is false.
 
+**client_aware_channel_bindings**
+    If this flag is true, then all application protocol authentication
+    requests will be flagged to indicate that the application supports
+    channel bindings when operating over a secure channel.  The
+    default value is false.
+
 .. _realms:
 
 [realms]
@@ -408,7 +425,7 @@ following tags may be specified in the realm's subsection:
 
 **admin_server**
     Identifies the host where the administration server is running.
-    Typically, this is the master Kerberos server.  This tag must be
+    Typically, this is the primary Kerberos server.  This tag must be
     given a value in order to communicate with the :ref:`kadmind(8)`
     server for the realm.
 
@@ -523,12 +540,20 @@ following tags may be specified in the realm's subsection:
     host will be tried.
 
 **master_kdc**
-    Identifies the master KDC(s).  Currently, this tag is used in only
+    The name for **primary_kdc** prior to release 1.19.  Its value is
+    used as a fallback if **primary_kdc** is not specified.
+
+**primary_kdc**
+    Identifies the primary KDC(s).  Currently, this tag is used in only
     one case: If an attempt to get credentials fails because of an
     invalid password, the client software will attempt to contact the
-    master KDC, in case the user's password has just been changed, and
+    primary KDC, in case the user's password has just been changed, and
     the updated database has not been propagated to the replica
-    servers yet.
+    servers yet.  New in release 1.19.
+
+**sitename**
+    Specifies the name of the host's site for the purpose of DNS-based
+    KDC discovery for this realm.  New in release 1.22.
 
 **v4_instance_convert**
     This subsection allows the administrator to configure exceptions
@@ -550,15 +575,12 @@ following tags may be specified in the realm's subsection:
 [domain_realm]
 ~~~~~~~~~~~~~~
 
-The [domain_realm] section provides a translation from a domain name
-or hostname to a Kerberos realm name.  The tag name can be a host name
-or domain name, where domain names are indicated by a prefix of a
-period (``.``).  The value of the relation is the Kerberos realm name
-for that particular host or domain.  A host name relation implicitly
-provides the corresponding domain name relation, unless an explicit domain
-name relation is provided.  The Kerberos realm may be
+The [domain_realm] section provides a translation from hostnames to
+Kerberos realms.  Each tag is a domain name, providing the mapping for
+that domain and all subdomains.  If the tag begins with a period
+(``.``) then it applies only to subdomains.  The Kerberos realm may be
 identified either in the realms_ section or using DNS SRV records.
-Host names and domain names should be in lower case.  For example::
+Tag names should be in lower case.  For example::
 
     [domain_realm]
         crash.mit.edu = TEST.ATHENA.MIT.EDU
@@ -1018,7 +1040,7 @@ information for PKINIT is as follows:
     All keyword/values are optional.  *modname* specifies the location
     of a library implementing PKCS #11.  If a value is encountered
     with no keyword, it is assumed to be the *modname*.  If no
-    module-name is specified, the default is ``opensc-pkcs11.so``.
+    module-name is specified, the default is |pkcs11_modname|.
     ``slotid=`` and/or ``token=`` may be specified to force the use of
     a particular smard card reader or token if there is more than one
     available.  ``certid=`` and/or ``certlabel=`` may be specified to
@@ -1123,20 +1145,20 @@ PKINIT krb5.conf options
         option is not recommended.
 
 **pkinit_dh_min_bits**
-    Specifies the size of the Diffie-Hellman key the client will
-    attempt to use.  The acceptable values are 1024, 2048, and 4096.
-    The default is 2048.
+    Specifies the group of the Diffie-Hellman key the client will
+    attempt to use.  The acceptable values are 1024, 2048, P-256,
+    4096, P-384, and P-521.  The default is 2048.  (P-256, P-384, and
+    P-521 are new in release 1.22.)
 
 **pkinit_identities**
     Specifies the location(s) to be used to find the user's X.509
     identity information.  If this option is specified multiple times,
-    the first valid value is used; this can be used to specify an
-    environment variable (with **ENV:**\ *envvar*) followed by a
-    default value.  Note that these values are not used if the user
-    specifies **X509_user_identity** on the command line.
+    each value is attempted in order until certificates are found.
+    Note that these values are not used if the user specifies
+    **X509_user_identity** on the command line.
 
 **pkinit_kdc_hostname**
-    The presense of this option indicates that the client is willing
+    The presence of this option indicates that the client is willing
     to accept a KDC certificate with a dNSName SAN (Subject
     Alternative Name) rather than requiring the id-pkinit-san as
     defined in :rfc:`4556`.  This option may be specified multiple
@@ -1216,7 +1238,7 @@ Here is an example of a generic krb5.conf file::
             kdc = kerberos-1.mit.edu
             kdc = kerberos-2.mit.edu
             admin_server = kerberos.mit.edu
-            master_kdc = kerberos.mit.edu
+            primary_kdc = kerberos.mit.edu
         }
         EXAMPLE.COM = {
             kdc = kerberos.example.com

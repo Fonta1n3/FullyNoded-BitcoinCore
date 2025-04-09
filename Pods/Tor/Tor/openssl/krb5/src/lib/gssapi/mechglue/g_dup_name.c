@@ -51,12 +51,8 @@ val_dup_name_args(
 
 
 OM_uint32 KRB5_CALLCONV
-gss_duplicate_name(minor_status,
-		src_name,
-		dest_name)
-OM_uint32 *minor_status;
-const gss_name_t src_name;
-gss_name_t *dest_name;
+gss_duplicate_name(OM_uint32 *minor_status, const gss_name_t src_name,
+		   gss_name_t *dest_name)
 {
 		gss_union_name_t src_union, dest_union;
 		OM_uint32 major_status = GSS_S_FAILURE;
@@ -81,7 +77,7 @@ gss_name_t *dest_name;
 	dest_union->name_type = 0;
 	dest_union->external_name = 0;
 
-	/* Now copy the external representaion */
+	/* Now copy the external representation. */
 	if (gssint_create_copy_buffer(src_union->external_name,
 				&dest_union->external_name, 0))
 		goto allocation_failure;

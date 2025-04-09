@@ -1,10 +1,20 @@
 #!/bin/bash
 
+if [[ "$1" = "--no-lzma" ]]; then
+    LZMA="no"
+else
+    LZMA="yes"
+fi
+
 ARCHS=($ARCHS)
 
 # We need gettext to build Tor.
 # This extends the path to look in some common locations (for example, if installed via Homebrew).
 PATH=$PATH:/usr/local/bin:/usr/local/opt/gettext/bin:/usr/local/opt/automake/bin:/usr/local/opt/aclocal/bin:/opt/homebrew/bin
+
+## Apply patches:
+git apply --quiet ../mmap-cache.patch
+git apply --quiet ../free-and-null.patch
 
 # If there is a space in BUILT_PRODUCTS_DIR, make a symlink without a space and use that.
 if [[ "${BUILT_PRODUCTS_DIR}" =~ \  ]]; then
@@ -27,8 +37,6 @@ touch "${PSEUDO_SYS_INCLUDE_DIR}/sys/ptrace.h"
 
 if [[ "${BITCODE_GENERATION_MODE}" = "bitcode" ]]; then
     BITCODE_CFLAGS="-fembed-bitcode"
-elif [[ "${BITCODE_GENERATION_MODE}" = "marker" ]]; then
-    BITCODE_CFLAGS="-fembed-bitcode-marker"
 fi
 
 if [[ "${CONFIGURATION}" = "Debug" ]]; then
@@ -52,7 +60,7 @@ function configure {
     # off with `-DOPENSSL_NO_ENGINE`. Remove that, when the underlying problem
     # is fixed!
 
-    ./configure --enable-silent-rules --enable-pic --disable-module-relay --disable-module-dirauth --disable-tool-name-check --disable-unittests --enable-static-openssl --enable-static-libevent --disable-asciidoc --disable-system-torrc --disable-linker-hardening --disable-dependency-tracking --disable-manpage --disable-html-manual --disable-gcc-warnings-advisory --prefix="${CONFIGURATION_TEMP_DIR}/tor-${ARCH}" --with-libevent-dir="${BUILT_PRODUCTS_DIR}" --with-openssl-dir="${BUILT_PRODUCTS_DIR}" --enable-lzma --enable-zstd=no CC="$(xcrun -f --sdk ${PLATFORM_NAME} clang) -arch ${ARCH} -isysroot ${SDKROOT}" CPP="$(xcrun -f --sdk ${PLATFORM_NAME} clang) -E -arch ${ARCH} -isysroot ${SDKROOT}" CPPFLAGS="${DEBUG_CFLAGS} ${BITCODE_CFLAGS} -I${PODS_TARGET_SRCROOT}/Tor/tor/src/core -I${PODS_TARGET_SRCROOT}/Tor/include -I${PODS_TARGET_SRCROOT}/Tor/openssl/include -I${BUILT_PRODUCTS_DIR}/openssl-${ARCH} -I${PODS_TARGET_SRCROOT}/Tor/libevent/include -I${BUILT_PRODUCTS_DIR}/libevent-${ARCH} -I${BUILT_PRODUCTS_DIR}/liblzma-${ARCH} -I${PSEUDO_SYS_INCLUDE_DIR} -isysroot ${SDKROOT} -DOPENSSL_NO_ENGINE" cross_compiling="yes" ac_cv_func__NSGetEnviron="no" ac_cv_func_clock_gettime="no" ac_cv_func_getentropy="no" LDFLAGS="-lz ${BITCODE_CFLAGS}"
+    ./configure --enable-silent-rules --enable-pic --disable-module-relay --disable-module-dirauth --disable-tool-name-check --disable-unittests --enable-static-openssl --enable-static-libevent --disable-asciidoc --disable-system-torrc --disable-linker-hardening --disable-dependency-tracking --disable-manpage --disable-html-manual --disable-gcc-warnings-advisory --prefix="${CONFIGURATION_TEMP_DIR}/tor-${ARCH}" --with-libevent-dir="${BUILT_PRODUCTS_DIR}" --with-openssl-dir="${BUILT_PRODUCTS_DIR}" --enable-lzma=${LZMA} --enable-zstd=no CC="$(xcrun -f --sdk ${PLATFORM_NAME} clang) -arch ${ARCH} -isysroot ${SDKROOT}" CPP="$(xcrun -f --sdk ${PLATFORM_NAME} clang) -E -arch ${ARCH} -isysroot ${SDKROOT}" CPPFLAGS="${DEBUG_CFLAGS} ${BITCODE_CFLAGS} -I${PODS_TARGET_SRCROOT}/Tor/tor/src/core -I${PODS_TARGET_SRCROOT}/Tor/include -I${PODS_TARGET_SRCROOT}/Tor/openssl/include -I${BUILT_PRODUCTS_DIR}/openssl-${ARCH} -I${PODS_TARGET_SRCROOT}/Tor/libevent/include -I${BUILT_PRODUCTS_DIR}/libevent-${ARCH} -I${BUILT_PRODUCTS_DIR}/liblzma-${ARCH} -I${PSEUDO_SYS_INCLUDE_DIR} -isysroot ${SDKROOT} -DOPENSSL_NO_ENGINE" cross_compiling="yes" ac_cv_func__NSGetEnviron="no" ac_cv_func_clock_gettime="no" ac_cv_func_getentropy="no" LDFLAGS="-lz ${BITCODE_CFLAGS}"
 
     LAST_CONFIGURED_ARCH=$ARCH
 }

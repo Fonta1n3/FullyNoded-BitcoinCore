@@ -58,17 +58,10 @@
    conf_state is only valid if SEAL. */
 
 static OM_uint32
-kg_unseal_v1(context, minor_status, ctx, ptr, bodysize, message_buffer,
-             conf_state, qop_state, toktype)
-    krb5_context context;
-    OM_uint32 *minor_status;
-    krb5_gss_ctx_id_rec *ctx;
-    unsigned char *ptr;
-    int bodysize;
-    gss_buffer_t message_buffer;
-    int *conf_state;
-    gss_qop_t *qop_state;
-    int toktype;
+kg_unseal_v1(krb5_context context, OM_uint32 *minor_status,
+             krb5_gss_ctx_id_rec *ctx, unsigned char *ptr, int bodysize,
+             gss_buffer_t message_buffer, int *conf_state,
+             gss_qop_t *qop_state, int toktype)
 {
     krb5_error_code code;
     int conflen = 0;
@@ -76,7 +69,6 @@ kg_unseal_v1(context, minor_status, ctx, ptr, bodysize, message_buffer,
     int sealalg;
     int bad_pad = 0;
     gss_buffer_desc token;
-    krb5_checksum cksum;
     krb5_checksum md5cksum;
     krb5_data plaind;
     char *data_ptr;
@@ -132,7 +124,6 @@ kg_unseal_v1(context, minor_status, ctx, ptr, bodysize, message_buffer,
        but few enough that we can try them all. */
 
     if ((ctx->sealalg == SEAL_ALG_NONE && signalg > 1) ||
-        (ctx->sealalg == SEAL_ALG_1 && signalg != SGN_ALG_3) ||
         (ctx->sealalg == SEAL_ALG_DES3KD &&
          signalg != SGN_ALG_HMAC_SHA1_DES3_KD)||
         (ctx->sealalg == SEAL_ALG_MICROSOFT_RC4 &&
@@ -142,15 +133,10 @@ kg_unseal_v1(context, minor_status, ctx, ptr, bodysize, message_buffer,
     }
 
     switch (signalg) {
-    case SGN_ALG_DES_MAC_MD5:
-    case SGN_ALG_MD2_5:
     case SGN_ALG_HMAC_MD5:
         cksum_len = 8;
         if (toktype != KG_TOK_SEAL_MSG)
             sign_usage = 15;
-        break;
-    case SGN_ALG_3:
-        cksum_len = 16;
         break;
     case SGN_ALG_HMAC_SHA1_DES3_KD:
         cksum_len = 20;
@@ -260,12 +246,6 @@ kg_unseal_v1(context, minor_status, ctx, ptr, bodysize, message_buffer,
 
     /* initialize the the cksum */
     switch (signalg) {
-    case SGN_ALG_DES_MAC_MD5:
-    case SGN_ALG_MD2_5:
-    case SGN_ALG_DES_MAC:
-    case SGN_ALG_3:
-        md5cksum.checksum_type = CKSUMTYPE_RSA_MD5;
-        break;
     case SGN_ALG_HMAC_MD5:
         md5cksum.checksum_type = CKSUMTYPE_HMAC_MD5_ARCFOUR;
         break;
@@ -282,105 +262,6 @@ kg_unseal_v1(context, minor_status, ctx, ptr, bodysize, message_buffer,
     md5cksum.length = sumlen;
 
     switch (signalg) {
-    case SGN_ALG_DES_MAC_MD5:
-    case SGN_ALG_3:
-        /* compute the checksum of the message */
-
-        /* 8 = bytes of token body to be checksummed according to spec */
-
-        if (! (data_ptr = xmalloc(8 + plainlen))) {
-            if (sealalg != 0xffff)
-                xfree(plain);
-            if (toktype == KG_TOK_SEAL_MSG)
-                gssalloc_free(token.value);
-            *minor_status = ENOMEM;
-            return(GSS_S_FAILURE);
-        }
-
-        (void) memcpy(data_ptr, ptr-2, 8);
-
-        (void) memcpy(data_ptr+8, plain, plainlen);
-
-        plaind.length = 8 + plainlen;
-        plaind.data = data_ptr;
-        code = krb5_k_make_checksum(context, md5cksum.checksum_type,
-                                    ctx->seq, sign_usage,
-                                    &plaind, &md5cksum);
-        xfree(data_ptr);
-
-        if (code) {
-            if (toktype == KG_TOK_SEAL_MSG)
-                gssalloc_free(token.value);
-            *minor_status = code;
-            return(GSS_S_FAILURE);
-        }
-
-        code = kg_encrypt_inplace(context, ctx->seq, KG_USAGE_SEAL,
-                                  (g_OID_equal(ctx->mech_used,
-                                               gss_mech_krb5_old) ?
-                                   ctx->seq->keyblock.contents : NULL),
-                                  md5cksum.contents, 16);
-        if (code) {
-            krb5_free_checksum_contents(context, &md5cksum);
-            if (toktype == KG_TOK_SEAL_MSG)
-                gssalloc_free(token.value);
-            *minor_status = code;
-            return GSS_S_FAILURE;
-        }
-
-        if (signalg == 0)
-            cksum.length = 8;
-        else
-            cksum.length = 16;
-        cksum.contents = md5cksum.contents + 16 - cksum.length;
-
-        code = k5_bcmp(cksum.contents, ptr + 14, cksum.length);
-        break;
-
-    case SGN_ALG_MD2_5:
-        if (!ctx->seed_init &&
-            (code = kg_make_seed(context, ctx->subkey, ctx->seed))) {
-            krb5_free_checksum_contents(context, &md5cksum);
-            if (sealalg != 0xffff)
-                xfree(plain);
-            if (toktype == KG_TOK_SEAL_MSG)
-                gssalloc_free(token.value);
-            *minor_status = code;
-            return GSS_S_FAILURE;
-        }
-
-        if (! (data_ptr = xmalloc(sizeof(ctx->seed) + 8 + plainlen))) {
-            krb5_free_checksum_contents(context, &md5cksum);
-            if (sealalg == 0)
-                xfree(plain);
-            if (toktype == KG_TOK_SEAL_MSG)
-                gssalloc_free(token.value);
-            *minor_status = ENOMEM;
-            return(GSS_S_FAILURE);
-        }
-        (void) memcpy(data_ptr, ptr-2, 8);
-        (void) memcpy(data_ptr+8, ctx->seed, sizeof(ctx->seed));
-        (void) memcpy(data_ptr+8+sizeof(ctx->seed), plain, plainlen);
-        plaind.length = 8 + sizeof(ctx->seed) + plainlen;
-        plaind.data = data_ptr;
-        krb5_free_checksum_contents(context, &md5cksum);
-        code = krb5_k_make_checksum(context, md5cksum.checksum_type,
-                                    ctx->seq, sign_usage,
-                                    &plaind, &md5cksum);
-        xfree(data_ptr);
-
-        if (code) {
-            if (sealalg == 0)
-                xfree(plain);
-            if (toktype == KG_TOK_SEAL_MSG)
-                gssalloc_free(token.value);
-            *minor_status = code;
-            return(GSS_S_FAILURE);
-        }
-
-        code = k5_bcmp(md5cksum.contents, ptr + 14, 8);
-        /* Falls through to defective-token??  */
-
     default:
         *minor_status = 0;
         return(GSS_S_DEFECTIVE_TOKEN);
@@ -472,23 +353,14 @@ kg_unseal_v1(context, minor_status, ctx, ptr, bodysize, message_buffer,
    conf_state is only valid if SEAL. */
 
 OM_uint32
-kg_unseal(minor_status, context_handle, input_token_buffer,
-          message_buffer, conf_state, qop_state, toktype)
-    OM_uint32 *minor_status;
-    gss_ctx_id_t context_handle;
-    gss_buffer_t input_token_buffer;
-    gss_buffer_t message_buffer;
-    int *conf_state;
-    gss_qop_t *qop_state;
-    int toktype;
+kg_unseal(OM_uint32 *minor_status, gss_ctx_id_t context_handle,
+          gss_buffer_t input_token_buffer, gss_buffer_t message_buffer,
+          int *conf_state, gss_qop_t *qop_state, int toktype)
 {
     krb5_gss_ctx_id_rec *ctx;
-    unsigned char *ptr;
-    unsigned int bodysize;
-    int err;
     int toktype2;
-    int vfyflags = 0;
     OM_uint32 ret;
+    struct k5input in;
 
     ctx = (krb5_gss_ctx_id_rec *) context_handle;
 
@@ -501,42 +373,25 @@ kg_unseal(minor_status, context_handle, input_token_buffer,
 
     /* verify the header */
 
-    ptr = (unsigned char *) input_token_buffer->value;
-
-
-    err = g_verify_token_header(ctx->mech_used,
-                                &bodysize, &ptr, -1,
-                                input_token_buffer->length,
-                                vfyflags);
-    if (err) {
-        *minor_status = err;
-        return GSS_S_DEFECTIVE_TOKEN;
-    }
-
-    if (bodysize < 2) {
-        *minor_status = (OM_uint32)G_BAD_TOK_HEADER;
-        return GSS_S_DEFECTIVE_TOKEN;
-    }
-
-    toktype2 = load_16_be(ptr);
-
-    ptr += 2;
-    bodysize -= 2;
+    k5_input_init(&in, input_token_buffer->value, input_token_buffer->length);
+    (void)g_verify_token_header(&in, ctx->mech_used);
+    toktype2 = k5_input_get_uint16_be(&in);
 
     switch (toktype2) {
     case KG2_TOK_MIC_MSG:
     case KG2_TOK_WRAP_MSG:
     case KG2_TOK_DEL_CTX:
         ret = gss_krb5int_unseal_token_v3(&ctx->k5_context, minor_status, ctx,
-                                          ptr, bodysize, message_buffer,
-                                          conf_state, qop_state, toktype);
+                                          (uint8_t *)in.ptr, in.len,
+                                          message_buffer, conf_state,
+                                          qop_state, toktype);
         break;
     case KG_TOK_MIC_MSG:
     case KG_TOK_WRAP_MSG:
     case KG_TOK_DEL_CTX:
-        ret = kg_unseal_v1(ctx->k5_context, minor_status, ctx, ptr, bodysize,
-                           message_buffer, conf_state, qop_state,
-                           toktype);
+        ret = kg_unseal_v1(ctx->k5_context, minor_status, ctx,
+                           (uint8_t *)in.ptr, in.len, message_buffer,
+                           conf_state, qop_state, toktype);
         break;
     default:
         *minor_status = (OM_uint32)G_BAD_TOK_HEADER;
@@ -551,15 +406,10 @@ kg_unseal(minor_status, context_handle, input_token_buffer,
 }
 
 OM_uint32 KRB5_CALLCONV
-krb5_gss_unwrap(minor_status, context_handle,
-                input_message_buffer, output_message_buffer,
-                conf_state, qop_state)
-    OM_uint32           *minor_status;
-    gss_ctx_id_t        context_handle;
-    gss_buffer_t        input_message_buffer;
-    gss_buffer_t        output_message_buffer;
-    int                 *conf_state;
-    gss_qop_t           *qop_state;
+krb5_gss_unwrap(OM_uint32 *minor_status, gss_ctx_id_t context_handle,
+                gss_buffer_t input_message_buffer,
+                gss_buffer_t output_message_buffer, int *conf_state,
+                gss_qop_t *qop_state)
 {
     OM_uint32           rstat;
 
@@ -570,14 +420,9 @@ krb5_gss_unwrap(minor_status, context_handle,
 }
 
 OM_uint32 KRB5_CALLCONV
-krb5_gss_verify_mic(minor_status, context_handle,
-                    message_buffer, token_buffer,
-                    qop_state)
-    OM_uint32           *minor_status;
-    gss_ctx_id_t        context_handle;
-    gss_buffer_t        message_buffer;
-    gss_buffer_t        token_buffer;
-    gss_qop_t           *qop_state;
+krb5_gss_verify_mic(OM_uint32 *minor_status, gss_ctx_id_t context_handle,
+                    gss_buffer_t message_buffer, gss_buffer_t token_buffer,
+                    gss_qop_t *qop_state)
 {
     OM_uint32           rstat;
 

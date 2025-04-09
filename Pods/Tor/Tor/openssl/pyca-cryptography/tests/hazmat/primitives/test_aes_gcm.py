@@ -20,7 +20,7 @@ from ...utils import load_nist_vectors
     ),
     skip_message="Does not support AES GCM",
 )
-class TestAESModeGCM(object):
+class TestAESModeGCM:
     test_gcm = generate_aead_test(
         load_nist_vectors,
         os.path.join("ciphers", "AES", "GCM"),
@@ -71,9 +71,11 @@ class TestAESModeGCM(object):
             modes.GCM(b"\x01" * 16),
             backend=backend,
         ).encryptor()
-        encryptor._bytes_processed = modes.GCM._MAX_ENCRYPTED_BYTES - 16
+        new_max = modes.GCM._MAX_ENCRYPTED_BYTES - 16
+        encryptor._bytes_processed = new_max  # type: ignore[attr-defined]
         encryptor.update(b"0" * 16)
-        assert encryptor._bytes_processed == modes.GCM._MAX_ENCRYPTED_BYTES
+        max = modes.GCM._MAX_ENCRYPTED_BYTES
+        assert encryptor._bytes_processed == max  # type: ignore[attr-defined]
         with pytest.raises(ValueError):
             encryptor.update(b"0")
 
@@ -83,9 +85,13 @@ class TestAESModeGCM(object):
             modes.GCM(b"\x01" * 16),
             backend=backend,
         ).encryptor()
-        encryptor._aad_bytes_processed = modes.GCM._MAX_AAD_BYTES - 16
+        new_max = modes.GCM._MAX_AAD_BYTES - 16
+        encryptor._aad_bytes_processed = new_max  # type: ignore[attr-defined]
         encryptor.authenticate_additional_data(b"0" * 16)
-        assert encryptor._aad_bytes_processed == modes.GCM._MAX_AAD_BYTES
+        max = modes.GCM._MAX_AAD_BYTES
+        assert (
+            encryptor._aad_bytes_processed == max  # type: ignore[attr-defined]
+        )
         with pytest.raises(ValueError):
             encryptor.authenticate_additional_data(b"0")
 
@@ -96,11 +102,11 @@ class TestAESModeGCM(object):
             backend=backend,
         ).encryptor()
         encryptor.update(b"0" * 8)
-        assert encryptor._bytes_processed == 8
+        assert encryptor._bytes_processed == 8  # type: ignore[attr-defined]
         encryptor.update(b"0" * 7)
-        assert encryptor._bytes_processed == 15
+        assert encryptor._bytes_processed == 15  # type: ignore[attr-defined]
         encryptor.update(b"0" * 18)
-        assert encryptor._bytes_processed == 33
+        assert encryptor._bytes_processed == 33  # type: ignore[attr-defined]
 
     def test_gcm_aad_increments(self, backend):
         encryptor = base.Cipher(
@@ -109,9 +115,13 @@ class TestAESModeGCM(object):
             backend=backend,
         ).encryptor()
         encryptor.authenticate_additional_data(b"0" * 8)
-        assert encryptor._aad_bytes_processed == 8
+        assert (
+            encryptor._aad_bytes_processed == 8  # type: ignore[attr-defined]
+        )
         encryptor.authenticate_additional_data(b"0" * 18)
-        assert encryptor._aad_bytes_processed == 26
+        assert (
+            encryptor._aad_bytes_processed == 26  # type: ignore[attr-defined]
+        )
 
     def test_gcm_tag_decrypt_none(self, backend):
         key = binascii.unhexlify(b"5211242698bed4774a090620a6ca56f3")
@@ -215,3 +225,15 @@ class TestAESModeGCM(object):
 
         decryptor.finalize_with_tag(tag)
         assert pt == payload
+
+    @pytest.mark.parametrize("alg", [algorithms.AES128, algorithms.AES256])
+    def test_alternate_aes_classes(self, alg, backend):
+        data = bytearray(b"sixteen_byte_msg")
+        cipher = base.Cipher(
+            alg(b"0" * (alg.key_size // 8)), modes.GCM(b"\x00" * 12), backend
+        )
+        enc = cipher.encryptor()
+        ct = enc.update(data) + enc.finalize()
+        dec = cipher.decryptor()
+        pt = dec.update(ct) + dec.finalize_with_tag(enc.tag)
+        assert pt == data

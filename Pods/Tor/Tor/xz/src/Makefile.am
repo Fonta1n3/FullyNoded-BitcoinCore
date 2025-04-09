@@ -1,9 +1,5 @@
-##
+## SPDX-License-Identifier: 0BSD
 ## Author: Lasse Collin
-##
-## This file has been put into the public domain.
-## You can do whatever you want with this file.
-##
 
 SUBDIRS = liblzma xzdec
 
@@ -39,4 +35,6 @@ EXTRA_DIST = \
 	common/tuklib_physmem.c \
 	common/tuklib_physmem.h \
 	common/tuklib_progname.c \
-	common/tuklib_progname.h
+	common/tuklib_progname.h \
+	common/w32_application.manifest \
+	common/w32_application.manifest.comments.txt

@@ -85,24 +85,10 @@ val_acq_cred_args(
 
 
 OM_uint32 KRB5_CALLCONV
-gss_acquire_cred(minor_status,
-                 desired_name,
-                 time_req,
-                 desired_mechs,
-		 cred_usage,
-                 output_cred_handle,
-                 actual_mechs,
-                 time_rec)
-
-OM_uint32 *		minor_status;
-gss_name_t		desired_name;
-OM_uint32		time_req;
-gss_OID_set		desired_mechs;
-int			cred_usage;
-gss_cred_id_t *		output_cred_handle;
-gss_OID_set *		actual_mechs;
-OM_uint32 *		time_rec;
-
+gss_acquire_cred(OM_uint32 *minor_status, gss_name_t desired_name,
+		 OM_uint32 time_req, gss_OID_set desired_mechs,
+		 int cred_usage, gss_cred_id_t *output_cred_handle,
+		 gss_OID_set *actual_mechs, OM_uint32 *time_rec)
 {
     return gss_acquire_cred_from(minor_status, desired_name, time_req,
 				 desired_mechs, cred_usage, NULL,
@@ -110,26 +96,11 @@ OM_uint32 *		time_rec;
 }
 
 OM_uint32 KRB5_CALLCONV
-gss_acquire_cred_from(minor_status,
-		      desired_name,
-		      time_req,
-		      desired_mechs,
-		      cred_usage,
-		      cred_store,
-		      output_cred_handle,
-		      actual_mechs,
-		      time_rec)
-
-OM_uint32 *			minor_status;
-gss_name_t			desired_name;
-OM_uint32			time_req;
-gss_OID_set			desired_mechs;
-int				cred_usage;
-gss_const_key_value_set_t	cred_store;
-gss_cred_id_t *			output_cred_handle;
-gss_OID_set *			actual_mechs;
-OM_uint32 *			time_rec;
-
+gss_acquire_cred_from(OM_uint32 * minor_status, gss_name_t desired_name,
+		      OM_uint32 time_req, gss_OID_set desired_mechs,
+		      int cred_usage, gss_const_key_value_set_t cred_store,
+		      gss_cred_id_t *output_cred_handle,
+		      gss_OID_set *actual_mechs, OM_uint32 *time_rec)
 {
     OM_uint32 major = GSS_S_FAILURE, tmpMinor;
     OM_uint32 first_major = GSS_S_COMPLETE, first_minor = 0;
@@ -397,22 +368,12 @@ error:
 
 /* V2 KRB5_CALLCONV */
 OM_uint32 KRB5_CALLCONV
-gss_add_cred(minor_status, input_cred_handle,
-		  desired_name, desired_mech, cred_usage,
-		  initiator_time_req, acceptor_time_req,
-		  output_cred_handle, actual_mechs,
-		  initiator_time_rec, acceptor_time_rec)
-    OM_uint32		*minor_status;
-    gss_cred_id_t	input_cred_handle;
-    gss_name_t		desired_name;
-    gss_OID		desired_mech;
-    gss_cred_usage_t	cred_usage;
-    OM_uint32		initiator_time_req;
-    OM_uint32		acceptor_time_req;
-    gss_cred_id_t	*output_cred_handle;
-    gss_OID_set		*actual_mechs;
-    OM_uint32		*initiator_time_rec;
-    OM_uint32		*acceptor_time_rec;
+gss_add_cred(OM_uint32 *minor_status, gss_cred_id_t input_cred_handle,
+	     gss_name_t desired_name, gss_OID desired_mech,
+	     gss_cred_usage_t cred_usage, OM_uint32 initiator_time_req,
+	     OM_uint32 acceptor_time_req, gss_cred_id_t *output_cred_handle,
+	     gss_OID_set *actual_mechs, OM_uint32 *initiator_time_rec,
+	     OM_uint32 *acceptor_time_rec)
 {
     return gss_add_cred_from(minor_status, input_cred_handle, desired_name,
 			     desired_mech, cred_usage, initiator_time_req,
@@ -422,25 +383,13 @@ gss_add_cred(minor_status, input_cred_handle,
 }
 
 OM_uint32 KRB5_CALLCONV
-gss_add_cred_from(minor_status, input_cred_handle,
-		  desired_name, desired_mech,
-		  cred_usage,
-		  initiator_time_req, acceptor_time_req,
-		  cred_store,
-		  output_cred_handle, actual_mechs,
-		  initiator_time_rec, acceptor_time_rec)
-    OM_uint32		*minor_status;
-    gss_cred_id_t	input_cred_handle;
-    gss_name_t		desired_name;
-    gss_OID		desired_mech;
-    gss_cred_usage_t	cred_usage;
-    OM_uint32		initiator_time_req;
-    OM_uint32		acceptor_time_req;
-    gss_const_key_value_set_t  cred_store;
-    gss_cred_id_t	*output_cred_handle;
-    gss_OID_set		*actual_mechs;
-    OM_uint32		*initiator_time_rec;
-    OM_uint32		*acceptor_time_rec;
+gss_add_cred_from(OM_uint32 *minor_status, gss_cred_id_t input_cred_handle,
+		  gss_name_t desired_name, gss_OID desired_mech,
+		  gss_cred_usage_t cred_usage, OM_uint32 initiator_time_req,
+		  OM_uint32 acceptor_time_req,
+		  gss_const_key_value_set_t cred_store,
+		  gss_cred_id_t *output_cred_handle, gss_OID_set *actual_mechs,
+		  OM_uint32 *initiator_time_rec, OM_uint32 *acceptor_time_rec)
 {
     OM_uint32		status, temp_minor_status;
     OM_uint32		time_req, time_rec = 0, *time_recp = NULL;
@@ -480,7 +429,13 @@ gss_add_cred_from(minor_status, input_cred_handle,
     else if (!mech->gss_acquire_cred)
 	return (GSS_S_UNAVAILABLE);
 
-    if (input_cred_handle == GSS_C_NO_CREDENTIAL) {
+    union_cred = (gss_union_cred_t)input_cred_handle;
+    if (union_cred != NULL &&
+	gssint_get_mechanism_cred(union_cred,
+				  selected_mech) != GSS_C_NO_CREDENTIAL)
+	return (GSS_S_DUPLICATE_ELEMENT);
+
+    if (union_cred == NULL) {
 	/* Create a new credential handle. */
 	union_cred = malloc(sizeof (gss_union_cred_desc));
 	if (union_cred == NULL)
@@ -488,13 +443,7 @@ gss_add_cred_from(minor_status, input_cred_handle,
 
 	(void) memset(union_cred, 0, sizeof (gss_union_cred_desc));
 	union_cred->loopback = union_cred;
-    } else if (output_cred_handle == NULL) {
-	/* Add to the existing handle. */
-	union_cred = (gss_union_cred_t)input_cred_handle;
-	if (gssint_get_mechanism_cred(union_cred, selected_mech) !=
-	    GSS_C_NO_CREDENTIAL)
-	    return (GSS_S_DUPLICATE_ELEMENT);
-    } else {
+    } else if (output_cred_handle != NULL) {
 	/* Create a new credential handle with the mechanism credentials of the
 	 * input handle plus the acquired mechanism credential. */
 	status = copy_union_cred(minor_status, input_cred_handle, &union_cred);

@@ -22,7 +22,7 @@ When in doubt, refer to :pep:`8` for Python code. You can check if your code
 meets our automated requirements by formatting it with ``black`` and running
 ``flake8`` against it. If you've installed the development requirements this
 will automatically use our configuration. You can also run the ``tox`` job with
-``tox -e pep8``.
+``tox -e flake``.
 
 `Write comments as complete sentences.`_
 
@@ -75,10 +75,6 @@ Every recipe should include a version or algorithmic marker of some sort in its
 output in order to allow transparent upgrading of the algorithms in use, as
 the algorithms or parameters needed to achieve a given security margin evolve.
 
-APIs at the :doc:`/hazmat/primitives/index` and recipes layer should
-automatically use the :func:`~cryptography.hazmat.backends.default_backend`,
-but optionally allow specifying a different backend.
-
 C bindings
 ~~~~~~~~~~
 
@@ -99,7 +95,7 @@ Documentation
 -------------
 
 All features should be documented with prose in the ``docs`` section. To ensure
-it builds and passes `doc8`_ style checks you can run ``tox -e docs``.
+it builds you can run ``tox -e docs``.
 
 Because of the inherent challenges in implementing correct cryptographic
 systems, we want to make our documentation point people in the right directions
@@ -152,4 +148,3 @@ So, specifically:
 .. _`syntax`: https://www.sphinx-doc.org/en/master/usage/restructuredtext/domains.html#info-field-lists
 .. _`Studies have shown`: https://smartbear.com/learn/code-review/best-practices-for-peer-code-review/
 .. _`our mailing list`: https://mail.python.org/mailman/listinfo/cryptography-dev
-.. _`doc8`: https://github.com/openstack/doc8

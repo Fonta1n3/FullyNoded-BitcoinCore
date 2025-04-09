@@ -2072,6 +2072,8 @@ test_dir_measured_bw_kb(void *arg)
   int i;
   const char *lines_pass[] = {
     "node_id=$557365204145532d32353620696e73746561642e bw=1024\n",
+    /* check whether node_id does not need the dollar sign at the start */
+    "node_id=557365204145532d32353620696e73746561642e bw=1024\n",
     "node_id=$557365204145532d32353620696e73746561642e\t  bw=1024 \n",
     " node_id=$557365204145532d32353620696e73746561642e  bw=1024\n",
     "\tnoise\tnode_id=$557365204145532d32353620696e73746561642e  "
@@ -2129,7 +2131,6 @@ test_dir_measured_bw_kb(void *arg)
     " node_id= ",
     "node_id==$557365204145532d32353620696e73746561642e bw==1024\n",
     "node_id=$55736520414552d32353620696e73746561642e bw=1024\n",
-    "node_id=557365204145532d32353620696e73746561642e bw=1024\n",
     "node_id= $557365204145532d32353620696e73746561642e bw=0.23\n",
 
     /* Test that a line with vote=0 will fail too, so that it is ignored. */
@@ -2971,7 +2972,7 @@ test_vrs_for_v3ns(vote_routerstatus_t *vrs, int voter, time_t now)
                 (voter == 1)) {
     /* Check the first routerstatus. */
     tt_str_op(vrs->version,OP_EQ, "0.1.2.14");
-    tt_int_op(rs->published_on,OP_EQ, now-1500);
+    tt_int_op(vrs->published_on,OP_EQ, now-1500);
     tt_str_op(rs->nickname,OP_EQ, "router2");
     tt_mem_op(rs->identity_digest,OP_EQ,
                "\x3\x3\x3\x3\x3\x3\x3\x3\x3\x3\x3\x3\x3\x3\x3\x3"
@@ -2996,7 +2997,7 @@ test_vrs_for_v3ns(vote_routerstatus_t *vrs, int voter, time_t now)
     if (voter == 1) {
       /* Check the second routerstatus. */
       tt_str_op(vrs->version,OP_EQ, "0.2.0.5");
-      tt_int_op(rs->published_on,OP_EQ, now-1000);
+      tt_int_op(vrs->published_on,OP_EQ, now-1000);
       tt_str_op(rs->nickname,OP_EQ, "router1");
     }
     tt_mem_op(rs->descriptor_digest,OP_EQ, "MMMMMMMMMMMMMMMMMMMM", DIGEST_LEN);
@@ -3057,6 +3058,7 @@ test_consensus_for_v3ns(networkstatus_t *con, time_t now)
 static void
 test_routerstatus_for_v3ns(routerstatus_t *rs, time_t now)
 {
+  (void)now;
   tor_addr_t addr_ipv6;
 
   tt_assert(rs);
@@ -3093,7 +3095,6 @@ test_routerstatus_for_v3ns(routerstatus_t *rs, time_t now)
                DIGEST_LEN);
     tt_str_op(rs->nickname,OP_EQ, "router1");
     tt_mem_op(rs->descriptor_digest,OP_EQ, "MMMMMMMMMMMMMMMMMMMM", DIGEST_LEN);
-    tt_int_op(rs->published_on,OP_EQ, now-1000);
     tt_assert(tor_addr_eq_ipv4h(&rs->ipv4_addr, 0x99009901));
     tt_int_op(rs->ipv4_orport,OP_EQ, 443);
     tt_int_op(rs->ipv4_dirport,OP_EQ, 0);
@@ -3968,7 +3969,7 @@ gen_routerstatus_for_umbw(int idx, time_t now)
       vrs = tor_malloc_zero(sizeof(vote_routerstatus_t));
       rs = &vrs->status;
       vrs->version = tor_strdup("0.1.2.14");
-      rs->published_on = now-1500;
+      vrs->published_on = now-1500;
       strlcpy(rs->nickname, "router2", sizeof(rs->nickname));
       memset(rs->identity_digest, 3, DIGEST_LEN);
       memset(rs->descriptor_digest, 78, DIGEST_LEN);
@@ -3993,7 +3994,7 @@ gen_routerstatus_for_umbw(int idx, time_t now)
       vrs = tor_malloc_zero(sizeof(vote_routerstatus_t));
       rs = &vrs->status;
       vrs->version = tor_strdup("0.2.0.5");
-      rs->published_on = now-1000;
+      vrs->published_on = now-1000;
       strlcpy(rs->nickname, "router1", sizeof(rs->nickname));
       memset(rs->identity_digest, 5, DIGEST_LEN);
       memset(rs->descriptor_digest, 77, DIGEST_LEN);
@@ -4020,7 +4021,7 @@ gen_routerstatus_for_umbw(int idx, time_t now)
       vrs = tor_malloc_zero(sizeof(vote_routerstatus_t));
       rs = &vrs->status;
       vrs->version = tor_strdup("0.1.0.3");
-      rs->published_on = now-1000;
+      vrs->published_on = now-1000;
       strlcpy(rs->nickname, "router3", sizeof(rs->nickname));
       memset(rs->identity_digest, 0x33, DIGEST_LEN);
       memset(rs->descriptor_digest, 79, DIGEST_LEN);
@@ -4046,7 +4047,7 @@ gen_routerstatus_for_umbw(int idx, time_t now)
       vrs = tor_malloc_zero(sizeof(vote_routerstatus_t));
       rs = &vrs->status;
       vrs->version = tor_strdup("0.1.6.3");
-      rs->published_on = now-1000;
+      vrs->published_on = now-1000;
       strlcpy(rs->nickname, "router4", sizeof(rs->nickname));
       memset(rs->identity_digest, 0x34, DIGEST_LEN);
       memset(rs->descriptor_digest, 47, DIGEST_LEN);
@@ -4146,7 +4147,7 @@ test_vrs_for_umbw(vote_routerstatus_t *vrs, int voter, time_t now)
      * cutoff.
      */
     tt_str_op(vrs->version,OP_EQ, "0.1.2.14");
-    tt_int_op(rs->published_on,OP_EQ, now-1500);
+    tt_int_op(vrs->published_on,OP_EQ, now-1500);
     tt_str_op(rs->nickname,OP_EQ, "router2");
     tt_mem_op(rs->identity_digest,OP_EQ,
                "\x3\x3\x3\x3\x3\x3\x3\x3\x3\x3"
@@ -4170,7 +4171,7 @@ test_vrs_for_umbw(vote_routerstatus_t *vrs, int voter, time_t now)
      * cutoff.
      */
     tt_str_op(vrs->version,OP_EQ, "0.2.0.5");
-    tt_int_op(rs->published_on,OP_EQ, now-1000);
+    tt_int_op(vrs->published_on,OP_EQ, now-1000);
     tt_str_op(rs->nickname,OP_EQ, "router1");
     tt_mem_op(rs->identity_digest,OP_EQ,
                "\x5\x5\x5\x5\x5\x5\x5\x5\x5\x5"
@@ -4245,6 +4246,7 @@ test_consensus_for_umbw(networkstatus_t *con, time_t now)
 static void
 test_routerstatus_for_umbw(routerstatus_t *rs, time_t now)
 {
+  (void)now;
   tor_addr_t addr_ipv6;
   uint32_t max_unmeasured_bw_kb = (alternate_clip_bw > 0) ?
     alternate_clip_bw : DEFAULT_MAX_UNMEASURED_BW_KB;
@@ -4285,7 +4287,6 @@ test_routerstatus_for_umbw(routerstatus_t *rs, time_t now)
                DIGEST_LEN);
     tt_str_op(rs->nickname,OP_EQ, "router1");
     tt_mem_op(rs->descriptor_digest,OP_EQ, "MMMMMMMMMMMMMMMMMMMM", DIGEST_LEN);
-    tt_int_op(rs->published_on,OP_EQ, now-1000);
     tt_assert(tor_addr_eq_ipv4h(&rs->ipv4_addr, 0x99009901));
     tt_int_op(rs->ipv4_orport,OP_EQ, 443);
     tt_int_op(rs->ipv4_dirport,OP_EQ, 0);
@@ -4385,7 +4386,6 @@ test_dir_fmt_control_ns(void *arg)
   (void)arg;
 
   memset(&rs, 0, sizeof(rs));
-  rs.published_on = 1364925198;
   strlcpy(rs.nickname, "TetsuoMilk", sizeof(rs.nickname));
   memcpy(rs.identity_digest, "Stately, plump Buck ", DIGEST_LEN);
   memcpy(rs.descriptor_digest, "Mulligan came up fro", DIGEST_LEN);
@@ -4403,7 +4403,7 @@ test_dir_fmt_control_ns(void *arg)
   tt_assert(s);
   tt_str_op(s, OP_EQ,
             "r TetsuoMilk U3RhdGVseSwgcGx1bXAgQnVjayA "
-               "TXVsbGlnYW4gY2FtZSB1cCBmcm8 2013-04-02 17:53:18 "
+               "TXVsbGlnYW4gY2FtZSB1cCBmcm8 2038-01-01 00:00:00 "
                "32.48.64.80 9001 9002\n"
             "s Exit Fast Running V2Dir\n"
             "w Bandwidth=1000\n");
@@ -5265,7 +5265,7 @@ test_dir_conn_purpose_to_string(void *data)
   tt_str_op(dir_conn_purpose_to_string(purpose), OP_EQ, expected);
 
   EXPECT_CONN_PURPOSE(DIR_PURPOSE_UPLOAD_DIR, "server descriptor upload");
-  EXPECT_CONN_PURPOSE(DIR_PURPOSE_UPLOAD_VOTE, "server vote upload");
+  EXPECT_CONN_PURPOSE(DIR_PURPOSE_UPLOAD_VOTE, "consensus vote upload");
   EXPECT_CONN_PURPOSE(DIR_PURPOSE_UPLOAD_SIGNATURES,
                       "consensus signature upload");
   EXPECT_CONN_PURPOSE(DIR_PURPOSE_FETCH_SERVERDESC, "server descriptor fetch");

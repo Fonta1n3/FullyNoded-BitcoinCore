@@ -68,7 +68,7 @@
 static int verbose = 1;
 
 static void
-usage()
+usage(void)
 {
     fprintf(stderr, "Usage: gss-client [-port port] [-mech mechanism] [-d]\n");
     fprintf(stderr, "       [-seq] [-noreplay] [-nomutual]");
@@ -125,7 +125,7 @@ get_server_info(char *host, u_short port)
  *      host            (r) the target host name
  *      port            (r) the target port, in host byte order
  *
- * Returns: the established socket file desciptor, or -1 on failure
+ * Returns: the established socket file descriptor, or -1 on failure
  *
  * Effects:
  *
@@ -134,7 +134,7 @@ get_server_info(char *host, u_short port)
  * displayed and -1 is returned.
  */
 static int
-connect_to_server()
+connect_to_server(void)
 {
     int s;
 

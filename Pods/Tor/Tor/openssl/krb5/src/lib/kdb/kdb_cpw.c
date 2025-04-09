@@ -57,10 +57,7 @@
 enum save { DISCARD_ALL, KEEP_LAST_KVNO, KEEP_ALL };
 
 int
-krb5_db_get_key_data_kvno(context, count, data)
-    krb5_context          context;
-    int                   count;
-    krb5_key_data       * data;
+krb5_db_get_key_data_kvno(krb5_context context, int count, krb5_key_data *data)
 {
     int i, kvno;
     /* Find last key version number */
@@ -73,10 +70,7 @@ krb5_db_get_key_data_kvno(context, count, data)
 }
 
 static void
-cleanup_key_data(context, count, data)
-    krb5_context          context;
-    int                   count;
-    krb5_key_data       * data;
+cleanup_key_data(krb5_context context, int count, krb5_key_data *data)
 {
     int i;
 
@@ -149,13 +143,9 @@ preserve_old_keys(krb5_context context, krb5_keyblock *mkey,
 }
 
 static krb5_error_code
-add_key_rnd(context, master_key, ks_tuple, ks_tuple_count, db_entry, kvno)
-    krb5_context          context;
-    krb5_keyblock       * master_key;
-    krb5_key_salt_tuple * ks_tuple;
-    int                   ks_tuple_count;
-    krb5_db_entry       * db_entry;
-    int                   kvno;
+add_key_rnd(krb5_context context, krb5_keyblock *master_key,
+            krb5_key_salt_tuple *ks_tuple, int ks_tuple_count,
+            krb5_db_entry *db_entry, int kvno)
 {
     krb5_keyblock         key;
     int                   i, j;
@@ -246,21 +236,14 @@ make_random_salt(krb5_context context, krb5_keysalt *salt_out)
  * If passwd is NULL the assumes that the caller wants a random password.
  */
 static krb5_error_code
-add_key_pwd(context, master_key, ks_tuple, ks_tuple_count, passwd,
-            db_entry, kvno)
-    krb5_context          context;
-    krb5_keyblock       * master_key;
-    krb5_key_salt_tuple * ks_tuple;
-    int                   ks_tuple_count;
-    const char          * passwd;
-    krb5_db_entry       * db_entry;
-    int                   kvno;
+add_key_pwd(krb5_context context, krb5_keyblock *master_key,
+            krb5_key_salt_tuple *ks_tuple, int ks_tuple_count,
+            const char *passwd, krb5_db_entry *db_entry, int kvno)
 {
     krb5_error_code       retval;
     krb5_keysalt          key_salt;
     krb5_keyblock         key;
     krb5_data             pwd;
-    krb5_data             afs_params = string2data("\1"), *s2k_params;
     int                   i, j;
     krb5_key_data        *kd_slot;
 
@@ -268,7 +251,6 @@ add_key_pwd(context, master_key, ks_tuple, ks_tuple_count, passwd,
         krb5_boolean similar;
 
         similar = 0;
-        s2k_params = NULL;
 
         /*
          * We could use krb5_keysalt_iterate to replace this loop, or use
@@ -316,18 +298,6 @@ add_key_pwd(context, master_key, ks_tuple, ks_tuple_count, passwd,
                                               &key_salt.data)))
                 return(retval);
             break;
-        case KRB5_KDB_SALTTYPE_V4:
-            key_salt.data.length = 0;
-            key_salt.data.data = 0;
-            break;
-        case KRB5_KDB_SALTTYPE_AFS3:
-            retval = krb5int_copy_data_contents(context,
-                                                &db_entry->princ->realm,
-                                                &key_salt.data);
-            if (retval)
-                return retval;
-            s2k_params = &afs_params;
-            break;
         case KRB5_KDB_SALTTYPE_SPECIAL:
             retval = make_random_salt(context, &key_salt);
             if (retval)
@@ -342,7 +312,7 @@ add_key_pwd(context, master_key, ks_tuple, ks_tuple_count, passwd,
         retval = krb5_c_string_to_key_with_params(context,
                                                   ks_tuple[i].ks_enctype,
                                                   &pwd, &key_salt.data,
-                                                  s2k_params, &key);
+                                                  NULL, &key);
         if (retval) {
             free(key_salt.data.data);
             return retval;

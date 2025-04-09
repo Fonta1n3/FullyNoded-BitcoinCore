@@ -37,7 +37,7 @@ krb5_context test_context;
 int error_count = 0;
 int do_trval = 0;
 int first_trval = 1;
-int trval2();
+int trval2(FILE *, unsigned char *, int, int, int *);
 
 static void
 encoder_print_results(krb5_data *code, char *typestring, char *description)
@@ -51,7 +51,7 @@ encoder_print_results(krb5_data *code, char *typestring, char *description)
         else
             printf("\n");
         printf("encode_krb5_%s%s:\n", typestring, description);
-        r = trval2(stdout, code->data, code->length, 0, &rlen);
+        r = trval2(stdout, (uint8_t *)code->data, code->length, 0, &rlen);
         printf("\n");
         if (rlen < 0 || (unsigned int) rlen != code->length) {
             printf("Error: length mismatch: was %d, parsed %d\n",
@@ -72,9 +72,8 @@ encoder_print_results(krb5_data *code, char *typestring, char *description)
     ktest_destroy_data(&code);
 }
 
-static void PRS(argc, argv)
-    int argc;
-    char        **argv;
+static void
+PRS(int argc, char **argv)
 {
     extern char *optarg;
     int optchar;
@@ -107,9 +106,7 @@ static void PRS(argc, argv)
 }
 
 int
-main(argc, argv)
-    int argc;
-    char        **argv;
+main(int argc, char **argv)
 {
     krb5_data *code;
     krb5_error_code retval;
@@ -640,23 +637,6 @@ main(argc, argv)
         ktest_empty_ad_kdcissued(&kdci);
     }
     /****************************************************************/
-    /* encode_krb5_ad_signedpath_data */
-    {
-        krb5_ad_signedpath_data spd;
-        ktest_make_sample_ad_signedpath_data(&spd);
-        encode_run(spd, "ad_signedpath_data", "",
-                   encode_krb5_ad_signedpath_data);
-        ktest_empty_ad_signedpath_data(&spd);
-    }
-    /****************************************************************/
-    /* encode_krb5_ad_signedpath */
-    {
-        krb5_ad_signedpath sp;
-        ktest_make_sample_ad_signedpath(&sp);
-        encode_run(sp, "ad_signedpath", "", encode_krb5_ad_signedpath);
-        ktest_empty_ad_signedpath(&sp);
-    }
-    /****************************************************************/
     /* encode_krb5_iakerb_header */
     {
         krb5_iakerb_header ih;
@@ -798,15 +778,6 @@ main(argc, argv)
         ktest_empty_pa_pk_as_req(&req);
     }
     /****************************************************************/
-    /* encode_krb5_pa_pk_as_req_draft9 */
-    {
-        krb5_pa_pk_as_req_draft9 req;
-        ktest_make_sample_pa_pk_as_req_draft9(&req);
-        encode_run(req, "pa_pk_as_req_draft9", "",
-                   acc.encode_krb5_pa_pk_as_req_draft9);
-        ktest_empty_pa_pk_as_req_draft9(&req);
-    }
-    /****************************************************************/
     /* encode_krb5_pa_pk_as_rep */
     {
         krb5_pa_pk_as_rep rep;
@@ -820,34 +791,12 @@ main(argc, argv)
         ktest_empty_pa_pk_as_rep(&rep);
     }
     /****************************************************************/
-    /* encode_krb5_pa_pk_as_rep_draft9 */
-    {
-        krb5_pa_pk_as_rep_draft9 rep;
-        ktest_make_sample_pa_pk_as_rep_draft9_dhSignedData(&rep);
-        encode_run(rep, "pa_pk_as_rep_draft9", "(dhSignedData)",
-                   acc.encode_krb5_pa_pk_as_rep_draft9);
-        ktest_empty_pa_pk_as_rep_draft9(&rep);
-        ktest_make_sample_pa_pk_as_rep_draft9_encKeyPack(&rep);
-        encode_run(rep, "pa_pk_as_rep_draft9", "(encKeyPack)",
-                   acc.encode_krb5_pa_pk_as_rep_draft9);
-        ktest_empty_pa_pk_as_rep_draft9(&rep);
-    }
-    /****************************************************************/
     /* encode_krb5_auth_pack */
     {
         krb5_auth_pack pack;
         ktest_make_sample_auth_pack(&pack);
         encode_run(pack, "auth_pack", "", acc.encode_krb5_auth_pack);
         ktest_empty_auth_pack(&pack);
-    }
-    /****************************************************************/
-    /* encode_krb5_auth_pack_draft9_draft9 */
-    {
-        krb5_auth_pack_draft9 pack;
-        ktest_make_sample_auth_pack_draft9(&pack);
-        encode_run(pack, "auth_pack_draft9", "",
-                   acc.encode_krb5_auth_pack_draft9);
-        ktest_empty_auth_pack_draft9(&pack);
     }
     /****************************************************************/
     /* encode_krb5_kdc_dh_key_info */
@@ -864,15 +813,6 @@ main(argc, argv)
         ktest_make_sample_reply_key_pack(&pack);
         encode_run(pack, "reply_key_pack", "", acc.encode_krb5_reply_key_pack);
         ktest_empty_reply_key_pack(&pack);
-    }
-    /****************************************************************/
-    /* encode_krb5_reply_key_pack_draft9 */
-    {
-        krb5_reply_key_pack_draft9 pack;
-        ktest_make_sample_reply_key_pack_draft9(&pack);
-        encode_run(pack, "reply_key_pack_draft9", "",
-                   acc.encode_krb5_reply_key_pack_draft9);
-        ktest_empty_reply_key_pack_draft9(&pack);
     }
     /****************************************************************/
     /* encode_krb5_sp80056a_other_info */

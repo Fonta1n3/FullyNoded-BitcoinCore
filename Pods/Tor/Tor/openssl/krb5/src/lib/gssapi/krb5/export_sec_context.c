@@ -27,10 +27,9 @@
 #include "gssapiP_krb5.h"
 #ifndef LEAN_CLIENT
 OM_uint32 KRB5_CALLCONV
-krb5_gss_export_sec_context(minor_status, context_handle, interprocess_token)
-    OM_uint32           *minor_status;
-    gss_ctx_id_t        *context_handle;
-    gss_buffer_t        interprocess_token;
+krb5_gss_export_sec_context(OM_uint32 *minor_status,
+                            gss_ctx_id_t *context_handle,
+                            gss_buffer_t interprocess_token)
 {
     krb5_context        context = NULL;
     krb5_error_code     kret;
@@ -51,14 +50,10 @@ krb5_gss_export_sec_context(minor_status, context_handle, interprocess_token)
     }
 
     context = ctx->k5_context;
-    kret = krb5_gss_ser_init(context);
-    if (kret)
-        goto error_out;
 
     /* Determine size needed for externalization of context */
     bufsize = 0;
-    if ((kret = kg_ctx_size(context, (krb5_pointer) ctx,
-                            &bufsize)))
+    if ((kret = kg_ctx_size(context, ctx, &bufsize)))
         goto error_out;
 
     /* Allocate the buffer */
@@ -70,8 +65,7 @@ krb5_gss_export_sec_context(minor_status, context_handle, interprocess_token)
     obp = obuffer;
     blen = bufsize;
     /* Externalize the context */
-    if ((kret = kg_ctx_externalize(context,
-                                   (krb5_pointer) ctx, &obp, &blen)))
+    if ((kret = kg_ctx_externalize(context, ctx, &obp, &blen)))
         goto error_out;
 
     /* Success!  Return the buffer */

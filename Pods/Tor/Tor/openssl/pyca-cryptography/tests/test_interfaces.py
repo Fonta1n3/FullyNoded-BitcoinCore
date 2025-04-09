@@ -4,77 +4,17 @@
 
 import abc
 
-import pytest
-
-from cryptography.utils import (
-    InterfaceNotImplemented,
-    verify_interface,
-)
+from cryptography.utils import verify_interface
 
 
-class TestVerifyInterface(object):
-    def test_verify_missing_method(self):
+class TestVerifyInterface:
+    def test_noop(self):
         class SimpleInterface(metaclass=abc.ABCMeta):
             @abc.abstractmethod
             def method(self):
                 """A simple method"""
 
-        class NonImplementer(object):
+        class NonImplementer:
             pass
 
-        with pytest.raises(InterfaceNotImplemented):
-            verify_interface(SimpleInterface, NonImplementer)
-
-    def test_different_arguments(self):
-        class SimpleInterface(metaclass=abc.ABCMeta):
-            @abc.abstractmethod
-            def method(self, a):
-                """Method with one argument"""
-
-        class NonImplementer(object):
-            def method(self):
-                """Method with no arguments"""
-
-        # Invoke this to ensure the line is covered
-        NonImplementer().method()
-        with pytest.raises(InterfaceNotImplemented):
-            verify_interface(SimpleInterface, NonImplementer)
-
-    def test_handles_abstract_property(self):
-        class SimpleInterface(metaclass=abc.ABCMeta):
-            @abc.abstractproperty
-            def property(self):
-                """An abstract property"""
-
-        class NonImplementer(object):
-            @property
-            def property(self):
-                """A concrete property"""
-
-        # Invoke this to ensure the line is covered
-        NonImplementer().property
         verify_interface(SimpleInterface, NonImplementer)
-
-    def test_signature_mismatch(self):
-        class SimpleInterface(metaclass=abc.ABCMeta):
-            @abc.abstractmethod
-            def method(self, other: object) -> int:
-                """Method with signature"""
-
-        class ClassWithoutSignature:
-            def method(self, other):
-                """Method without signature"""
-
-        class ClassWithSignature:
-            def method(self, other: object) -> int:
-                """Method with signature"""
-
-        verify_interface(SimpleInterface, ClassWithoutSignature)
-        verify_interface(SimpleInterface, ClassWithSignature)
-        with pytest.raises(InterfaceNotImplemented):
-            verify_interface(
-                SimpleInterface, ClassWithoutSignature, check_annotations=True
-            )
-        verify_interface(
-            SimpleInterface, ClassWithSignature, check_annotations=True
-        )

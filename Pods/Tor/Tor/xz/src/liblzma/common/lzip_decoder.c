@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: 0BSD
+
 ///////////////////////////////////////////////////////////////////////////////
 //
 /// \file       lzip_decoder.c
@@ -5,9 +7,6 @@
 //
 //  Author:     Michał Górny
 //              Lasse Collin
-//
-//  This file has been put into the public domain.
-//  You can do whatever you want with this file.
 //
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -186,7 +185,7 @@ lzip_decode(void *coder_ptr, const lzma_allocator *allocator,
 		// The five lowest bits are for the base-2 logarithm of
 		// the dictionary size and the highest three bits are
 		// the fractional part (0/16 to 7/16) that will be
-		// substracted to get the final value.
+		// subtracted to get the final value.
 		//
 		// For example, with 0xB5:
 		//     b2log = 21

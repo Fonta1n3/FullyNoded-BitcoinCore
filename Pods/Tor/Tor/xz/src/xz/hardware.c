@@ -1,12 +1,11 @@
+// SPDX-License-Identifier: 0BSD
+
 ///////////////////////////////////////////////////////////////////////////////
 //
 /// \file       hardware.c
 /// \brief      Detection of available hardware resources
 //
 //  Author:     Lasse Collin
-//
-//  This file has been put into the public domain.
-//  You can do whatever you want with this file.
 //
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -15,7 +14,7 @@
 
 /// Maximum number of worker threads. This can be set with
 /// the --threads=NUM command line option.
-static uint32_t threads_max = 1;
+static uint32_t threads_max;
 
 /// True when the number of threads is automatically determined based
 /// on the available hardware threads.
@@ -42,7 +41,7 @@ static uint64_t memlimit_decompress = 0;
 ///
 ///   - Default value for --memlimit-mt-decompress
 ///
-/// This value is caluclated in hardware_init() and cannot be changed later.
+/// This value is calculated in hardware_init() and cannot be changed later.
 static uint64_t memlimit_mt_default;
 
 /// Memory usage limit for multithreaded decompression. This is a soft limit:
@@ -147,7 +146,7 @@ hardware_memlimit_set(uint64_t new_memlimit,
 		// for the xz program and so on. Don't use 4000 MiB because
 		// it could look like someone mixed up base-2 and base-10.
 #ifdef __mips__
-		// For MIPS32, due to architectural pecularities,
+		// For MIPS32, due to architectural peculiarities,
 		// the limit is even lower.
 		const uint64_t limit_max = UINT64_C(2000) << 20;
 #else
@@ -333,6 +332,10 @@ hardware_init(void)
 	if (memlimit_mt_default > mem_ceiling)
 		memlimit_mt_default = mem_ceiling;
 #endif
+
+	// Enable threaded mode by default. xz 5.4.x and older
+	// used single-threaded mode by default.
+	hardware_threads_set(0);
 
 	return;
 }

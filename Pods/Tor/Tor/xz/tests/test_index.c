@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: 0BSD
+
 ///////////////////////////////////////////////////////////////////////////////
 //
 /// \file       test_index.c
@@ -7,10 +9,6 @@
 //
 //  Authors:    Jia Tan
 //              Lasse Collin
-//
-//
-//  This file has been put into the public domain.
-//  You can do whatever you want with this file.
 //
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -25,8 +23,11 @@
 
 #define MEMLIMIT (UINT64_C(1) << 20)
 
+#ifdef HAVE_ENCODERS
 static uint8_t *decode_buffer;
 static size_t decode_buffer_size = 0;
+#endif
+
 static lzma_index *decode_test_index;
 
 
@@ -44,8 +45,11 @@ test_lzma_index_memusage(void)
 	assert_uint_eq(lzma_index_memusage((lzma_vli)UINT32_MAX + 1, 1),
 			UINT64_MAX);
 
-	// The maximum number of Blocks should be LZMA_VLI_MAX
-	assert_uint_eq(lzma_index_memusage(1, LZMA_VLI_MAX), UINT64_MAX);
+	// While the number of blocks is lzma_vli, the real maximum value is
+	// much smaller than LZMA_VLI_MAX. Just check that it fails with a
+	// huge but valid VLI and that it succeeds with a smaller one.
+	assert_uint_eq(lzma_index_memusage(1, LZMA_VLI_MAX / 5), UINT64_MAX);
+	assert_uint(lzma_index_memusage(1, LZMA_VLI_MAX / 11), <, UINT64_MAX);
 
 	// Number of Streams must be non-zero
 	assert_uint_eq(lzma_index_memusage(0, 1), UINT64_MAX);
@@ -100,7 +104,7 @@ test_lzma_index_memused(void)
 static void
 test_lzma_index_append(void)
 {
-	// Basic input-ouput test done here.
+	// Basic input-output test done here.
 	// Less trivial tests for this function are done throughout
 	// other tests.
 
@@ -134,25 +138,45 @@ test_lzma_index_append(void)
 
 	lzma_index_end(idx, NULL);
 
-	// Test uncompressed .xz file size growing too large.
+	// Test compressed .xz file size growing too large. This also tests
+	// a failing assert fixed in ae5c07b22a6b3766b84f409f1b6b5c100469068a.
 	// Should result in LZMA_DATA_ERROR.
 	idx = lzma_index_init(NULL);
 
-	assert_lzma_ret(lzma_index_append(idx, NULL, UNPADDED_SIZE_MAX,
-			1), LZMA_DATA_ERROR);
+	// The calculation for maximum unpadded size is to make room for the
+	// second stream when lzma_index_cat() is called. The
+	// 4 * LZMA_STREAM_HEADER_SIZE is for the header and footer of
+	// both streams. The extra 24 bytes are for the size of the indexes
+	// for both streams. This allows us to maximize the unpadded sum
+	// during the lzma_index_append() call after the indexes have been
+	// concatenated.
+	assert_lzma_ret(lzma_index_append(idx, NULL, UNPADDED_SIZE_MAX
+			- ((4 * LZMA_STREAM_HEADER_SIZE) + 24), 1), LZMA_OK);
 
-	// Test compressed size growing too large.
+	lzma_index *second = lzma_index_init(NULL);
+	assert_true(second != NULL);
+
+	assert_lzma_ret(lzma_index_cat(second, idx, NULL), LZMA_OK);
+
+	assert_lzma_ret(lzma_index_append(second, NULL, UNPADDED_SIZE_MAX, 1),
+			LZMA_DATA_ERROR);
+
+	lzma_index_end(second, NULL);
+
+	// Test uncompressed size growing too large.
 	// Should result in LZMA_DATA_ERROR.
+	idx = lzma_index_init(NULL);
+
 	assert_lzma_ret(lzma_index_append(idx, NULL,
 			UNPADDED_SIZE_MIN, LZMA_VLI_MAX), LZMA_OK);
 	assert_lzma_ret(lzma_index_append(idx, NULL,
 			UNPADDED_SIZE_MIN, 1), LZMA_DATA_ERROR);
 
+	lzma_index_end(idx, NULL);
+
 	// Currently not testing for error case when the size of the Index
 	// grows too large to be stored. This was not practical to test for
 	// since too many Blocks needed to be created to cause this.
-
-	lzma_index_end(idx, NULL);
 }
 
 
@@ -204,28 +228,28 @@ test_lzma_index_checks(void)
 	assert_lzma_ret(lzma_index_stream_flags(idx, &stream_flags),
 			LZMA_OK);
 	assert_uint_eq(lzma_index_checks(idx),
-			UINT32_C(1) << LZMA_CHECK_NONE);
+			LZMA_INDEX_CHECK_MASK_NONE);
 
 	// Set the check type to CRC32 and repeat
 	stream_flags.check = LZMA_CHECK_CRC32;
 	assert_lzma_ret(lzma_index_stream_flags(idx, &stream_flags),
 			LZMA_OK);
 	assert_uint_eq(lzma_index_checks(idx),
-			UINT32_C(1) << LZMA_CHECK_CRC32);
+			LZMA_INDEX_CHECK_MASK_CRC32);
 
 	// Set the check type to CRC64 and repeat
 	stream_flags.check = LZMA_CHECK_CRC64;
 	assert_lzma_ret(lzma_index_stream_flags(idx, &stream_flags),
 			LZMA_OK);
 	assert_uint_eq(lzma_index_checks(idx),
-			UINT32_C(1) << LZMA_CHECK_CRC64);
+			LZMA_INDEX_CHECK_MASK_CRC64);
 
 	// Set the check type to SHA256 and repeat
 	stream_flags.check = LZMA_CHECK_SHA256;
 	assert_lzma_ret(lzma_index_stream_flags(idx, &stream_flags),
 			LZMA_OK);
 	assert_uint_eq(lzma_index_checks(idx),
-			UINT32_C(1) << LZMA_CHECK_SHA256);
+			LZMA_INDEX_CHECK_MASK_SHA256);
 
 	// Create second lzma_index and cat to first
 	lzma_index *second = lzma_index_init(NULL);
@@ -237,14 +261,14 @@ test_lzma_index_checks(void)
 			LZMA_OK);
 
 	assert_uint_eq(lzma_index_checks(second),
-			UINT32_C(1) << LZMA_CHECK_CRC32);
+			LZMA_INDEX_CHECK_MASK_CRC32);
 
 	assert_lzma_ret(lzma_index_cat(idx, second, NULL), LZMA_OK);
 
 	// Index should now have both CRC32 and SHA256
 	assert_uint_eq(lzma_index_checks(idx),
-			(UINT32_C(1) << LZMA_CHECK_CRC32) |
-			(UINT32_C(1) << LZMA_CHECK_SHA256));
+			LZMA_INDEX_CHECK_MASK_CRC32 |
+			LZMA_INDEX_CHECK_MASK_SHA256);
 
 	// Change the check type of the second Stream to SHA256
 	stream_flags.check = LZMA_CHECK_SHA256;
@@ -253,7 +277,7 @@ test_lzma_index_checks(void)
 
 	// Index should now have only SHA256
 	assert_uint_eq(lzma_index_checks(idx),
-			UINT32_C(1) << LZMA_CHECK_SHA256);
+			LZMA_INDEX_CHECK_MASK_SHA256);
 
 	// Test with a third Stream
 	lzma_index *third = lzma_index_init(NULL);
@@ -264,14 +288,14 @@ test_lzma_index_checks(void)
 			LZMA_OK);
 
 	assert_uint_eq(lzma_index_checks(third),
-			UINT32_C(1) << LZMA_CHECK_CRC64);
+			LZMA_INDEX_CHECK_MASK_CRC64);
 
 	assert_lzma_ret(lzma_index_cat(idx, third, NULL), LZMA_OK);
 
 	// Index should now have CRC64 and SHA256
 	assert_uint_eq(lzma_index_checks(idx),
-			(UINT32_C(1) << LZMA_CHECK_CRC64) |
-			(UINT32_C(1) << LZMA_CHECK_SHA256));
+			LZMA_INDEX_CHECK_MASK_CRC64 |
+			LZMA_INDEX_CHECK_MASK_SHA256);
 
 	lzma_index_end(idx, NULL);
 }
@@ -447,15 +471,18 @@ test_lzma_index_stream_size(void)
 
 	// Next, append a few Blocks and retest
 	assert_lzma_ret(lzma_index_append(idx, NULL, 1000, 1), LZMA_OK);
-	assert_lzma_ret(lzma_index_append(idx, NULL, 1000, 1), LZMA_OK);
-	assert_lzma_ret(lzma_index_append(idx, NULL, 1000, 1), LZMA_OK);
+	assert_lzma_ret(lzma_index_append(idx, NULL, 999, 1), LZMA_OK);
+	assert_lzma_ret(lzma_index_append(idx, NULL, 997, 1), LZMA_OK);
 
 	// Stream size should be:
 	// Size of Stream Header - 12 bytes
-	// Size of all Blocks - 3000 bytes
+	// Size of all Blocks - 3000 bytes [*]
 	// Size of Index - 16 bytes
 	// Size of Stream Footer - 12 bytes
 	// Total: 3040 bytes
+	//
+	// [*] Block size is a multiple of 4 bytes so 999 and 997 get
+	//     rounded up to 1000 bytes.
 	assert_uint_eq(lzma_index_stream_size(idx), 3040);
 
 	lzma_index *second = lzma_index_init(NULL);
@@ -500,10 +527,10 @@ test_lzma_index_total_size(void)
 	assert_lzma_ret(lzma_index_append(idx, NULL, 1000, 1), LZMA_OK);
 	assert_uint_eq(lzma_index_total_size(idx), 1000);
 
-	assert_lzma_ret(lzma_index_append(idx, NULL, 1000, 1), LZMA_OK);
+	assert_lzma_ret(lzma_index_append(idx, NULL, 999, 1), LZMA_OK);
 	assert_uint_eq(lzma_index_total_size(idx), 2000);
 
-	assert_lzma_ret(lzma_index_append(idx, NULL, 1000, 1), LZMA_OK);
+	assert_lzma_ret(lzma_index_append(idx, NULL, 997, 1), LZMA_OK);
 	assert_uint_eq(lzma_index_total_size(idx), 3000);
 
 	// Create second lzma_index and append Blocks to it.
@@ -525,6 +552,16 @@ test_lzma_index_total_size(void)
 	// from both Streams
 	assert_uint_eq(lzma_index_total_size(idx), 3200);
 
+	// Test sizes that aren't multiples of four bytes
+	assert_lzma_ret(lzma_index_append(idx, NULL, 11, 1), LZMA_OK);
+	assert_uint_eq(lzma_index_total_size(idx), 3212);
+
+	assert_lzma_ret(lzma_index_append(idx, NULL, 11, 1), LZMA_OK);
+	assert_uint_eq(lzma_index_total_size(idx), 3224);
+
+	assert_lzma_ret(lzma_index_append(idx, NULL, 9, 1), LZMA_OK);
+	assert_uint_eq(lzma_index_total_size(idx), 3236);
+
 	lzma_index_end(idx, NULL);
 }
 
@@ -540,8 +577,8 @@ test_lzma_index_file_size(void)
 	assert_uint_eq(lzma_index_file_size(idx), 32);
 
 	assert_lzma_ret(lzma_index_append(idx, NULL, 1000, 1), LZMA_OK);
-	assert_lzma_ret(lzma_index_append(idx, NULL, 1000, 1), LZMA_OK);
-	assert_lzma_ret(lzma_index_append(idx, NULL, 1000, 1), LZMA_OK);
+	assert_lzma_ret(lzma_index_append(idx, NULL, 999, 1), LZMA_OK);
+	assert_lzma_ret(lzma_index_append(idx, NULL, 997, 1), LZMA_OK);
 
 	assert_uint_eq(lzma_index_file_size(idx), 3040);
 
@@ -648,6 +685,8 @@ test_lzma_index_iter_init(void)
 	assert_false(lzma_index_iter_next(&iter, LZMA_INDEX_ITER_STREAM));
 	assert_false(lzma_index_iter_next(&iter, LZMA_INDEX_ITER_STREAM));
 	assert_uint_eq(iter.stream.number, 3);
+
+	lzma_index_end(first, NULL);
 }
 
 
@@ -668,9 +707,10 @@ test_lzma_index_iter_rewind(void)
 		assert_false(lzma_index_iter_next(&iter,
 				LZMA_INDEX_ITER_BLOCK));
 		assert_uint_eq(iter.block.number_in_file, i + 1);
+		assert_uint_eq(iter.block.number_in_stream, i + 1);
 	}
 
-	// Rewind back to the begining and iterate over the Blocks again
+	// Rewind back to the beginning and iterate over the Blocks again
 	lzma_index_iter_rewind(&iter);
 
 	// Should be able to re-iterate over the Blocks again.
@@ -678,6 +718,7 @@ test_lzma_index_iter_rewind(void)
 		assert_false(lzma_index_iter_next(&iter,
 				LZMA_INDEX_ITER_BLOCK));
 		assert_uint_eq(iter.block.number_in_file, i + 1);
+		assert_uint_eq(iter.block.number_in_stream, i + 1);
 	}
 
 	// Next concatenate two more lzma_indexes, iterate over them,
@@ -897,8 +938,9 @@ test_lzma_index_iter_next(void)
 	// Verify both Blocks
 
 	// Next call to iterate Block should return true because the
-	// first Block can already be read from the LZMA_INDEX_ITER_STREAM
-	// call.
+	// first Block can already be read from the earlier *successful*
+	// LZMA_INDEX_ITER_STREAM call; the previous failed call doesn't
+	// modify the iterator.
 	assert_true(lzma_index_iter_next(&iter, LZMA_INDEX_ITER_BLOCK));
 
 	// Rewind to test LZMA_INDEX_ITER_ANY
@@ -1024,13 +1066,14 @@ test_lzma_index_iter_locate(void)
 	lzma_index_iter_init(&iter, idx);
 
 	for (uint32_t n = 4; n <= 4 * 5555; n += 4)
-		assert_lzma_ret(lzma_index_append(idx, NULL, n + 8, n),
+		assert_lzma_ret(lzma_index_append(idx, NULL, n + 7, n),
 				LZMA_OK);
 
 	assert_uint_eq(lzma_index_block_count(idx), 5555);
 
 	// First Record
 	assert_false(lzma_index_iter_locate(&iter, 0));
+	assert_uint_eq(iter.block.unpadded_size, 4 + 7);
 	assert_uint_eq(iter.block.total_size, 4 + 8);
 	assert_uint_eq(iter.block.uncompressed_size, 4);
 	assert_uint_eq(iter.block.compressed_file_offset,
@@ -1038,6 +1081,7 @@ test_lzma_index_iter_locate(void)
 	assert_uint_eq(iter.block.uncompressed_file_offset, 0);
 
 	assert_false(lzma_index_iter_locate(&iter, 3));
+	assert_uint_eq(iter.block.unpadded_size, 4 + 7);
 	assert_uint_eq(iter.block.total_size, 4 + 8);
 	assert_uint_eq(iter.block.uncompressed_size, 4);
 	assert_uint_eq(iter.block.compressed_file_offset,
@@ -1046,6 +1090,7 @@ test_lzma_index_iter_locate(void)
 
 	// Second Record
 	assert_false(lzma_index_iter_locate(&iter, 4));
+	assert_uint_eq(iter.block.unpadded_size, 2 * 4 + 7);
 	assert_uint_eq(iter.block.total_size, 2 * 4 + 8);
 	assert_uint_eq(iter.block.uncompressed_size, 2 * 4);
 	assert_uint_eq(iter.block.compressed_file_offset,
@@ -1055,6 +1100,7 @@ test_lzma_index_iter_locate(void)
 	// Last Record
 	assert_false(lzma_index_iter_locate(
 			&iter, lzma_index_uncompressed_size(idx) - 1));
+	assert_uint_eq(iter.block.unpadded_size, 4 * 5555 + 7);
 	assert_uint_eq(iter.block.total_size, 4 * 5555 + 8);
 	assert_uint_eq(iter.block.uncompressed_size, 4 * 5555);
 	assert_uint_eq(iter.block.compressed_file_offset,
@@ -1120,6 +1166,7 @@ test_lzma_index_iter_locate(void)
 	for (n = 0; n < group_multiple; ++n)
 		assert_lzma_ret(lzma_index_append(idx, NULL, 8, 0),
 				LZMA_OK);
+
 	assert_lzma_ret(lzma_index_append(idx, NULL, 16, 1), LZMA_OK);
 	assert_false(lzma_index_iter_locate(&iter, 0));
 	assert_uint_eq(iter.block.total_size, 16);
@@ -1149,14 +1196,17 @@ test_lzma_index_cat(void)
 	assert_lzma_ret(lzma_index_cat(dest, NULL, NULL), LZMA_PROG_ERROR);
 	assert_lzma_ret(lzma_index_cat(NULL, src, NULL), LZMA_PROG_ERROR);
 
-	// Check for uncompressed size overflow
+	// Check for compressed size overflow
 	assert_lzma_ret(lzma_index_append(dest, NULL,
 			(UNPADDED_SIZE_MAX / 2) + 1, 1), LZMA_OK);
 	assert_lzma_ret(lzma_index_append(src, NULL,
 			(UNPADDED_SIZE_MAX / 2) + 1, 1), LZMA_OK);
 	assert_lzma_ret(lzma_index_cat(dest, src, NULL), LZMA_DATA_ERROR);
 
-	// Check for compressed size overflow
+	lzma_index_end(src, NULL);
+	lzma_index_end(dest, NULL);
+
+	// Check for uncompressed size overflow
 	dest = lzma_index_init(NULL);
 	assert_true(dest != NULL);
 
@@ -1164,9 +1214,9 @@ test_lzma_index_cat(void)
 	assert_true(src != NULL);
 
 	assert_lzma_ret(lzma_index_append(dest, NULL,
-			UNPADDED_SIZE_MIN, LZMA_VLI_MAX - 1), LZMA_OK);
+			UNPADDED_SIZE_MIN, (LZMA_VLI_MAX / 2) + 1), LZMA_OK);
 	assert_lzma_ret(lzma_index_append(src, NULL,
-			UNPADDED_SIZE_MIN, LZMA_VLI_MAX - 1), LZMA_OK);
+			UNPADDED_SIZE_MIN, (LZMA_VLI_MAX / 2) + 1), LZMA_OK);
 	assert_lzma_ret(lzma_index_cat(dest, src, NULL), LZMA_DATA_ERROR);
 
 	lzma_index_end(dest, NULL);
@@ -1238,12 +1288,16 @@ my_alloc(void *opaque, size_t a, size_t b)
 {
 	(void)opaque;
 
+	assert_true(SIZE_MAX / a >= b);
+
 	static unsigned count = 0;
-	if (++count > 2)
+	if (count >= 2)
 		return NULL;
 
+	++count;
 	return malloc(a * b);
 }
+
 
 static const lzma_allocator test_index_dup_alloc = { &my_alloc, NULL, NULL };
 
@@ -1297,8 +1351,10 @@ test_lzma_index_dup(void)
 	assert_true(copy != NULL);
 	assert_true(index_is_equal(idx, copy));
 
+	lzma_index_end(copy, NULL);
 	lzma_index_end(idx, NULL);
 }
+
 
 #if defined(HAVE_ENCODERS) && defined(HAVE_DECODERS)
 static void
@@ -1428,35 +1484,35 @@ test_lzma_index_encoder(void)
 
 	verify_index_buffer(idx, buffer, buffer_size);
 
+	lzma_index_end(idx, NULL);
 	lzma_end(&strm);
 #endif
 }
+
 
 static void
 generate_index_decode_buffer(void)
 {
 #ifdef HAVE_ENCODERS
 	decode_test_index = lzma_index_init(NULL);
-	if (decode_test_index == NULL)
-		return;
+	assert_true(decode_test_index != NULL);
 
 	// Add 4 Blocks
 	for (uint32_t i = 1; i < 5; i++)
-		if (lzma_index_append(decode_test_index, NULL,
-				0x1000 * i, 0x100 * i) != LZMA_OK)
-			return;
+		assert_lzma_ret(lzma_index_append(decode_test_index, NULL,
+				0x1000 * i, 0x100 * i), LZMA_OK);
 
-	size_t size = lzma_index_size(decode_test_index);
+	const size_t size = (size_t)lzma_index_size(decode_test_index);
 	decode_buffer = tuktest_malloc(size);
 
-	if (lzma_index_buffer_encode(decode_test_index,
-			decode_buffer, &decode_buffer_size, size) != LZMA_OK)
-		decode_buffer_size = 0;
+	assert_lzma_ret(lzma_index_buffer_encode(decode_test_index,
+			decode_buffer, &decode_buffer_size, size), LZMA_OK);
+	assert_true(decode_buffer_size != 0);
 #endif
 }
 
 
-#ifdef HAVE_DECODERS
+#if defined(HAVE_ENCODERS) && defined(HAVE_DECODERS)
 static void
 decode_index(const uint8_t *buffer, const size_t size, lzma_stream *strm,
 		lzma_ret expected_error)
@@ -1471,11 +1527,10 @@ decode_index(const uint8_t *buffer, const size_t size, lzma_stream *strm,
 static void
 test_lzma_index_decoder(void)
 {
-#ifndef HAVE_DECODERS
-	assert_skip("Decoder support disabled");
+#if !defined(HAVE_ENCODERS) || !defined(HAVE_DECODERS)
+	assert_skip("Encoder or decoder support disabled");
 #else
-	if (decode_buffer_size == 0)
-		assert_skip("Could not initialize decode test buffer");
+	assert_true(decode_buffer_size != 0);
 
 	lzma_stream strm = LZMA_STREAM_INIT;
 
@@ -1483,11 +1538,21 @@ test_lzma_index_decoder(void)
 			LZMA_PROG_ERROR);
 	assert_lzma_ret(lzma_index_decoder(&strm, NULL, MEMLIMIT),
 			LZMA_PROG_ERROR);
-	assert_lzma_ret(lzma_index_decoder(NULL, &decode_test_index,
-			MEMLIMIT), LZMA_PROG_ERROR);
+
+	// If the first argument (lzma_stream *strm) is NULL then
+	// *idx must still become NULL since the API docs say that
+	// it's done if an error occurs. This was fixed in
+	// 71eed2520e2eecae89bade9dceea16e56cfa2ea0.
+	lzma_index *idx_allocated = lzma_index_init(NULL);
+	lzma_index *idx = idx_allocated;
+	assert_lzma_ret(lzma_index_decoder(NULL, &idx, MEMLIMIT),
+			LZMA_PROG_ERROR);
+	assert_true(idx == NULL);
+
+	lzma_index_end(idx_allocated, NULL);
+	idx_allocated = NULL;
 
 	// Do actual decode
-	lzma_index *idx;
 	assert_lzma_ret(lzma_index_decoder(&strm, &idx, MEMLIMIT),
 			LZMA_OK);
 
@@ -1552,8 +1617,8 @@ test_lzma_index_buffer_encode(void)
 #if !defined(HAVE_ENCODERS) || !defined(HAVE_DECODERS)
 	assert_skip("Encoder or decoder support disabled");
 #else
-	// More simple test than test_lzma_index_encoder() because
-	// currently lzma_index_buffer_encode() is mostly a wrapper
+	// These are simpler test than in test_lzma_index_encoder()
+	// because lzma_index_buffer_encode() is mostly a wrapper
 	// around lzma_index_encoder() anyway.
 	lzma_index *idx = lzma_index_init(NULL);
 	assert_true(idx != NULL);
@@ -1580,6 +1645,9 @@ test_lzma_index_buffer_encode(void)
 			0), LZMA_PROG_ERROR);
 	out_pos = 0;
 	assert_lzma_ret(lzma_index_buffer_encode(idx, buffer, &out_pos,
+			0), LZMA_BUF_ERROR);
+	assert_uint_eq(out_pos, 0);
+	assert_lzma_ret(lzma_index_buffer_encode(idx, buffer, &out_pos,
 			1), LZMA_BUF_ERROR);
 
 	// Do encoding
@@ -1589,6 +1657,8 @@ test_lzma_index_buffer_encode(void)
 
 	// Validate results
 	verify_index_buffer(idx, buffer, buffer_size);
+
+	lzma_index_end(idx, NULL);
 #endif
 }
 
@@ -1596,11 +1666,10 @@ test_lzma_index_buffer_encode(void)
 static void
 test_lzma_index_buffer_decode(void)
 {
-#ifndef HAVE_DECODERS
-	assert_skip("Decoder support disabled");
+#if !defined(HAVE_ENCODERS) || !defined(HAVE_DECODERS)
+	assert_skip("Encoder or decoder support disabled");
 #else
-	if (decode_buffer_size == 0)
-		assert_skip("Could not initialize decode test buffer");
+	assert_true(decode_buffer_size != 0);
 
 	// Simple test since test_lzma_index_decoder() covers most of the
 	// lzma_index_buffer_decode() code anyway.
@@ -1609,35 +1678,73 @@ test_lzma_index_buffer_decode(void)
 	assert_lzma_ret(lzma_index_buffer_decode(NULL, NULL, NULL, NULL,
 			NULL, 0), LZMA_PROG_ERROR);
 
-	lzma_index *idx;
 	uint64_t memlimit = MEMLIMIT;
 	size_t in_pos = 0;
+	lzma_index *idx_allocated = lzma_index_init(NULL);
+	lzma_index *idx = idx_allocated;
 
 	assert_lzma_ret(lzma_index_buffer_decode(&idx, NULL, NULL, NULL,
 			NULL, 0), LZMA_PROG_ERROR);
+	assert_true(idx == NULL);
 
+	idx = idx_allocated;
 	assert_lzma_ret(lzma_index_buffer_decode(&idx, &memlimit, NULL,
 			NULL, NULL, 0), LZMA_PROG_ERROR);
+	assert_true(idx == NULL);
 
+	idx = idx_allocated;
 	assert_lzma_ret(lzma_index_buffer_decode(&idx, &memlimit, NULL,
 			decode_buffer, NULL, 0), LZMA_PROG_ERROR);
+	assert_true(idx == NULL);
 
+	idx = idx_allocated;
 	assert_lzma_ret(lzma_index_buffer_decode(&idx, &memlimit, NULL,
 			decode_buffer, NULL, 0), LZMA_PROG_ERROR);
+	assert_true(idx == NULL);
 
+	idx = idx_allocated;
 	assert_lzma_ret(lzma_index_buffer_decode(&idx, &memlimit, NULL,
 			decode_buffer, &in_pos, 0), LZMA_DATA_ERROR);
+	assert_true(idx == NULL);
 
 	in_pos = 1;
+	idx = idx_allocated;
 	assert_lzma_ret(lzma_index_buffer_decode(&idx, &memlimit, NULL,
 			decode_buffer, &in_pos, 0), LZMA_PROG_ERROR);
+	assert_true(idx == NULL);
+
+	// Test too short input
 	in_pos = 0;
+	idx = idx_allocated;
+	assert_lzma_ret(lzma_index_buffer_decode(&idx, &memlimit, NULL,
+			decode_buffer, &in_pos, decode_buffer_size - 1),
+			LZMA_DATA_ERROR);
+	assert_true(idx == NULL);
+
+	lzma_index_end(idx_allocated, NULL);
+	idx_allocated = NULL;
 
 	// Test expected successful decode
+	in_pos = 0;
 	assert_lzma_ret(lzma_index_buffer_decode(&idx, &memlimit, NULL,
 			decode_buffer, &in_pos, decode_buffer_size), LZMA_OK);
 
+	assert_uint_eq(in_pos, decode_buffer_size);
 	assert_true(index_is_equal(decode_test_index, idx));
+
+	lzma_index_end(idx, NULL);
+
+	// Test too much input. This won't read past
+	// the end of the allocated array (decode_buffer_size bytes).
+	in_pos = 0;
+	assert_lzma_ret(lzma_index_buffer_decode(&idx, &memlimit, NULL,
+			decode_buffer, &in_pos, decode_buffer_size + 16),
+			LZMA_OK);
+
+	assert_uint_eq(in_pos, decode_buffer_size);
+	assert_true(index_is_equal(decode_test_index, idx));
+
+	lzma_index_end(idx, NULL);
 
 	// Test too small memlimit
 	in_pos = 0;

@@ -28,7 +28,8 @@ static jmp_buf listen_jmpb;
 
 #ifdef NO_READLINE
 /* Dumb replacement for readline when we don't have support for a real one. */
-static char *readline(const char *prompt)
+static char *
+readline(const char *prompt)
 {
     struct termios termbuf;
     char input[BUFSIZ];
@@ -49,20 +50,21 @@ static char *readline(const char *prompt)
 }
 
 /* No-op replacement for add_history() when we have no readline support. */
-static void add_history(const char *line)
+static void
+add_history(const char *line)
 {
 }
 #endif
 
-static RETSIGTYPE listen_int_handler(signo)
-    int signo;
+static void
+listen_int_handler(int signo)
 {
     putc('\n', stdout);
     longjmp(listen_jmpb, 1);
 }
 
-int ss_listen (sci_idx)
-    int sci_idx;
+int
+ss_listen(int sci_idx)
 {
     char *cp;
     ss_data *info;
@@ -74,8 +76,8 @@ int ss_listen (sci_idx)
     struct sigaction isig, csig, nsig, osig;
     sigset_t nmask, omask;
 #else
-    RETSIGTYPE (*sig_cont)();
-    RETSIGTYPE (*sig_int)(), (*old_sig_cont)();
+    void (*sig_cont)();
+    void (*sig_int)(), (*old_sig_cont)();
     int mask;
 #endif
 
@@ -83,12 +85,12 @@ int ss_listen (sci_idx)
     info->abort = 0;
 
 #ifdef POSIX_SIGNALS
-    csig.sa_handler = (RETSIGTYPE (*)())0;
+    csig.sa_handler = (void (*)(int))0;
     sigemptyset(&nmask);
     sigaddset(&nmask, SIGINT);
     sigprocmask(SIG_BLOCK, &nmask, &omask);
 #else
-    sig_cont = (RETSIGTYPE (*)())0;
+    sig_cont = (void (*)(int))0;
     mask = sigblock(sigmask(SIGINT));
 #endif
 
@@ -115,7 +117,7 @@ int ss_listen (sci_idx)
         nsig.sa_handler = listen_int_handler;   /* fgets is not signal-safe */
         osig = csig;
         sigaction(SIGCONT, &nsig, &csig);
-        if ((RETSIGTYPE (*)())csig.sa_handler==(RETSIGTYPE (*)())listen_int_handler)
+        if ((void (*)(int))csig.sa_handler==(void (*)(int))listen_int_handler)
             csig = osig;
 #else
         old_sig_cont = sig_cont;
@@ -166,20 +168,16 @@ egress:
     return code;
 }
 
-void ss_abort_subsystem(sci_idx, code)
-    int sci_idx;
-    int code;
+void
+ss_abort_subsystem(int sci_idx, int code)
 {
     ss_info(sci_idx)->abort = 1;
     ss_info(sci_idx)->exit_status = code;
 
 }
 
-void ss_quit(argc, argv, sci_idx, infop)
-    int argc;
-    char const * const *argv;
-    int sci_idx;
-    pointer infop;
+void
+ss_quit(int argc, char const * const *argv, int sci_idx, pointer infop)
 {
     ss_abort_subsystem(sci_idx, 0);
 }

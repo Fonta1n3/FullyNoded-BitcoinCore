@@ -144,9 +144,8 @@ gss_krb5int_make_seal_token_v3_iov(krb5_context context,
         /* TOK_ID */
         store_16_be(KG2_TOK_WRAP_MSG, outbuf);
         /* flags */
-        outbuf[2] = (acceptor_flag
-                     | (conf_req_flag ? FLAG_WRAP_CONFIDENTIAL : 0)
-                     | (ctx->have_acceptor_subkey ? FLAG_ACCEPTOR_SUBKEY : 0));
+        outbuf[2] = (acceptor_flag | FLAG_WRAP_CONFIDENTIAL |
+                     (ctx->have_acceptor_subkey ? FLAG_ACCEPTOR_SUBKEY : 0));
         /* filler */
         outbuf[3] = 0xFF;
         /* EC */
@@ -403,9 +402,10 @@ gss_krb5int_unseal_v3_iov(krb5_context context,
             if (load_16_be(althdr) != KG2_TOK_WRAP_MSG
                 || althdr[2] != ptr[2]
                 || althdr[3] != ptr[3]
+                || load_16_be(althdr + 4) != ec
                 || memcmp(althdr + 8, ptr + 8, 8) != 0) {
                 *minor_status = 0;
-                return GSS_S_BAD_SIG;
+                return GSS_S_DEFECTIVE_TOKEN;
             }
         } else {
             /* Verify checksum: note EC is checksum size here, not padding */

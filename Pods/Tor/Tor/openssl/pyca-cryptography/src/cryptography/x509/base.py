@@ -9,8 +9,6 @@ import os
 import typing
 
 from cryptography import utils
-from cryptography.hazmat.backends import _get_backend
-from cryptography.hazmat.backends.interfaces import Backend
 from cryptography.hazmat.bindings._rust import x509 as rust_x509
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import (
@@ -19,13 +17,21 @@ from cryptography.hazmat.primitives.asymmetric import (
     ed25519,
     ed448,
     rsa,
+    x25519,
+    x448,
 )
 from cryptography.hazmat.primitives.asymmetric.types import (
-    PRIVATE_KEY_TYPES as PRIVATE_KEY_TYPES,
-    PUBLIC_KEY_TYPES as PUBLIC_KEY_TYPES,
+    CERTIFICATE_ISSUER_PUBLIC_KEY_TYPES,
+    CERTIFICATE_PRIVATE_KEY_TYPES,
+    CERTIFICATE_PUBLIC_KEY_TYPES,
 )
-from cryptography.x509.extensions import Extension, ExtensionType, Extensions
-from cryptography.x509.name import Name
+from cryptography.x509.extensions import (
+    Extension,
+    ExtensionType,
+    Extensions,
+    _make_sequence_methods,
+)
+from cryptography.x509.name import Name, _ASN1Type
 from cryptography.x509.oid import ObjectIdentifier
 
 
@@ -50,10 +56,12 @@ def _reject_duplicate_extension(
 
 def _reject_duplicate_attribute(
     oid: ObjectIdentifier,
-    attributes: typing.List[typing.Tuple[ObjectIdentifier, bytes]],
+    attributes: typing.List[
+        typing.Tuple[ObjectIdentifier, bytes, typing.Optional[int]]
+    ],
 ) -> None:
     # This is quadratic in the number of attributes
-    for attr_oid, _ in attributes:
+    for attr_oid, _, _ in attributes:
         if attr_oid == oid:
             raise ValueError("This attribute has already been set.")
 
@@ -70,6 +78,62 @@ def _convert_to_naive_utc_time(time: datetime.datetime) -> datetime.datetime:
         return time.replace(tzinfo=None) - offset
     else:
         return time
+
+
+class Attribute:
+    def __init__(
+        self,
+        oid: ObjectIdentifier,
+        value: bytes,
+        _type: int = _ASN1Type.UTF8String.value,
+    ) -> None:
+        self._oid = oid
+        self._value = value
+        self._type = _type
+
+    @property
+    def oid(self) -> ObjectIdentifier:
+        return self._oid
+
+    @property
+    def value(self) -> bytes:
+        return self._value
+
+    def __repr__(self) -> str:
+        return "<Attribute(oid={}, value={!r})>".format(self.oid, self.value)
+
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, Attribute):
+            return NotImplemented
+
+        return (
+            self.oid == other.oid
+            and self.value == other.value
+            and self._type == other._type
+        )
+
+    def __hash__(self) -> int:
+        return hash((self.oid, self.value, self._type))
+
+
+class Attributes:
+    def __init__(
+        self,
+        attributes: typing.Iterable[Attribute],
+    ) -> None:
+        self._attributes = list(attributes)
+
+    __len__, __iter__, __getitem__ = _make_sequence_methods("_attributes")
+
+    def __repr__(self) -> str:
+        return "<Attributes({})>".format(self._attributes)
+
+    def get_attribute_for_oid(self, oid: ObjectIdentifier) -> Attribute:
+        for attr in self:
+            if attr.oid == oid:
+                return attr
+
+        raise AttributeNotFound("No {} attribute was found".format(oid), oid)
 
 
 class Version(utils.Enum):
@@ -103,7 +167,7 @@ class Certificate(metaclass=abc.ABCMeta):
         """
 
     @abc.abstractmethod
-    def public_key(self) -> PUBLIC_KEY_TYPES:
+    def public_key(self) -> CERTIFICATE_PUBLIC_KEY_TYPES:
         """
         Returns the public key
         """
@@ -165,16 +229,17 @@ class Certificate(metaclass=abc.ABCMeta):
         Returns the tbsCertificate payload bytes as defined in RFC 5280.
         """
 
+    @abc.abstractproperty
+    def tbs_precertificate_bytes(self) -> bytes:
+        """
+        Returns the tbsCertificate payload bytes with the SCT list extension
+        stripped.
+        """
+
     @abc.abstractmethod
     def __eq__(self, other: object) -> bool:
         """
         Checks equality.
-        """
-
-    @abc.abstractmethod
-    def __ne__(self, other: object) -> bool:
-        """
-        Checks not equal.
         """
 
     @abc.abstractmethod
@@ -216,6 +281,30 @@ class RevokedCertificate(metaclass=abc.ABCMeta):
 
 # Runtime isinstance checks need this since the rust class is not a subclass.
 RevokedCertificate.register(rust_x509.RevokedCertificate)
+
+
+class _RawRevokedCertificate(RevokedCertificate):
+    def __init__(
+        self,
+        serial_number: int,
+        revocation_date: datetime.datetime,
+        extensions: Extensions,
+    ):
+        self._serial_number = serial_number
+        self._revocation_date = revocation_date
+        self._extensions = extensions
+
+    @property
+    def serial_number(self) -> int:
+        return self._serial_number
+
+    @property
+    def revocation_date(self) -> datetime.datetime:
+        return self._revocation_date
+
+    @property
+    def extensions(self) -> Extensions:
+        return self._extensions
 
 
 class CertificateRevocationList(metaclass=abc.ABCMeta):
@@ -298,12 +387,6 @@ class CertificateRevocationList(metaclass=abc.ABCMeta):
         """
 
     @abc.abstractmethod
-    def __ne__(self, other: object) -> bool:
-        """
-        Checks not equal.
-        """
-
-    @abc.abstractmethod
     def __len__(self) -> int:
         """
         Number of revoked certificates in the CRL.
@@ -332,7 +415,9 @@ class CertificateRevocationList(metaclass=abc.ABCMeta):
         """
 
     @abc.abstractmethod
-    def is_signature_valid(self, public_key: PUBLIC_KEY_TYPES) -> bool:
+    def is_signature_valid(
+        self, public_key: CERTIFICATE_ISSUER_PUBLIC_KEY_TYPES
+    ) -> bool:
         """
         Verifies signature of revocation list against given public key.
         """
@@ -349,19 +434,13 @@ class CertificateSigningRequest(metaclass=abc.ABCMeta):
         """
 
     @abc.abstractmethod
-    def __ne__(self, other: object) -> bool:
-        """
-        Checks not equal.
-        """
-
-    @abc.abstractmethod
     def __hash__(self) -> int:
         """
         Computes a hash.
         """
 
     @abc.abstractmethod
-    def public_key(self) -> PUBLIC_KEY_TYPES:
+    def public_key(self) -> CERTIFICATE_PUBLIC_KEY_TYPES:
         """
         Returns the public key
         """
@@ -391,6 +470,12 @@ class CertificateSigningRequest(metaclass=abc.ABCMeta):
     def extensions(self) -> Extensions:
         """
         Returns the extensions in the signing request.
+        """
+
+    @abc.abstractproperty
+    def attributes(self) -> Attributes:
+        """
+        Returns an Attributes object.
         """
 
     @abc.abstractmethod
@@ -436,6 +521,10 @@ def load_pem_x509_certificate(
     return rust_x509.load_pem_x509_certificate(data)
 
 
+def load_pem_x509_certificates(data: bytes) -> typing.List[Certificate]:
+    return rust_x509.load_pem_x509_certificates(data)
+
+
 # Backend argument preserved for API compatibility, but ignored.
 def load_der_x509_certificate(
     data: bytes, backend: typing.Any = None
@@ -445,38 +534,40 @@ def load_der_x509_certificate(
 
 # Backend argument preserved for API compatibility, but ignored.
 def load_pem_x509_csr(
-    data: bytes, backend: typing.Optional[Backend] = None
+    data: bytes, backend: typing.Any = None
 ) -> CertificateSigningRequest:
     return rust_x509.load_pem_x509_csr(data)
 
 
 # Backend argument preserved for API compatibility, but ignored.
 def load_der_x509_csr(
-    data: bytes, backend: typing.Optional[Backend] = None
+    data: bytes, backend: typing.Any = None
 ) -> CertificateSigningRequest:
     return rust_x509.load_der_x509_csr(data)
 
 
 # Backend argument preserved for API compatibility, but ignored.
 def load_pem_x509_crl(
-    data: bytes, backend: typing.Optional[Backend] = None
+    data: bytes, backend: typing.Any = None
 ) -> CertificateRevocationList:
     return rust_x509.load_pem_x509_crl(data)
 
 
 # Backend argument preserved for API compatibility, but ignored.
 def load_der_x509_crl(
-    data: bytes, backend: typing.Optional[Backend] = None
+    data: bytes, backend: typing.Any = None
 ) -> CertificateRevocationList:
     return rust_x509.load_der_x509_crl(data)
 
 
-class CertificateSigningRequestBuilder(object):
+class CertificateSigningRequestBuilder:
     def __init__(
         self,
         subject_name: typing.Optional[Name] = None,
         extensions: typing.List[Extension[ExtensionType]] = [],
-        attributes: typing.List[typing.Tuple[ObjectIdentifier, bytes]] = [],
+        attributes: typing.List[
+            typing.Tuple[ObjectIdentifier, bytes, typing.Optional[int]]
+        ] = [],
     ):
         """
         Creates an empty X.509 certificate request (v1).
@@ -516,7 +607,11 @@ class CertificateSigningRequestBuilder(object):
         )
 
     def add_attribute(
-        self, oid: ObjectIdentifier, value: bytes
+        self,
+        oid: ObjectIdentifier,
+        value: bytes,
+        *,
+        _tag: typing.Optional[_ASN1Type] = None,
     ) -> "CertificateSigningRequestBuilder":
         """
         Adds an X.509 attribute with an OID and associated value.
@@ -527,37 +622,44 @@ class CertificateSigningRequestBuilder(object):
         if not isinstance(value, bytes):
             raise TypeError("value must be bytes")
 
+        if _tag is not None and not isinstance(_tag, _ASN1Type):
+            raise TypeError("tag must be _ASN1Type")
+
         _reject_duplicate_attribute(oid, self._attributes)
+
+        if _tag is not None:
+            tag = _tag.value
+        else:
+            tag = None
 
         return CertificateSigningRequestBuilder(
             self._subject_name,
             self._extensions,
-            self._attributes + [(oid, value)],
+            self._attributes + [(oid, value, tag)],
         )
 
     def sign(
         self,
-        private_key: PRIVATE_KEY_TYPES,
+        private_key: CERTIFICATE_PRIVATE_KEY_TYPES,
         algorithm: typing.Optional[hashes.HashAlgorithm],
-        backend: typing.Optional[Backend] = None,
+        backend: typing.Any = None,
     ) -> CertificateSigningRequest:
         """
         Signs the request using the requestor's private key.
         """
-        backend = _get_backend(backend)
         if self._subject_name is None:
             raise ValueError("A CertificateSigningRequest must have a subject")
-        return backend.create_x509_csr(self, private_key, algorithm)
+        return rust_x509.create_x509_csr(self, private_key, algorithm)
 
 
-class CertificateBuilder(object):
+class CertificateBuilder:
     _extensions: typing.List[Extension[ExtensionType]]
 
     def __init__(
         self,
         issuer_name: typing.Optional[Name] = None,
         subject_name: typing.Optional[Name] = None,
-        public_key: typing.Optional[PUBLIC_KEY_TYPES] = None,
+        public_key: typing.Optional[CERTIFICATE_PUBLIC_KEY_TYPES] = None,
         serial_number: typing.Optional[int] = None,
         not_valid_before: typing.Optional[datetime.datetime] = None,
         not_valid_after: typing.Optional[datetime.datetime] = None,
@@ -610,7 +712,7 @@ class CertificateBuilder(object):
 
     def public_key(
         self,
-        key: PUBLIC_KEY_TYPES,
+        key: CERTIFICATE_PUBLIC_KEY_TYPES,
     ) -> "CertificateBuilder":
         """
         Sets the requestor's public key (as found in the signing request).
@@ -623,12 +725,15 @@ class CertificateBuilder(object):
                 ec.EllipticCurvePublicKey,
                 ed25519.Ed25519PublicKey,
                 ed448.Ed448PublicKey,
+                x25519.X25519PublicKey,
+                x448.X448PublicKey,
             ),
         ):
             raise TypeError(
                 "Expecting one of DSAPublicKey, RSAPublicKey,"
-                " EllipticCurvePublicKey, Ed25519PublicKey or"
-                " Ed448PublicKey."
+                " EllipticCurvePublicKey, Ed25519PublicKey,"
+                " Ed448PublicKey, X25519PublicKey, or "
+                "X448PublicKey."
             )
         if self._public_key is not None:
             raise ValueError("The public key may only be set once.")
@@ -756,14 +861,13 @@ class CertificateBuilder(object):
 
     def sign(
         self,
-        private_key: PRIVATE_KEY_TYPES,
+        private_key: CERTIFICATE_PRIVATE_KEY_TYPES,
         algorithm: typing.Optional[hashes.HashAlgorithm],
-        backend: typing.Optional[Backend] = None,
+        backend: typing.Any = None,
     ) -> Certificate:
         """
         Signs the certificate using the CA's private key.
         """
-        backend = _get_backend(backend)
         if self._subject_name is None:
             raise ValueError("A certificate must have a subject name")
 
@@ -782,10 +886,10 @@ class CertificateBuilder(object):
         if self._public_key is None:
             raise ValueError("A certificate must have a public key")
 
-        return backend.create_x509_certificate(self, private_key, algorithm)
+        return rust_x509.create_x509_certificate(self, private_key, algorithm)
 
 
-class CertificateRevocationListBuilder(object):
+class CertificateRevocationListBuilder:
     _extensions: typing.List[Extension[ExtensionType]]
     _revoked_certificates: typing.List[RevokedCertificate]
 
@@ -904,11 +1008,10 @@ class CertificateRevocationListBuilder(object):
 
     def sign(
         self,
-        private_key: PRIVATE_KEY_TYPES,
+        private_key: CERTIFICATE_PRIVATE_KEY_TYPES,
         algorithm: typing.Optional[hashes.HashAlgorithm],
-        backend: typing.Optional[Backend] = None,
+        backend: typing.Any = None,
     ) -> CertificateRevocationList:
-        backend = _get_backend(backend)
         if self._issuer_name is None:
             raise ValueError("A CRL must have an issuer name")
 
@@ -918,10 +1021,10 @@ class CertificateRevocationListBuilder(object):
         if self._next_update is None:
             raise ValueError("A CRL must have a next update time")
 
-        return backend.create_x509_crl(self, private_key, algorithm)
+        return rust_x509.create_x509_crl(self, private_key, algorithm)
 
 
-class RevokedCertificateBuilder(object):
+class RevokedCertificateBuilder:
     def __init__(
         self,
         serial_number: typing.Optional[int] = None,
@@ -980,18 +1083,18 @@ class RevokedCertificateBuilder(object):
             self._extensions + [extension],
         )
 
-    def build(
-        self, backend: typing.Optional[Backend] = None
-    ) -> RevokedCertificate:
-        backend = _get_backend(backend)
+    def build(self, backend: typing.Any = None) -> RevokedCertificate:
         if self._serial_number is None:
             raise ValueError("A revoked certificate must have a serial number")
         if self._revocation_date is None:
             raise ValueError(
                 "A revoked certificate must have a revocation date"
             )
-
-        return backend.create_x509_revoked_certificate(self)
+        return _RawRevokedCertificate(
+            self._serial_number,
+            self._revocation_date,
+            Extensions(self._extensions),
+        )
 
 
 def random_serial_number() -> int:

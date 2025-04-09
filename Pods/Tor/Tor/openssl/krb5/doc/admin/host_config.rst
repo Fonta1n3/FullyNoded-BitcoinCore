@@ -92,7 +92,7 @@ to principals from a different realm than the default realm::
             # only principals in OTHER.REALM are matched.
             #
             # s/@OTHER\.REALM$// removes the realm name, leaving behind the
-            # principal name as the acount name.
+            # principal name as the account name.
             auth_to_local = RULE:[1:$1@$0](.*@OTHER\.REALM)s/@OTHER\.REALM$//
 
             # Also allow principals from the default realm.  Omit this line
@@ -199,10 +199,9 @@ GSSAPI mechanism modules
 ~~~~~~~~~~~~~~~~~~~~~~~~
 
 GSSAPI mechanism modules are registered using the file
-``/etc/gss/mech`` or configuration files in the ``/etc/gss/mech.d/``
-directory.  Only files with a ``.conf`` suffix will be read from the
-``/etc/gss/mech.d/`` directory.  Each line in these files has the
-form::
+|sysconfdir|\ ``/gss/mech`` or configuration files in the
+|sysconfdir|\ ``/gss/mech.d`` directory with a ``.conf``
+suffix.  Each line in these files has the form::
 
     name  oid  pathname  [options]  <type>
 
@@ -215,6 +214,9 @@ surrounded in square brackets.  *type* (if present) can be used to
 indicate a special type of module.  Currently the only special module
 type is "interposer", for a module designed to intercept calls to
 other mechanisms.
+
+If the environment variable **GSS_MECH_CONFIG** is set, its value is
+used as the sole mechanism configuration filename.
 
 
 .. _profile_plugin_config:

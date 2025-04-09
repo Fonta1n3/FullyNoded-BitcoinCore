@@ -93,7 +93,7 @@ static void free_mechSet(void);
 static gss_mech_info g_mechList = NULL;
 static gss_mech_info g_mechListTail = NULL;
 static k5_mutex_t g_mechListLock = K5_MUTEX_PARTIAL_INITIALIZER;
-static time_t g_confFileModTime = (time_t)0;
+static time_t g_confFileModTime = (time_t)-1;
 static time_t g_confLastCall = (time_t)0;
 
 static gss_OID_set_desc g_mechSet = { 0, NULL };
@@ -114,11 +114,19 @@ gssint_mechglue_init(void)
 	add_error_table(&et_ggss_error_table);
 
 	err = k5_mutex_finish_init(&g_mechSetLock);
+	if (err)
+		return err;
 	err = k5_mutex_finish_init(&g_mechListLock);
+	if (err)
+		return err;
 
 #ifdef _GSS_STATIC_LINK
 	err = gss_krb5int_lib_init();
+	if (err)
+		return err;
 	err = gss_spnegoint_lib_init();
+	if (err)
+		return err;
 #endif
 
 	err = gssint_mecherrmap_init();
@@ -161,12 +169,13 @@ gssint_mechglue_initialize_library(void)
  * This routine requires direct access to the mechList.
  */
 OM_uint32 KRB5_CALLCONV
-gss_release_oid(minor_status, oid)
-OM_uint32 *minor_status;
-gss_OID *oid;
+gss_release_oid(OM_uint32 *minor_status, gss_OID *oid)
 {
 	OM_uint32 major;
 	gss_mech_info aMech;
+
+	if (minor_status != NULL)
+	    *minor_status = 0;
 
 	if (minor_status == NULL || oid == NULL)
 		return (GSS_S_CALL_INACCESSIBLE_WRITE);
@@ -256,9 +265,7 @@ prune_deprecated(gss_OID_set mech_set)
  * a mech oid set, and only update it once the file has changed.
  */
 OM_uint32 KRB5_CALLCONV
-gss_indicate_mechs(minorStatus, mechSet_out)
-OM_uint32 *minorStatus;
-gss_OID_set *mechSet_out;
+gss_indicate_mechs(OM_uint32 *minorStatus, gss_OID_set *mechSet_out)
 {
 	OM_uint32 status;
 
@@ -406,8 +413,7 @@ build_mechSet(void)
  * caller is responsible for freeing the memory
  */
 char *
-gssint_get_modOptions(oid)
-const gss_OID oid;
+gssint_get_modOptions(const gss_OID oid)
 {
 	gss_mech_info aMech;
 	char *modOptions = NULL;
@@ -458,9 +464,9 @@ load_if_changed(const char *pathname, time_t last, time_t *highest)
 	mtime = check_link_mtime(pathname, &mtime);
 	if (mtime == (time_t)-1)
 		return;
-	if (mtime > *highest)
+	if (mtime > *highest || *highest == (time_t)-1)
 		*highest = mtime;
-	if (mtime > last)
+	if (mtime > last || last == (time_t)-1)
 		loadConfigFile(pathname);
 }
 
@@ -468,16 +474,23 @@ load_if_changed(const char *pathname, time_t last, time_t *highest)
 /* Try to load any config files which have changed since the last call.  Config
  * files are MECH_CONF and any files matching MECH_CONF_PATTERN. */
 static void
-loadConfigFiles()
+loadConfigFiles(void)
 {
 	glob_t globbuf;
-	time_t highest = 0, now;
+	time_t highest = (time_t)-1, now;
 	char **path;
+	const char *val;
 
 	/* Don't glob and stat more than once per second. */
 	if (time(&now) == (time_t)-1 || now == g_confLastCall)
 		return;
 	g_confLastCall = now;
+
+	val = secure_getenv("GSS_MECH_CONFIG");
+	if (val != NULL) {
+		load_if_changed(val, g_confFileModTime, &g_confFileModTime);
+		return;
+	}
 
 	load_if_changed(MECH_CONF, g_confFileModTime, &highest);
 
@@ -504,7 +517,8 @@ updateMechList(void)
 
 #if defined(_WIN32)
 	time_t lastConfModTime = getRegConfigModTime(MECH_KEY);
-	if (g_confFileModTime >= lastConfModTime)
+	if (g_confFileModTime >= lastConfModTime &&
+	    g_confFileModTime != (time_t)-1)
 		return;
 	g_confFileModTime = lastConfModTime;
 	loadConfigFromRegistry(HKEY_CURRENT_USER, MECH_KEY);
@@ -660,7 +674,8 @@ gssint_register_mechinfo(gss_mech_info template)
 		memset(&errinfo, 0, sizeof(errinfo)); \
 		if (krb5int_get_plugin_func(_dl, \
 					    #_symbol, \
-					    (void (**)())&(_mech)->_symbol, \
+					    (void (**)(void)) \
+					    &(_mech)->_symbol, \
 					    &errinfo) || errinfo.code) {  \
 			(_mech)->_symbol = NULL; \
 			k5_clear_error(&errinfo); \
@@ -760,6 +775,14 @@ build_dynamicMech(void *dl, const gss_OID mech_type)
 	GSS_ADD_DYNAMIC_METHOD(dl, mech, gssspi_import_sec_context_by_mech);
 	GSS_ADD_DYNAMIC_METHOD(dl, mech, gssspi_import_name_by_mech);
 	GSS_ADD_DYNAMIC_METHOD(dl, mech, gssspi_import_cred_by_mech);
+	/* draft-zhu-negoex */
+	GSS_ADD_DYNAMIC_METHOD_NOLOOP(dl, mech, gssspi_query_meta_data);
+	GSS_ADD_DYNAMIC_METHOD_NOLOOP(dl, mech, gssspi_exchange_meta_data);
+	GSS_ADD_DYNAMIC_METHOD_NOLOOP(dl, mech, gssspi_query_mechanism_info);
+	/* gss_get_mic_iov extensions (added 1.12, implementable 1.20) */
+	GSS_ADD_DYNAMIC_METHOD_NOLOOP(dl, mech, gss_get_mic_iov);
+	GSS_ADD_DYNAMIC_METHOD_NOLOOP(dl, mech, gss_verify_mic_iov);
+	GSS_ADD_DYNAMIC_METHOD_NOLOOP(dl, mech, gss_get_mic_iov_length);
 
 	assert(mech_type != GSS_C_NO_OID);
 
@@ -774,7 +797,7 @@ build_dynamicMech(void *dl, const gss_OID mech_type)
 		memset(&errinfo, 0, sizeof(errinfo));			\
 		if (krb5int_get_plugin_func(_dl,			\
 					    "gssi" #_nsym,		\
-					    (void (**)())&(_mech)->_psym \
+					    (void (**)(void))&(_mech)->_psym \
 					    ## _nsym,			\
 					    &errinfo) || errinfo.code) { \
 			(_mech)->_psym ## _nsym = NULL;			\
@@ -864,6 +887,10 @@ build_interMech(void *dl, const gss_OID mech_type)
 	RESOLVE_GSSI_SYMBOL(dl, mech, gssspi, _import_sec_context_by_mech);
 	RESOLVE_GSSI_SYMBOL(dl, mech, gssspi, _import_name_by_mech);
 	RESOLVE_GSSI_SYMBOL(dl, mech, gssspi, _import_cred_by_mech);
+	/* gss_get_mic_iov extensions (added 1.12, implementable 1.20) */
+	RESOLVE_GSSI_SYMBOL(dl, mech, gss, _get_mic_iov);
+	RESOLVE_GSSI_SYMBOL(dl, mech, gss, _verify_mic_iov);
+	RESOLVE_GSSI_SYMBOL(dl, mech, gss, _get_mic_iov_length);
 
 	mech->mech_type = *mech_type;
 	return mech;
@@ -917,7 +944,7 @@ loadInterMech(gss_mech_info minfo)
 	}
 
 	if (krb5int_get_plugin_func(dl, MECH_INTERPOSER_SYM,
-				    (void (**)())&isym, &errinfo) != 0)
+				    (void (**)(void))&isym, &errinfo) != 0)
 		goto cleanup;
 
 	/* Get a list of mechs to interpose. */
@@ -1148,16 +1175,18 @@ gssint_get_mechanism(gss_const_OID oid)
 
 	if (krb5int_open_plugin(aMech->uLibName, &dl, &errinfo) != 0 ||
 	    errinfo.code != 0) {
+		k5_clear_error(&errinfo);
 		k5_mutex_unlock(&g_mechListLock);
 		return ((gss_mechanism)NULL);
 	}
 
-	if (krb5int_get_plugin_func(dl, MECH_SYM, (void (**)())&sym,
+	if (krb5int_get_plugin_func(dl, MECH_SYM, (void (**)(void))&sym,
 				    &errinfo) == 0) {
 		/* Call the symbol to get the mechanism table */
 		aMech->mech = (*sym)(aMech->mech_type);
 	} else {
 		/* Try dynamic dispatch table */
+		k5_clear_error(&errinfo);
 		aMech->mech = build_dynamicMech(dl, aMech->mech_type);
 		aMech->freeMech = 1;
 	}

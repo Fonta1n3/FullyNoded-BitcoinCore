@@ -13,7 +13,7 @@ from ...doubles import DummyHashAlgorithm
 from ...utils import raises_unsupported_algorithm
 
 
-class TestPBKDF2HMAC(object):
+class TestPBKDF2HMAC:
     def test_already_finalized(self, backend):
         kdf = PBKDF2HMAC(hashes.SHA1(), 20, b"salt", 10, backend)
         kdf.derive(b"password")
@@ -61,16 +61,3 @@ class TestPBKDF2HMAC(object):
         kdf = PBKDF2HMAC(hashes.SHA1(), 10, b"salt", 10, backend)
         data = bytearray(b"data")
         assert kdf.derive(data) == b"\xe9n\xaa\x81\xbbt\xa4\xf6\x08\xce"
-
-
-def test_invalid_backend():
-    pretend_backend = object()
-
-    with raises_unsupported_algorithm(_Reasons.BACKEND_MISSING_INTERFACE):
-        PBKDF2HMAC(
-            hashes.SHA1(),
-            20,
-            b"salt",
-            10,
-            pretend_backend,  # type:ignore[arg-type]
-        )

@@ -67,16 +67,10 @@ void *alloca ();
 
 #include <sys/types.h>
 
-#ifdef TIME_WITH_SYS_TIME
-#include <sys/time.h>
-#include <time.h>
-#else
 #ifdef HAVE_SYS_TIME_H
 #include <sys/time.h>
-#else
+#endif
 #include <time.h>
-#endif
-#endif
 
 #ifdef timezone
 #undef timezone /* needed for sgi */
@@ -105,9 +99,6 @@ struct my_timeb {
 #ifndef bcopy
 #define bcopy(from, to, len) memcpy ((to), (from), (len))
 #endif
-
-extern struct tm	*gmtime();
-extern struct tm	*localtime();
 
 #define yyparse getdate_yyparse
 #define yylex getdate_yylex
@@ -185,12 +176,11 @@ static time_t	yyRelSeconds;
     enum _MERIDIAN	Meridian;
 }
 
-%token	tAGO tDAY tDAYZONE tID tMERIDIAN tMINUTE_UNIT tMONTH tMONTH_UNIT
-%token	tSEC_UNIT tSNUMBER tUNUMBER tZONE tDST tNEVER
-
-%type	<Number>	tDAY tDAYZONE tMINUTE_UNIT tMONTH tMONTH_UNIT
-%type	<Number>	tSEC_UNIT tSNUMBER tUNUMBER tZONE
-%type	<Meridian>	tMERIDIAN o_merid
+%token			tAGO tID tDST tNEVER
+%token	<Number>	tDAY tDAYZONE tMINUTE_UNIT tMONTH tMONTH_UNIT
+%token	<Number>	tSEC_UNIT tSNUMBER tUNUMBER tZONE
+%token	<Meridian>	tMERIDIAN
+%type	<Meridian>	o_merid
 
 %%
 
@@ -785,7 +775,7 @@ LookupWord(char *buff)
 
 
 static int
-yylex()
+yylex(void)
 {
     char		c;
     char		*p;

@@ -79,8 +79,7 @@ However, developing and supporting this project is hard work and costs real mone
 
 ## PGP
 
-* Peter Denton (new): 1C72 2776 3647 A221 6E02  E539 025E 9AD2 D3AC 0FCA
-* Peter Denton (old): 3B37 97FA 0AE8 4BE5 B440  6591 8564 01D7 121C 32FC
+* 297D 3AA6 F231 4CD0 E023  CD9B 7C85 7452 1475 38F5
 
 ## Contributing
 

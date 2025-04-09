@@ -98,15 +98,15 @@ error(const char *fmt, ...)
 }
 
 static void
-usage()
+usage(void)
 {
     error(_("Usage: %s [-r realm] [-p principal] [-q query] "
             "[clnt|local args]\n"
             "              [command args...]\n"
             "\tclnt args: [-s admin_server[:port]] "
-            "[[-c ccache]|[-k [-t keytab]]]|[-n]\n"
+            "[[-c ccache]|[-k [-t keytab]]]|[-n] [-O | -N]\n"
             "\tlocal args: [-x db_args]* [-d dbname] "
-            "[-e \"enc:salt ...\"] [-m]"
+            "[-e \"enc:salt ...\"] [-m] [-w password] "
             "where,\n\t[-x db_args]* - any number of database specific "
             "arguments.\n"
             "\t\t\tLook at each database documentation for supported "
@@ -442,7 +442,7 @@ kadmin_startup(int argc, char *argv[], char **request_out, char ***args_out)
 
     /*
      * If no principal name is specified: If authenticating anonymously, use
-     * the anonymouse principal for the local realm, else if a ccache was
+     * the anonymous principal for the local realm, else if a ccache was
      * specified and its primary principal name can be read, it is used, else
      * if a keytab was specified, the principal name is host/hostname,
      * otherwise append "/admin" to the primary name of the default ccache,
@@ -607,7 +607,7 @@ kadmin_startup(int argc, char *argv[], char **request_out, char ***args_out)
 }
 
 int
-quit()
+quit(void)
 {
     kadm5_ret_t retval;
 
@@ -633,7 +633,7 @@ quit()
 }
 
 void
-kadmin_lock(int argc, char *argv[])
+kadmin_lock(int argc, char *argv[], int sci_idx, void *info_ptr)
 {
     kadm5_ret_t retval;
 
@@ -648,7 +648,7 @@ kadmin_lock(int argc, char *argv[])
 }
 
 void
-kadmin_unlock(int argc, char *argv[])
+kadmin_unlock(int argc, char *argv[], int sci_idx, void *info_ptr)
 {
     kadm5_ret_t retval;
 
@@ -663,7 +663,7 @@ kadmin_unlock(int argc, char *argv[])
 }
 
 void
-kadmin_delprinc(int argc, char *argv[])
+kadmin_delprinc(int argc, char *argv[], int sci_idx, void *info_ptr)
 {
     kadm5_ret_t retval;
     krb5_principal princ = NULL;
@@ -711,7 +711,7 @@ cleanup:
 }
 
 void
-kadmin_renameprinc(int argc, char *argv[])
+kadmin_renameprinc(int argc, char *argv[], int sci_idx, void *info_ptr)
 {
     kadm5_ret_t retval;
     krb5_principal oprinc = NULL, nprinc = NULL;
@@ -784,7 +784,7 @@ cpw_usage(const char *str)
 }
 
 void
-kadmin_cpw(int argc, char *argv[])
+kadmin_cpw(int argc, char *argv[], int sci_idx, void *info_ptr)
 {
     kadm5_ret_t retval;
     static char newpw[1024];
@@ -797,11 +797,11 @@ kadmin_cpw(int argc, char *argv[])
     char **db_args = NULL;
     int db_args_size = 0;
 
-    if (argc < 2) {
+    if (argc < 1) {
         cpw_usage(NULL);
         return;
     }
-    for (argv++, argc--; argc > 1; argc--, argv++) {
+    for (argv++, argc--; argc > 0 && **argv == '-'; argc--, argv++) {
         if (!strcmp("-x", *argv)) {
             argc--;
             if (argc < 1) {
@@ -841,12 +841,16 @@ kadmin_cpw(int argc, char *argv[])
                 goto cleanup;
             }
         } else {
+            com_err("change_password", 0, _("unrecognized option %s"), *argv);
             cpw_usage(NULL);
             goto cleanup;
         }
     }
-    if (*argv == NULL) {
-        com_err("change_password", 0, _("missing principal name"));
+    if (argc != 1) {
+        if (argc < 1)
+            com_err("change_password", 0, _("missing principal name"));
+        else
+            com_err("change_password", 0, _("too many arguments"));
         cpw_usage(NULL);
         goto cleanup;
     }
@@ -1126,7 +1130,7 @@ kadmin_parse_princ_args(int argc, char *argv[], kadm5_principal_ent_t oprinc,
 }
 
 static void
-kadmin_addprinc_usage()
+kadmin_addprinc_usage(void)
 {
     error(_("usage: add_principal [options] principal\n"));
     error(_("\toptions are:\n"));
@@ -1150,7 +1154,7 @@ kadmin_addprinc_usage()
 }
 
 static void
-kadmin_modprinc_usage()
+kadmin_modprinc_usage(void)
 {
     error(_("usage: modify_principal [options] principal\n"));
     error(_("\toptions are:\n"));
@@ -1186,7 +1190,7 @@ prepare_dummy_password(char *buf, size_t sz)
 }
 
 void
-kadmin_addprinc(int argc, char *argv[])
+kadmin_addprinc(int argc, char *argv[], int sci_idx, void *info_ptr)
 {
     kadm5_principal_ent_rec princ;
     long mask;
@@ -1225,13 +1229,13 @@ kadmin_addprinc(int argc, char *argv[])
         /* If the policy "default" exists, assign it. */
         if (policy_exists("default")) {
             if (!script_mode) {
-                fprintf(stderr, _("NOTICE: no policy specified for %s; "
+                fprintf(stderr, _("No policy specified for %s; "
                                   "assigning \"default\"\n"), canon);
             }
             princ.policy = "default";
             mask |= KADM5_POLICY;
         } else if (!script_mode) {
-            fprintf(stderr, _("WARNING: no policy specified for %s; "
+            fprintf(stderr, _("No policy specified for %s; "
                               "defaulting to no policy\n"), canon);
         }
     }
@@ -1309,7 +1313,7 @@ cleanup:
 }
 
 void
-kadmin_modprinc(int argc, char *argv[])
+kadmin_modprinc(int argc, char *argv[], int sci_idx, void *info_ptr)
 {
     kadm5_principal_ent_rec princ, oldprinc;
     krb5_principal kprinc = NULL;
@@ -1382,7 +1386,7 @@ cleanup:
 }
 
 void
-kadmin_getprinc(int argc, char *argv[])
+kadmin_getprinc(int argc, char *argv[], int sci_idx, void *info_ptr)
 {
     kadm5_principal_ent_rec dprinc;
     krb5_principal princ = NULL;
@@ -1451,12 +1455,18 @@ kadmin_getprinc(int argc, char *argv[])
         for (i = 0; i < dprinc.n_key_data; i++) {
             krb5_key_data *key_data = &dprinc.key_data[i];
             char enctype[BUFSIZ], salttype[BUFSIZ];
+            char *deprecated = "";
 
             if (krb5_enctype_to_name(key_data->key_data_type[0], FALSE,
                                      enctype, sizeof(enctype)))
                 snprintf(enctype, sizeof(enctype), _("<Encryption type 0x%x>"),
                          key_data->key_data_type[0]);
-            printf("Key: vno %d, %s", key_data->key_data_kvno, enctype);
+            if (!krb5_c_valid_enctype(key_data->key_data_type[0]))
+                deprecated = "UNSUPPORTED:";
+            else if (krb5int_c_deprecated_enctype(key_data->key_data_type[0]))
+                deprecated = "DEPRECATED:";
+            printf("Key: vno %d, %s%s", key_data->key_data_kvno, deprecated,
+                   enctype);
             if (key_data->key_data_ver > 1 &&
                 key_data->key_data_type[1] != KRB5_KDB_SALTTYPE_NORMAL) {
                 if (krb5_salttype_to_string(key_data->key_data_type[1],
@@ -1512,7 +1522,7 @@ cleanup:
 }
 
 void
-kadmin_getprincs(int argc, char *argv[])
+kadmin_getprincs(int argc, char *argv[], int sci_idx, void *info_ptr)
 {
     krb5_error_code retval;
     char *expr, **names;
@@ -1649,7 +1659,7 @@ kadmin_addmodpol_usage(char *func)
 }
 
 void
-kadmin_addpol(int argc, char *argv[])
+kadmin_addpol(int argc, char *argv[], int sci_idx, void *info_ptr)
 {
     krb5_error_code retval;
     long mask;
@@ -1670,7 +1680,7 @@ kadmin_addpol(int argc, char *argv[])
 }
 
 void
-kadmin_modpol(int argc, char *argv[])
+kadmin_modpol(int argc, char *argv[], int sci_idx, void *info_ptr)
 {
     krb5_error_code retval;
     long mask;
@@ -1691,7 +1701,7 @@ kadmin_modpol(int argc, char *argv[])
 }
 
 void
-kadmin_delpol(int argc, char *argv[])
+kadmin_delpol(int argc, char *argv[], int sci_idx, void *info_ptr)
 {
     krb5_error_code retval;
     char reply[5];
@@ -1717,7 +1727,7 @@ kadmin_delpol(int argc, char *argv[])
 }
 
 void
-kadmin_getpol(int argc, char *argv[])
+kadmin_getpol(int argc, char *argv[], int sci_idx, void *info_ptr)
 {
     krb5_error_code retval;
     kadm5_policy_ent_rec policy;
@@ -1763,7 +1773,7 @@ kadmin_getpol(int argc, char *argv[])
 }
 
 void
-kadmin_getpols(int argc, char *argv[])
+kadmin_getpols(int argc, char *argv[], int sci_idx, void *info_ptr)
 {
     krb5_error_code retval;
     char *expr, **names;
@@ -1785,7 +1795,7 @@ kadmin_getpols(int argc, char *argv[])
 }
 
 void
-kadmin_getprivs(int argc, char *argv[])
+kadmin_getprivs(int argc, char *argv[], int sci_idx, void *info_ptr)
 {
     static char *privs[] = {"INQUIRE", "ADD", "MODIFY", "DELETE"};
     krb5_error_code retval;
@@ -1810,7 +1820,7 @@ kadmin_getprivs(int argc, char *argv[])
 }
 
 void
-kadmin_purgekeys(int argc, char *argv[])
+kadmin_purgekeys(int argc, char *argv[], int sci_idx, void *info_ptr)
 {
     kadm5_ret_t retval;
     int keepkvno = -1;
@@ -1862,7 +1872,7 @@ cleanup:
 }
 
 void
-kadmin_getstrings(int argc, char *argv[])
+kadmin_getstrings(int argc, char *argv[], int sci_idx, void *info_ptr)
 {
     kadm5_ret_t retval;
     char *pname, *canon = NULL;
@@ -1908,7 +1918,7 @@ cleanup:
 }
 
 void
-kadmin_setstring(int argc, char *argv[])
+kadmin_setstring(int argc, char *argv[], int sci_idx, void *info_ptr)
 {
     kadm5_ret_t retval;
     char *pname, *canon = NULL, *key, *value;
@@ -1949,7 +1959,7 @@ cleanup:
 }
 
 void
-kadmin_delstring(int argc, char *argv[])
+kadmin_delstring(int argc, char *argv[], int sci_idx, void *info_ptr)
 {
     kadm5_ret_t retval;
     char *pname, *canon = NULL, *key;

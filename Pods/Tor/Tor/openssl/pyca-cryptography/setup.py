@@ -6,7 +6,11 @@
 
 import os
 import platform
+import re
+import shutil
+import subprocess
 import sys
+import warnings
 
 from setuptools import setup
 
@@ -27,6 +31,11 @@ except ImportError:
     raise
 
 
+# distutils emits this warning if you pass `setup()` an unknown option. This
+# is what happens if you somehow run this file without `cffi` installed:
+# `cffi_modules` is an unknown option.
+warnings.filterwarnings("error", message="Unknown distribution option")
+
 base_dir = os.path.dirname(__file__)
 src_dir = os.path.join(base_dir, "src")
 
@@ -42,7 +51,7 @@ try:
         ],
         rust_extensions=[
             RustExtension(
-                "_rust",
+                "cryptography.hazmat.bindings._rust",
                 "src/rust/Cargo.toml",
                 py_limited_api=True,
                 # Enable abi3 mode if we're not using PyPy.
@@ -51,7 +60,7 @@ try:
                     if platform.python_implementation() == "PyPy"
                     else ["pyo3/abi3-py36"]
                 ),
-                rust_version=">=1.41.0",
+                rust_version=">=1.48.0",
             )
         ],
     )
@@ -89,6 +98,22 @@ except:  # noqa: E722
         except pkg_resources.DistributionNotFound:
             version = "n/a"
         print(f"    {dist}: {version}")
+    version = "n/a"
+    if shutil.which("rustc") is not None:
+        try:
+            # If for any reason `rustc --version` fails, silently ignore it
+            rustc_output = subprocess.run(
+                ["rustc", "--version"],
+                capture_output=True,
+                timeout=0.5,
+                encoding="utf8",
+                check=True,
+            ).stdout
+            version = re.sub("^rustc ", "", rustc_output.strip())
+        except subprocess.SubprocessError:
+            pass
+    print(f"    rustc: {version}")
+
     print(
         """\
     =============================DEBUG ASSISTANCE=============================

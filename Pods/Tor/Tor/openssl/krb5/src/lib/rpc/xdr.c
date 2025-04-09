@@ -544,7 +544,7 @@ xdr_u_int32(XDR *xdrs, uint32_t *up)
 }
 
 /*
- * XDR a descriminated union
+ * XDR a discriminated union
  * Support routine for discriminated unions.
  * You create an array of xdrdiscrim structures, terminated with
  * an entry with a null procedure pointer.  The routine gets
@@ -579,14 +579,14 @@ xdr_union(
 	 */
 	for (; choices->proc != NULL_xdrproc_t; choices++) {
 		if (choices->value == dscm)
-			return ((*(choices->proc))(xdrs, unp, LASTUNSIGNED));
+			return choices->proc(xdrs, unp);
 	}
 
 	/*
 	 * no match - execute the default xdr routine if there is one
 	 */
 	return ((dfault == NULL_xdrproc_t) ? FALSE :
-	    (*dfault)(xdrs, unp, LASTUNSIGNED));
+	    (*dfault)(xdrs, unp));
 }
 
 

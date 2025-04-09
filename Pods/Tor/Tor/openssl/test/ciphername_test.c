@@ -1,8 +1,8 @@
 /*
- * Copyright 2017 The OpenSSL Project Authors. All Rights Reserved.
+ * Copyright 2017-2024 The OpenSSL Project Authors. All Rights Reserved.
  * Copyright 2017 BaishanCloud. All rights reserved.
  *
- * Licensed under the OpenSSL licenses, (the "License");
+ * Licensed under the Apache License 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  * https://www.openssl.org/source/license.html
@@ -361,6 +361,8 @@ static CIPHER_ID_NAME cipher_names[] = {
     {0x1303, "TLS_CHACHA20_POLY1305_SHA256"},
     {0x1304, "TLS_AES_128_CCM_SHA256"},
     {0x1305, "TLS_AES_128_CCM_8_SHA256"},
+    {0xC0B4, "TLS_SHA256_SHA256"},
+    {0xC0B5, "TLS_SHA384_SHA384"},
     {0xFEFE, "SSL_RSA_FIPS_WITH_DES_CBC_SHA"},
     {0xFEFF, "SSL_RSA_FIPS_WITH_3DES_EDE_CBC_SHA"},
 };
@@ -431,7 +433,7 @@ static int test_cipher_name(void)
     for (i = 0; i < sk_SSL_CIPHER_num(sk); i++) {
         c = sk_SSL_CIPHER_value(sk, i);
         id = SSL_CIPHER_get_id(c) & 0xFFFF;
-        if ((id == 0xFF85) || (id == 0xFF87))
+        if ((id == 0xC102) || (id == 0xFF85) ||(id == 0xFF87))
             /* skip GOST2012-GOST8912-GOST891 and GOST2012-NULL-GOST12 */
             continue;
         p = SSL_CIPHER_standard_name(c);

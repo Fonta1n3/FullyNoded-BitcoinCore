@@ -42,7 +42,7 @@ char *whoami;
 #ifdef __GNUC__
 __attribute__((noreturn))
 #endif
-static void usage()
+static void usage(void)
 {
      fprintf(stderr, "usage: %s {-t|-u} [-a] [-s num] [-m num] host service [count]\n",
 	     whoami);
@@ -50,9 +50,7 @@ static void usage()
 }
 
 int
-main(argc, argv)
-   int argc;
-   char **argv;
+main(int argc, char **argv)
 {
      char        *host, *port, *target, *echo_arg, **echo_resp, buf[BIG_BUF];
      CLIENT      *clnt;
@@ -172,7 +170,7 @@ main(argc, argv)
 	      strcmp(echo_arg, (*echo_resp) + 6) != 0)
 	       fprintf(stderr, "RPC_TEST_ECHO call %d response wrong: "
 		       "arg = %s, resp = %s\n", i, echo_arg, *echo_resp);
-	  gssrpc_xdr_free(xdr_wrapstring, echo_resp);
+	  gssrpc_xdr_free((xdrproc_t)xdr_wrapstring, echo_resp);
      }
 
      /*
@@ -194,7 +192,7 @@ main(argc, argv)
 	       clnt_perror(clnt, whoami);
      } else {
 	  fprintf(stderr, "bad seq didn't cause failure\n");
-	  gssrpc_xdr_free(xdr_wrapstring, echo_resp);
+	  gssrpc_xdr_free((xdrproc_t)xdr_wrapstring, echo_resp);
      }
 
      AUTH_PRIVATE(clnt->cl_auth)->seq_num -= 3;
@@ -207,7 +205,7 @@ main(argc, argv)
      if (echo_resp == NULL)
 	  clnt_perror(clnt, "Sequence number improperly reset");
      else
-	  gssrpc_xdr_free(xdr_wrapstring, echo_resp);
+	  gssrpc_xdr_free((xdrproc_t)xdr_wrapstring, echo_resp);
 
      /*
       * Now simulate a lost server response, and see if
@@ -219,7 +217,7 @@ main(argc, argv)
      if (echo_resp == NULL)
 	  clnt_perror(clnt, "Auto-resynchronization failed");
      else
-	  gssrpc_xdr_free(xdr_wrapstring, echo_resp);
+	  gssrpc_xdr_free((xdrproc_t)xdr_wrapstring, echo_resp);
 
      /*
       * Now make sure auto-resyncrhonization actually worked
@@ -229,34 +227,8 @@ main(argc, argv)
      if (echo_resp == NULL)
 	  clnt_perror(clnt, "Auto-resynchronization did not work");
      else
-	  gssrpc_xdr_free(xdr_wrapstring, echo_resp);
+	  gssrpc_xdr_free((xdrproc_t)xdr_wrapstring, echo_resp);
 
-     /*
-      * Test fix for secure-rpc/586, part 1: btree keys must be
-      * unique.  Create another context from the same credentials; it
-      * should have the same expiration time and will cause the server
-      * to abort if the clients are not differentiated.
-      *
-      * Test fix for secure-rpc/586, part 2: btree keys cannot be
-      * mutated in place.  To test this: a second client, *with a
-      * later expiration time*, must be run.  The second client should
-      * destroy itself *after* the first one; if the key-mutating bug
-      * is not fixed, the second client_data will be in the btree
-      * before the first, but its key will be larger; thus, when the
-      * first client calls AUTH_DESTROY, the server won't find it in
-      * the btree and call abort.
-      *
-      * For unknown reasons, running just a second client didn't
-      * tickle the bug; the btree code seemed to guess which node to
-      * look at first.  Running a total of three clients does ticket
-      * the bug.  Thus, the full test sequence looks like this:
-      *
-      * 	kinit -l 20m user && client server test@ddn 200
-      * 	sleep 1
-      * 	kini -l 30m user && client server test@ddn 300
-      * 	sleep 1
-      * 	kinit -l 40m user && client server test@ddn 400
-      */
      if (! auth_once) {
 	  tmp_auth = clnt->cl_auth;
 	  clnt->cl_auth = auth_gssapi_create_default(clnt, target);
@@ -285,7 +257,7 @@ main(argc, argv)
 		   strcmp(echo_arg, (*echo_resp) + 6) != 0)
 		    fprintf(stderr,
 			    "RPC_TEST_LENGTHS call %d response wrong\n", i);
-	       gssrpc_xdr_free(xdr_wrapstring, echo_resp);
+	       gssrpc_xdr_free((xdrproc_t)xdr_wrapstring, echo_resp);
 	  }
 
 	  /* cycle from 1 to 255 */

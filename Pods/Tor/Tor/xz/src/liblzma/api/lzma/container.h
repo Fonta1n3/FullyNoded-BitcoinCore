@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: 0BSD */
+
 /**
  * \file        lzma/container.h
  * \brief       File formats
@@ -6,9 +8,6 @@
 
 /*
  * Author: Lasse Collin
- *
- * This file has been put into the public domain.
- * You can do whatever you want with this file.
  */
 
 #ifndef LZMA_H_INTERNAL
@@ -297,7 +296,7 @@ extern LZMA_API(uint64_t) lzma_easy_decoder_memusage(uint32_t preset)
  * to call lzma_end() after failed initialization.
  *
  * If initialization succeeds, use lzma_code() to do the actual encoding.
- * Valid values for `action' (the second argument of lzma_code()) are
+ * Valid values for 'action' (the second argument of lzma_code()) are
  * LZMA_RUN, LZMA_SYNC_FLUSH, LZMA_FULL_FLUSH, and LZMA_FINISH. In future,
  * there may be compression levels or flags that don't support LZMA_SYNC_FLUSH.
  *
@@ -307,7 +306,7 @@ extern LZMA_API(uint64_t) lzma_easy_decoder_memusage(uint32_t preset)
  *                      number and zero or more flags. Usually flags aren't
  *                      used, so preset is simply a number [0, 9] which match
  *                      the options -0 ... -9 of the xz command line tool.
- *                      Additional flags can be be set using bitwise-or with
+ *                      Additional flags can be set using bitwise-or with
  *                      the preset level number, e.g. 6 | LZMA_PRESET_EXTREME.
  * \param       check   Integrity check type to use. See check.h for available
  *                      checks. The xz command line tool defaults to
@@ -436,6 +435,34 @@ extern LZMA_API(lzma_ret) lzma_stream_encoder_mt(
 
 
 /**
+ * \brief       Calculate recommended Block size for multithreaded .xz encoder
+ *
+ * This calculates a recommended Block size for multithreaded encoding given
+ * a filter chain. This is used internally by lzma_stream_encoder_mt() to
+ * determine the Block size if the block_size member is not set to the
+ * special value of 0 in the lzma_mt options struct.
+ *
+ * If one wishes to change the filters between Blocks, this function is
+ * helpful to set the block_size member of the lzma_mt struct before calling
+ * lzma_stream_encoder_mt(). Since the block_size member represents the
+ * maximum possible Block size for the multithreaded .xz encoder, one can
+ * use this function to find the maximum recommended Block size based on
+ * all planned filter chains. Otherwise, the multithreaded encoder will
+ * base its maximum Block size on the first filter chain used (if the
+ * block_size member is not set), which may unnecessarily limit the Block
+ * size for a later filter chain.
+ *
+ * \param       filters   Array of filters terminated with
+ *                        .id == LZMA_VLI_UNKNOWN.
+ *
+ * \return      Recommended Block size in bytes, or UINT64_MAX if
+ *              an error occurred.
+ */
+extern LZMA_API(uint64_t) lzma_mt_block_size(const lzma_filter *filters)
+		lzma_nothrow;
+
+
+/**
  * \brief       Initialize .lzma encoder (legacy file format)
  *
  * The .lzma format is sometimes called the LZMA_Alone format, which is the
@@ -468,7 +495,7 @@ extern LZMA_API(lzma_ret) lzma_alone_encoder(
 /**
  * \brief       Calculate output buffer size for single-call Stream encoder
  *
- * When trying to compress uncompressible data, the encoded size will be
+ * When trying to compress incompressible data, the encoded size will be
  * slightly bigger than the input data. This function calculates how much
  * output buffer space is required to be sure that lzma_stream_buffer_encode()
  * doesn't return LZMA_BUF_ERROR.
@@ -484,7 +511,7 @@ extern LZMA_API(lzma_ret) lzma_alone_encoder(
  * \note        The limit calculated by this function applies only to
  *              single-call encoding. Multi-call encoding may (and probably
  *              will) have larger maximum expansion when encoding
- *              uncompressible data. Currently there is no function to
+ *              incompressible data. Currently there is no function to
  *              calculate the maximum expansion of multi-call encoding.
  *
  * \param       uncompressed_size   Size in bytes of the uncompressed
@@ -587,7 +614,8 @@ extern LZMA_API(lzma_ret) lzma_stream_buffer_encode(
  *                output space (6 bytes) to create a valid MicroLZMA stream.
  */
 extern LZMA_API(lzma_ret) lzma_microlzma_encoder(
-		lzma_stream *strm, const lzma_options_lzma *options);
+		lzma_stream *strm, const lzma_options_lzma *options)
+		lzma_nothrow;
 
 
 /************
@@ -650,13 +678,13 @@ extern LZMA_API(lzma_ret) lzma_microlzma_encoder(
  * supported by liblzma, only the .xz and .lz formats allow concatenated
  * files. Concatenated files are not allowed with the legacy .lzma format.
  *
- * This flag also affects the usage of the `action' argument for lzma_code().
+ * This flag also affects the usage of the 'action' argument for lzma_code().
  * When LZMA_CONCATENATED is used, lzma_code() won't return LZMA_STREAM_END
- * unless LZMA_FINISH is used as `action'. Thus, the application has to set
+ * unless LZMA_FINISH is used as 'action'. Thus, the application has to set
  * LZMA_FINISH in the same way as it does when encoding.
  *
  * If LZMA_CONCATENATED is not used, the decoders still accept LZMA_FINISH
- * as `action' for lzma_code(), but the usage of LZMA_FINISH isn't required.
+ * as 'action' for lzma_code(), but the usage of LZMA_FINISH isn't required.
  */
 #define LZMA_CONCATENATED               UINT32_C(0x08)
 
@@ -764,7 +792,7 @@ extern LZMA_API(lzma_ret) lzma_stream_decoder_mt(
  * as it doesn't support any decoder flags. It will return LZMA_STREAM_END
  * after one .lzma stream.)
  *
-  * \param       strm       Pointer to lzma_stream that is at least initialized
+ * \param       strm        Pointer to lzma_stream that is at least initialized
  *                          with LZMA_STREAM_INIT.
  * \param       memlimit    Memory usage limit as bytes. Use UINT64_MAX
  *                          to effectively disable the limiter. liblzma
@@ -790,7 +818,7 @@ extern LZMA_API(lzma_ret) lzma_auto_decoder(
 /**
  * \brief       Initialize .lzma decoder (legacy file format)
  *
- * Valid `action' arguments to lzma_code() are LZMA_RUN and LZMA_FINISH.
+ * Valid 'action' arguments to lzma_code() are LZMA_RUN and LZMA_FINISH.
  * There is no need to use LZMA_FINISH, but it's allowed because it may
  * simplify certain types of applications.
  *
@@ -964,4 +992,4 @@ extern LZMA_API(lzma_ret) lzma_stream_buffer_decode(
 extern LZMA_API(lzma_ret) lzma_microlzma_decoder(
 		lzma_stream *strm, uint64_t comp_size,
 		uint64_t uncomp_size, lzma_bool uncomp_size_is_exact,
-		uint32_t dict_size);
+		uint32_t dict_size) lzma_nothrow;
